@@ -272,6 +272,33 @@ body.is-entering .light-surge {
       transparent 0 83.5%, #000 86.5% 90.5%, transparent 94%);
   animation: flicker 7.8s linear infinite;
 }
+
+/* Paused until the gate actually opens. Opacity alone is cheap, but every
+   layer this animation runs on also carries `mix-blend-mode: screen`
+   (four of them: the three .ring layers plus .leds, both above), and a
+   blended layer doesn't get the same free ride — the browser has to
+   recomposite it against everything underneath on every tick that
+   changes it, which is real, ongoing cost. All of it sits behind the
+   gate's opaque black the entire time a visitor is looking at the
+   password field, so it was spending that cost on frames nobody could
+   see, competing with the one thing that *is* visible there: the
+   lagging cursor. js/app.js adds `is-unlocked` the instant the gate is
+   gone (see Gate.init) — a paused CSS animation resumes exactly where it
+   left off, so there is no jump or restart when it does.
+
+   This has to come after both `.ring` and `.leds` above, not before —
+   each sets `animation-play-state` implicitly via the `animation:`
+   shorthand (to its default, "running"), and at equal specificity the
+   later rule in the file wins. Ahead of them, this would win against
+   `.ring`'s shorthand but lose against `.leds`'s. */
+.ring, .leds {
+  animation-play-state: paused;
+}
+body.is-unlocked .ring,
+body.is-unlocked .leds {
+  animation-play-state: running;
+}
+
 /* low-frequency noise so brightness wanders instead of being uniform */
 .leds__noise {
   position: absolute; inset: 0;

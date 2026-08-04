@@ -652,16 +652,30 @@
     }
 
     /* Ask the browser to fully decode every cover's artwork now, while the
-       gate is still up and there is nothing on screen competing for the
-       main thread — rather than leaving it to happen implicitly the
+       gate is still up — rather than leaving it to happen implicitly the
        instant each image is first painted, which used to land right on
        top of the reveal transition. img.decode() is exactly this: fetch
        (already under way) plus decode, off the render path, resolving
        once the bitmap is ready to paint for free. Errors are swallowed —
        a missing or unreadable file just decodes normally when it's
-       eventually shown instead, same as before this existed. */
+       eventually shown instead, same as before this existed.
+
+       One at a time, though, not all at once: these are ~1-2MB images,
+       and firing every decode() together means their completions can
+       still land in the same handful of frames, which is exactly the
+       kind of burst that competes with the one thing actually on screen
+       behind the gate — the lagging cursor. Chaining off each promise's
+       own resolution, with an idle tick between, spreads that out
+       instead of trading one pile-up for another. */
     function preloadArt() {
-      $$('img', el.covers).forEach(img => { img.decode?.().catch(() => {}); });
+      const queue = $$('img', el.covers).filter(img => img.decode);
+      const idle = window.requestIdleCallback || (fn => setTimeout(() => fn({ timeRemaining: () => 8 }), 24));
+      const step = () => {
+        const img = queue.shift();
+        if (!img) return;
+        img.decode().catch(() => {}).then(() => { if (queue.length) idle(step); });
+      };
+      if (queue.length) idle(step);
     }
 
     /* Neighbours tuck in behind the playing cover, a sliver showing each
@@ -1150,8 +1164,11 @@
          arriving, and a reload is an arrival, not a crossing. */
       init(enter, unlocked) {
         /* no gate configured, or they are already inside — straight through,
-           and the element goes rather than lingering as a dead overlay */
-        const straightIn = () => { el?.remove(); enter(); };
+           and the element goes rather than lingering as a dead overlay.
+           `is-unlocked` (see .ring/.leds in styles.css) is what lets the
+           ambient light animations run at all — there is no gate here to
+           hide behind, so they may as well start immediately. */
+        const straightIn = () => { document.body.classList.add('is-unlocked'); el?.remove(); enter(); };
         if (!el || !cfg.password) return straightIn();
 
         let seen = false;
@@ -1175,6 +1192,7 @@
           if (SOUND_ENABLED) woosh();
           el.classList.remove('is-wrong');
           el.classList.add('is-open');
+          document.body.classList.add('is-unlocked');
           if (remembers()) { try { sessionStorage.setItem(KEY, '1'); } catch (_) {} }
           setTimeout(() => el.remove(), 1800);   // past the fade
           unlocked();
