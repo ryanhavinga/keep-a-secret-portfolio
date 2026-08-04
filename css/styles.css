@@ -54,6 +54,10 @@
   --led-b: 246 118 226;        /* first contrasting particle */
   --led-c: 255 156 214;        /* second contrasting particle */
   --ring-size: min(172vh, 141vw);
+  /* the ring's vertical centre — shared between .ring's own `top` and the
+     .leds mask's `at 50% ...` below, which have to move together or the
+     glow and the LED field it's masking drift apart */
+  --ring-y: 60%;
 
   /* how long the whole lamp takes to cross-fade to the next track, and the
      curve it takes doing it — barely eased at either end, because a long
@@ -88,7 +92,15 @@ html {
 
 /* ---------- RESET ----------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; }
-html, body { height: 100%; }
+/* overflow:hidden was only ever on <body> — fine everywhere the ring stays
+   narrower than the viewport, but position:fixed content is positioned
+   against the initial containing block (<html>), not against <body>, so
+   once a mobile ring-size wide enough to overflow the phone's width
+   showed up, <body>'s own overflow:hidden had nothing to clip and the
+   layout viewport itself grew to fit it instead — the whole page reading
+   as zoomed out, with everything sized against that wider phantom
+   viewport rather than the real one. Both elements need it. */
+html, body { height: 100%; overflow: hidden; }
 body {
   margin: 0;
   background: #040405;
@@ -178,7 +190,7 @@ body.is-entering .light-surge {
    and out to 93.5%.                                                    */
 .ring {
   position: absolute;
-  left: 50%; top: 60%;
+  left: 50%; top: var(--ring-y);
   width: var(--ring-size); height: var(--ring-size);
   transform: translate(-50%, -50%);
   border-radius: 50%;
@@ -266,9 +278,9 @@ body.is-entering .light-surge {
   mix-blend-mode: screen;
   /* the band, matched to the ring layers above: 86.5%→90.5% lit, feathered
      from 83.5% and out to 94%. Half the width it used to be. */
-  -webkit-mask-image: radial-gradient(circle calc(var(--ring-size) / 2) at 50% 60%,
+  -webkit-mask-image: radial-gradient(circle calc(var(--ring-size) / 2) at 50% var(--ring-y),
       transparent 0 83.5%, #000 86.5% 90.5%, transparent 94%);
-  mask-image: radial-gradient(circle calc(var(--ring-size) / 2) at 50% 60%,
+  mask-image: radial-gradient(circle calc(var(--ring-size) / 2) at 50% var(--ring-y),
       transparent 0 83.5%, #000 86.5% 90.5%, transparent 94%);
   animation: flicker 7.8s linear infinite;
 }
@@ -1045,9 +1057,43 @@ body.page-contact,
    RESPONSIVE
    ============================================================ */
 @media (max-width: 760px) {
-  :root { --panel: clamp(240px, min(60vh, 78vw), 520px); --ring-size: min(136vh, 245vw); }
+  :root {
+    --panel: clamp(300px, min(74vh, 90vw), 620px);
+    /* considerably smaller relative to the viewport than the desktop
+       ratio (was min(136vh,245vw) — over 2x the viewport width, so only
+       its near-vertical side edges ever showed): sized instead to sit
+       close around the bigger mobile player, band-to-corner, rather than
+       as a huge arc mostly off both sides of the screen. */
+    --ring-size: min(92vh, 168vw);
+    /* raised from the shared 60% — centred on the panel, that put the
+       band's top edge a whole empty screen-third below the header and
+       its bottom edge well past the transport controls */
+    --ring-y: 54%;
+  }
   .stage { padding-top: clamp(88px, 15vh, 120px); }
   .player { padding: 14px 15px 16px; }
+
+  /* Both were sized off the same desktop clamp (23-40px), which floors at
+     23px regardless of how narrow the phone actually is — wide enough,
+     paired with "Contact" opposite it, to force "Keep A Secret" onto two
+     lines on every iPhone (measured: needs 226px at 23px, and the topbar
+     column only has ~183px left once "Contact" takes its share at that
+     same size). Matched to each other still, the way they are on desktop,
+     just at a floor low enough neither ever wraps — checked against the
+     narrowest common width (375px, iPhone SE/mini) with room to spare. */
+  .wordmark__main,
+  .tag {
+    font-size: clamp(18px, 5vw, 21px);
+  }
+  .wordmark__main { white-space: nowrap; }
+  .wordmark__sub {
+    white-space: nowrap;
+    /* the sub-line's own .42em tracking is what was pushing it onto a
+       second line even once the line above stopped wrapping — cut back
+       just enough to fit under the narrower wordmark, still visibly
+       spaced out */
+    letter-spacing: .26em;
+  }
 }
 @media (max-height: 620px) {
   :root { --panel: clamp(230px, 64vh, 420px); }
