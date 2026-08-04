@@ -463,6 +463,11 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
   display: inline-block;
 }
 .decrypt-char__final { visibility: hidden; }
+/* the reveal is over: the copy that has been reserving this letter's box
+   all along simply becomes the visible one, in the exact place it has
+   occupied since the first frame — see the note in decryptReveal() on why
+   this replaces collapsing the line back to plain text */
+.decrypt-char.is-settled .decrypt-char__final { visibility: visible; }
 .decrypt-char__glyph {
   position: absolute;
   inset: 0;
@@ -494,7 +499,11 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
   text-transform: uppercase;
   color: var(--white);
   white-space: nowrap;
+  /* it links to contact.html now — same restraint as the wordmark
+     opposite it, which lights rather than moves */
+  transition: text-shadow .7s var(--ease);
 }
+.tag:hover { text-shadow: 0 0 30px rgba(255, 255, 255, .5); }
 
 /* ============================================================
    STAGE + CAROUSEL
@@ -601,7 +610,18 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
   align-self: center;
   max-width: 100%;
   container-type: inline-size;
+  /* claim horizontal drags for the track-switch gesture (js/app.js,
+     coverDown/coverMove/coverUp) while still letting a touchscreen
+     scroll the page vertically */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
 }
+/* while a drag is live, the covers track the pointer directly — the 1s
+   slide transition below is for everything else (arrows, clicks,
+   keyboard), and would just make the stack visibly lag behind the mouse
+   if left on here too */
+.covers.is-dragging .cover { transition: none; }
 .cover {
   position: absolute; top: 50%; left: 50%;
   width: 100%; aspect-ratio: 1;
@@ -919,6 +939,107 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
   58% { transform: translateX(-4px); }
   78% { transform: translateX(2px); }
 }
+
+/* ============================================================
+   CONTACT PAGE — contact.html
+   Its own page, deliberately quieter than the portal: the same black,
+   the same type, none of the lamp. One centred block, a hairline above
+   it, and a header small enough to stay out of the way.
+   ============================================================ */
+/* the portal hides the system cursor and draws its own; this page does
+   not load app.js, so it has to hand the real one back or there would be
+   no pointer at all */
+body.page-contact,
+.page-contact a { cursor: auto; }
+
+.page-contact {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(120% 90% at 50% 30%, #0e0e11 0%, #0a0a0c 46%, #060607 76%, #030304 100%);
+  overflow: auto;
+}
+
+.contact__bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  padding: clamp(20px, 3.4vh, 40px) clamp(20px, 3.4vw, 48px);
+}
+.contact__mark {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(13px, 1.35vw, 19px);
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  color: var(--white);
+  transition: text-shadow .7s var(--ease);
+}
+.contact__mark:hover { text-shadow: 0 0 30px rgba(255, 255, 255, .5); }
+.contact__back {
+  font-size: 10px;
+  letter-spacing: .34em;
+  text-indent: .34em;
+  text-transform: uppercase;
+  color: var(--w-48);
+  transition: color .7s var(--ease);
+}
+.contact__back:hover { color: var(--white); }
+
+.contact {
+  flex: 1 1 auto;
+  display: grid;
+  place-items: center;
+  padding: 24px clamp(20px, 5vw, 48px) clamp(56px, 12vh, 110px);
+}
+.contact__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: clamp(14px, 2.4vh, 22px);
+  max-width: 100%;
+}
+.contact__eyebrow {
+  margin: 0;
+  padding-bottom: clamp(12px, 2.2vh, 20px);
+  border-bottom: 1px solid var(--hairline);
+  /* the rule sits under the label at a readable width whatever the
+     email's own length turns out to be */
+  min-width: min(260px, 72vw);
+  font-size: 10px;
+  letter-spacing: .42em;
+  text-indent: .42em;
+  text-transform: uppercase;
+  color: var(--w-48);
+}
+.contact__mail {
+  /* the one thing on the page anyone came for — sized to stay on one
+     line down to narrow phones rather than breaking mid-address */
+  font-size: clamp(13px, 2.5vw, 21px);
+  letter-spacing: .04em;
+  color: var(--white);
+  border-bottom: 1px solid rgba(255, 255, 255, .18);
+  padding-bottom: 4px;
+  transition: border-color .6s var(--ease), text-shadow .6s var(--ease);
+  overflow-wrap: anywhere;
+}
+.contact__mail:hover {
+  border-bottom-color: var(--w-48);
+  text-shadow: 0 0 26px rgba(255, 255, 255, .4);
+}
+.contact__social {
+  font-size: 10px;
+  letter-spacing: .34em;
+  text-indent: .34em;
+  text-transform: uppercase;
+  color: var(--w-30);
+  transition: color .7s var(--ease);
+}
+.contact__social:hover { color: var(--w-72); }
 
 /* ============================================================
    RESPONSIVE

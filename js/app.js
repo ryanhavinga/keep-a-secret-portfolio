@@ -12,7 +12,7 @@
   const lerp  = (a, b, t) => a + (b - a) * t;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fine    = matchMedia('(hover: hover) and (pointer: fine)').matches;
-  const SOUND_ENABLED = false;   // muted for now — flip back on to restore the gate woosh
+  const SOUND_ENABLED = true;   // the gate woosh — set false to mute it again
 
   const time = s => {
     if (!isFinite(s) || s < 0) s = 0;
@@ -458,6 +458,10 @@
         playing = false, fallback = false, fakeTime = 0, lastTick = 0, scrubbing = false,
         swapTimer = null, changeTimer = null;
 
+    /* cover-stack drag state — see coverDown/coverMove/coverUp below */
+    let coverDragging = false, coverCaptured = false, coverMoved = 0,
+        coverStartX = 0, dragExtra = 0, coverPid = null;
+
     const track = () => tracks[i];
     const duration = () => (fallback || !isFinite(audio.duration) || !audio.duration)
       ? track().duration || 180 : audio.duration;
@@ -699,7 +703,13 @@
        the first. */
     let lastD = null;
 
-    function placeCovers() {
+    /* `extra` is the live drag offset (see the drag block below) — a
+       fraction of a slot, added on top of every cover's resting integer
+       slot for exactly as long as a drag is in progress. Everything that
+       only makes sense at a discrete slot (which side a cover counts as,
+       whether it can take the pointer, tab order) still keys off the
+       plain integer `d`; only the paint itself moves continuously. */
+    function placeCovers(extra = 0) {
       const n = tracks.length;
       if (!lastD || lastD.length !== n) {
         lastD = covers.map((_, j) => {
@@ -718,7 +728,7 @@
             /* parked on the wrong side to enter smoothly — jump it to the
                mirrored far position first, invisibly */
             c.style.transition = 'none';
-            paintCover(c, Math.sign(near) * 2, 0, 'blur(0px)');
+            paintCover(c, Math.sign(near) * 2);
             void c.offsetWidth;          // force the jump to land before re-enabling
             c.style.transition = '';
           }
@@ -733,7 +743,7 @@
         const a = Math.abs(d);
         const side = a === 1;
         c.classList.toggle('cover--side', side);
-        paintCover(c, d, a === 0 ? 1 : side ? .9 : 0, side ? 'blur(1.5px)' : 'blur(0px)');
+        paintCover(c, d + extra);
         c.style.zIndex = String(10 - a);
         /* the playing cover takes the pointer too, so it can lift on hover
            like its neighbours — its click handler is a no-op. Only the
@@ -743,14 +753,74 @@
       });
     }
 
-    function paintCover(c, d, opacity, filter) {
-      const a = Math.abs(d);
-      c.style.transform = `translate(-50%, -50%) translateX(${d * 19}%) scale(${a ? .86 : 1})`;
-      c.style.opacity = String(opacity);
+    /* Continuous versions of the three discrete states the old fixed-`d`
+       calls used to jump between (centre / side / far) — `a` is the same
+       distance-from-centre used for those, just not rounded, so a cover
+       fades, blurs and shrinks smoothly under a dragging finger instead of
+       snapping at each integer boundary. */
+    function paintCover(c, d) {
+      const a = clamp(Math.abs(d), 0, 2);
+      const opacity = a <= 1 ? lerp(1, .9, a) : lerp(.9, 0, a - 1);
+      const blur = lerp(0, 1.5, clamp(a, 0, 1));
+      const scale = lerp(1, .86, clamp(a, 0, 1));
+      c.style.transform = `translate(-50%, -50%) translateX(${(d * 19).toFixed(2)}%) scale(${scale.toFixed(3)})`;
+      c.style.opacity = opacity.toFixed(3);
       /* blur(0px) rather than none — a filter list interpolates against a
          matching list, and `none` is not one, so the blur was snapping on
          and off at the ends of the slide instead of easing with it */
-      c.style.filter = filter;
+      c.style.filter = blur > .02 ? `blur(${blur.toFixed(2)}px)` : 'blur(0px)';
+    }
+
+    /* ---- drag-to-rotate --------------------------------------
+       Grabbing the cover stack and dragging left or right steps through
+       tracks in whichever direction the drag goes, live-tracking the
+       pointer the whole way rather than only reacting once released —
+       the same shape as Carousel's own drag above, adapted from a block
+       index to the covers' continuous `d` slots. `coverMoved` tells a
+       real drag apart from a tap on a side cover, which still switches
+       tracks the old way (the existing click listener in buildCovers). */
+    const DRAG_SLOT = .9;    // fraction of the stack's width that counts as one full slot of drag
+    const DRAG_COMMIT = .18; // matches Carousel's own commit threshold
+
+    function coverDown(e) {
+      if (tracks.length <= 1) return;   // nothing to drag to
+      if (e.target.closest('.ctrl, a, .scrub')) return;
+      coverDragging = true; coverCaptured = false; coverMoved = 0;
+      coverStartX = e.clientX; dragExtra = 0; coverPid = e.pointerId;
+    }
+    function coverMove(e) {
+      if (!coverDragging) return;
+      const dx = e.clientX - coverStartX;
+      coverMoved = Math.max(coverMoved, Math.abs(dx));
+      if (!coverCaptured) {
+        if (coverMoved < 6) return;
+        coverCaptured = true;
+        el.covers.setPointerCapture?.(coverPid);
+        el.covers.classList.add('is-dragging');
+      }
+      const w = el.covers.offsetWidth || 1;
+      dragExtra = clamp(dx / (w * DRAG_SLOT), -1, 1);
+      placeCovers(dragExtra);
+    }
+    function coverUp(e) {
+      if (!coverDragging) return;
+      coverDragging = false;
+      if (coverCaptured && coverPid !== null) el.covers.releasePointerCapture?.(coverPid);
+      coverPid = null;
+
+      if (coverCaptured) {
+        el.covers.classList.remove('is-dragging');
+        if (Math.abs(dragExtra) > DRAG_COMMIT) load(i - Math.sign(dragExtra), playing);
+        else placeCovers();          // under threshold — settle back where it started
+      } else if (coverMoved < 6) {
+        /* a tap rather than a drag — same behaviour as the side covers'
+           own click listener, just reached through the pointer sequence
+           instead of a separate click event */
+        const hit = e.target.closest('.cover');
+        const n = covers.indexOf(hit);
+        if (n > -1 && n !== i) load(n, playing);
+      }
+      coverCaptured = false; dragExtra = 0;
     }
 
     /* A guard against accidental rapid re-fires, not a rate limit on
@@ -810,12 +880,73 @@
       flashLight();
 
       fallback = false; fakeTime = 0;
-      audio.src = t.audio || '';
+      /* a copy already in memory is seekable from the first frame, so use
+         it when there is one and only fall back to streaming the URL
+         while the download is still in flight — see makeSeekable() */
+      audio.src = audioBlobs.get(i) || t.audio || '';
       audio.load();
+      if (t.audio && !audioBlobs.has(i)) makeSeekable(i);
       el.note.hidden = true;
       resetPaintCache();
       paint();
       if (autoplay) play();
+    }
+
+    /* ---- seekable audio ------------------------------------------
+       Neither the dev server nor the live host answers HTTP Range
+       requests for these files: both return the whole thing with a plain
+       200 and no `accept-ranges`. A media element fed that way reports
+       `seekable` as [0, 0] and silently ignores every `currentTime`
+       write — which is why the timeline only ever moved on the one track
+       with no audio file at all, since that runs on the JS fallback clock
+       instead of the element.
+
+       Downloading the file once and handing the element a blob: URL
+       sidesteps the whole negotiation: the bytes are already local, so
+       the browser will seek anywhere in them. Verified directly —
+       `seekable` goes from [0, 0] to [0, duration] on the swap. */
+    const audioBlobs = new Map();     // track index -> object URL
+    const audioFetches = new Map();   // track index -> in-flight promise
+
+    function fetchAudioBlob(n) {
+      if (audioBlobs.has(n)) return Promise.resolve(audioBlobs.get(n));
+      if (audioFetches.has(n)) return audioFetches.get(n);
+      const src = tracks[n]?.audio;
+      if (!src) return Promise.resolve(null);
+
+      const p = fetch(encodeURI(src))
+        .then(r => r.ok ? r.blob() : null)
+        .then(b => {
+          if (!b) return null;
+          const url = URL.createObjectURL(b);
+          audioBlobs.set(n, url);
+          return url;
+        })
+        /* a failed download just leaves the streaming source in place —
+           playback still works, only scrubbing stays unavailable */
+        .catch(() => null)
+        .finally(() => audioFetches.delete(n));
+
+      audioFetches.set(n, p);
+      return p;
+    }
+
+    /* Swap the element onto the downloaded copy once it lands, keeping the
+       playhead and the play state exactly where they were. Bails out if
+       the track changed while the download was in flight. */
+    function makeSeekable(n) {
+      fetchAudioBlob(n).then(url => {
+        if (!url || n !== i) return;
+        const at = audio.currentTime;
+        const wasPlaying = !audio.paused;
+        audio.src = url;
+        audio.load();
+        audio.addEventListener('loadedmetadata', () => {
+          if (n !== i) return;
+          if (at) audio.currentTime = at;
+          if (wasPlaying) audio.play().catch(() => {});
+        }, { once: true });
+      });
     }
 
     /* Last values actually written to the DOM. paint() runs on every frame,
@@ -920,6 +1051,14 @@
         el.play.addEventListener('click', toggle);
         el.prev.addEventListener('click', prevTrack);
         el.next.addEventListener('click', nextTrack);
+
+        /* drag the cover stack itself to step through tracks, in either
+           direction — see coverDown/coverMove/coverUp above */
+        el.covers.addEventListener('pointerdown', coverDown);
+        el.covers.addEventListener('pointermove', coverMove);
+        el.covers.addEventListener('pointerup', coverUp);
+        el.covers.addEventListener('pointercancel', coverUp);
+        el.covers.addEventListener('dragstart', e => e.preventDefault());
 
         /* ←/→ step tracks now that the carousel is a single panel. The
            scrubber stops these reaching here when it has focus, so seeking
@@ -1063,12 +1202,25 @@
       }, idx * stagger);
     });
 
-    /* once every letter has landed, collapse back to a single plain text
-       node — identical to what fillContent() would have produced on its
-       own. Nothing about the scaffolding outlives the reveal. */
+    /* Once every letter has landed, hand the line back to the real
+       characters — by revealing the hidden copy that was already holding
+       each letter's box, and dropping the animated one on top of it.
+
+       Deliberately NOT a collapse back to one plain text node: an
+       inline-block cell per letter rounds its own width, and those
+       roundings accumulate left-to-right (measured: ~8px by the end of
+       this line), so swapping the scaffolding for plain text re-flowed
+       every character a few pixels to the left in one visible jump at
+       the very end. Reusing the boxes that are already there keeps the
+       glyphs exactly where they have been since the first frame, and
+       still leaves real, selectable text behind. */
     setTimeout(() => {
       el.removeAttribute('aria-label');
-      el.textContent = text;
+      $$('.decrypt-char', el).forEach(cell => {
+        cell.removeAttribute('aria-hidden');
+        cell.classList.add('is-settled');
+        cell.querySelector('.decrypt-char__glyph')?.remove();
+      });
     }, (letters.length - 1) * stagger + WINDOW + 220);
   }
 
