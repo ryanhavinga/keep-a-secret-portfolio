@@ -1,0 +1,912 @@
+/* ============================================================
+   KEEP A SECRET — private listening room
+   ============================================================ */
+
+/* ---------- FONTS ----------------------------------------- */
+@font-face {
+  font-family: 'Monument Extended';
+  src: url('../fonts/MonumentExtended-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Monument Extended';
+  src: url('../fonts/MonumentExtended-Ultrabold.otf') format('opentype');
+  font-weight: 800;
+  font-display: swap;
+}
+
+/* The lamp colours are registered too, as lists of three numbers, which is
+   what lets a track change cross-fade the whole light instead of cutting to
+   the next colour. They stay rgb triplets rather than <color> so every
+   gradient below can still ask for its own alpha with rgb(var(--x) / .4). */
+@property --ring      { syntax: '<number>+'; inherits: true; initial-value: 214 128 255; }
+@property --ring-deep { syntax: '<number>+'; inherits: true; initial-value: 58 16 74; }
+@property --led-b     { syntax: '<number>+'; inherits: true; initial-value: 246 118 226; }
+@property --led-c     { syntax: '<number>+'; inherits: true; initial-value: 255 156 214; }
+
+/* ---------- TOKENS ---------------------------------------- */
+:root {
+  --display: 'Monument Extended', 'Helvetica Neue', Arial, sans-serif;
+  --sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+  --white: #fff;
+  --w-72: rgba(255, 255, 255, .72);
+  --w-48: rgba(255, 255, 255, .48);
+  --w-30: rgba(255, 255, 255, .30);
+  --hairline: rgba(255, 255, 255, .12);
+
+  /* the square block size — the centre panel */
+  --panel: clamp(272px, min(70vh, 88vw), 700px);
+  --radius: clamp(28px, 4.6vw, 56px);
+
+  /* carousel geometry */
+  --ease: cubic-bezier(.16, .84, .24, 1);
+  --slow: 2600ms;
+  /* the slide's own curve — eased at both ends rather than --ease's hard
+     launch, so a panel leaves and arrives at the same unhurried rate */
+  --ease-slide: cubic-bezier(.4, .02, .2, 1);
+
+  /* live artwork colour (rgb triplets, set by app.js) */
+  --dominant: 26 26 30;        /* muted — the player panel */
+  --ring: 214 128 255;         /* the lit band itself */
+  --ring-deep: 58 16 74;       /* the same hue, taken right down — the wash either side */
+  --led-b: 246 118 226;        /* first contrasting particle */
+  --led-c: 255 156 214;        /* second contrasting particle */
+  --ring-size: min(172vh, 141vw);
+
+  /* how long the whole lamp takes to cross-fade to the next track, and the
+     curve it takes doing it — barely eased at either end, because a long
+     colour fade reads smoothest when it moves at a near-constant rate */
+  --tint: 5s;
+  --ease-tint: cubic-bezier(.3, .05, .3, .95);
+
+  /* The colour fade is stepped rather than continuous, and this is a
+     performance decision, not a stylistic one. --ring/--ring-deep/--led-b/
+     --led-c feed the radial-gradients on three large blurred ring layers
+     and on the two viewport-wide LED lattices — so every distinct value
+     they take costs a full repaint of all of it, blurs included. Left
+     continuous, that is a repaint on every frame for the whole five
+     seconds after a track change, which is precisely the stutter that
+     used to follow next/prev and drag the cursor down with it.
+     Twelve updates a second is far below anything the eye resolves in a
+     slow wash of colour, and cuts that repaint work about fivefold. */
+  --tint-steps: steps(60, end);
+
+  /* the track-change light surge: slow rise, even slower release — see
+     body.is-surging on .light-surge, further down */
+  --surge-in: 1.9s;
+  --surge-out: 5.2s;
+}
+
+/* the colour change lives on the root because that is where app.js writes it;
+   everything downstream just inherits the value mid-interpolation */
+html {
+  transition: --ring var(--tint) var(--tint-steps), --ring-deep var(--tint) var(--tint-steps),
+              --led-b var(--tint) var(--tint-steps), --led-c var(--tint) var(--tint-steps);
+}
+
+/* ---------- RESET ----------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: #040405;
+  color: var(--white);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+img { display: block; max-width: 100%; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 1px solid rgba(255, 255, 255, .5); outline-offset: 6px; }
+
+/* ============================================================
+   CINEMATIC ENVIRONMENT
+   ============================================================ */
+.env { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.env::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 34%, #0e0e11 0%, #0a0a0c 44%, #060607 74%, #030304 100%);
+}
+
+/* ---------- THE TRACK-CHANGE SURGE ----------------------------
+   Wraps the ring layers and the LED field (in two pieces — see the note
+   in index.html). Brighter and a little more saturated while a new track
+   settles in, easing back down once it has. Lives on a plain ancestor
+   rather than on the ring/leds elements themselves, which each carry their
+   own infinite `flicker` animation — see the comment on .ring in the next
+   section for that reasoning. */
+.light-surge {
+  /* explicit, full-bleed sizing rather than an implicit one — its only
+     children are position:absolute (the ring layers, the leds field), so
+     without this the wrapper itself collapses to a 0×0 box, which a
+     `filter` transition needs real area to run against. */
+  position: absolute; inset: 0;
+  filter: brightness(1) saturate(1);
+  transition: filter var(--surge-out) var(--ease-tint);
+  /* promotes this to its own compositor layer so the filter transition
+     below repaints just this layer instead of the whole page underneath
+     it — without it, a track-change surge can steal enough main-thread
+     time to make the lagging cursor (js/app.js, Env) stutter. */
+  will-change: filter;
+}
+body.is-surging .light-surge {
+  transition-duration: var(--surge-in);
+  filter: brightness(1.3) saturate(1.32);
+}
+
+/* ---------- THE ENTRANCE LAMP ---------------------------------
+   A studio spotlight powering on, once, at the moment the password is
+   accepted — and only then. js/app.js's playEntranceLamp() is called from
+   the gate's own submit handler, never from the already-inside path, so a
+   refresh or a second visit inside the same session walks straight into a
+   room that is simply lit (see the note on Gate.init).
+
+   Dead black, a two-second climb onto the filament, a brief push past its
+   resting output as it settles — the overshoot a real lamp gives you when
+   it first strikes — then two seconds easing back down to normal. The
+   curve is deliberately slow off the bottom and slow into the top: a lamp
+   gathers light, it does not ramp linearly.
+
+   This is an animation rather than a transition so it takes priority over
+   the per-track surge on the same property for its one run, then hands
+   control straight back when the class is dropped. It ends on exactly the
+   resting filter, so removing it is seamless. */
+@keyframes intro-lamp {
+  0%   { filter: brightness(0) saturate(.55); animation-timing-function: cubic-bezier(.4, 0, .5, 1); }
+  43%  { filter: brightness(1.2) saturate(1.16); animation-timing-function: cubic-bezier(.3, 0, .3, 1); }
+  57%  { filter: brightness(1.46) saturate(1.3); animation-timing-function: cubic-bezier(.25, .1, .25, 1); }
+  100% { filter: brightness(1) saturate(1); }
+}
+body.is-entering .light-surge {
+  /* must match ENTRANCE_MS in js/app.js */
+  animation: intro-lamp 4.6s linear both;
+}
+
+/* ---------- THE RING ----------------------------------------
+   A narrow lit band, centred on the panel, larger than the window so it
+   runs off the bottom edge. The lit line itself is the LED field further
+   down — these three layers are only what spills off it, so none of them
+   carries a white plateau. Everything is keyed to one pair of radii:
+   the band runs 86.5%→90.5% of the gradient ray, feathering from 83.5%
+   and out to 93.5%.                                                    */
+.ring {
+  position: absolute;
+  left: 50%; top: 60%;
+  width: var(--ring-size); height: var(--ring-size);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  opacity: var(--o);
+  mix-blend-mode: screen;
+  animation: flicker 8.6s linear infinite;
+}
+/* the wash either side of the light: the same hue taken right down in
+   lightness, which is what a lamp actually throws onto the surface around
+   it — reads as a dark, saturated field rather than a grey haze */
+.ring--glow {
+  --o: .85;
+  background: radial-gradient(closest-side,
+      transparent 0 56%,
+      rgb(var(--ring-deep) / .22) 72%,
+      rgb(var(--ring-deep) / .62) 83%,
+      rgb(var(--ring-deep) / .88) 88.5%,
+      rgb(var(--ring-deep) / .6) 93%,
+      rgb(var(--ring-deep) / .24) 98%,
+      transparent 100%);
+  filter: blur(34px);
+  animation-duration: 9.4s;
+}
+/* a thin sympathetic bloom sitting exactly on the band — pure hue at low
+   opacity, so it lifts the dots without filling the gaps between them */
+.ring--core {
+  --o: .45;
+  background: radial-gradient(closest-side,
+      transparent 0 83.5%,
+      rgb(var(--ring) / .16) 86.5%,
+      rgb(var(--ring) / .4) 88.5%,
+      rgb(var(--ring) / .16) 90.5%,
+      transparent 93.5%);
+  filter: blur(8px);
+  animation-duration: 7.2s;
+}
+.ring--bloom {
+  --o: .34;
+  background: radial-gradient(closest-side,
+      transparent 0 64%,
+      rgb(var(--ring-deep) / .85) 88.5%,
+      rgb(var(--ring-deep) / .32) 96%,
+      transparent 100%);
+  filter: blur(66px);
+  animation-duration: 12s;
+}
+
+/* mains flicker — irregular on purpose, but shallow: the deepest dip is
+   only 7%, which reads as a lamp that isn't quite steady rather than one
+   that's failing. Opacity only, so it composites without repainting. The
+   track-change surge lives on `.light-surge` instead (below), not part of
+   this loop — kept off the elements that carry this animation on purpose,
+   so the two effects never have to interact on the same element. See the
+   note in index.html above the `.light-surge` wrappers. */
+@keyframes flicker {
+  0%   { opacity: var(--o); }
+  6%   { opacity: calc(var(--o) * .97); }
+  12%  { opacity: calc(var(--o) * 1); }
+  21%  { opacity: calc(var(--o) * .94); }
+  27%  { opacity: calc(var(--o) * .99); }
+  36%  { opacity: calc(var(--o) * .96); }
+  44%  { opacity: calc(var(--o) * 1); }
+  53%  { opacity: calc(var(--o) * .93); }
+  59%  { opacity: calc(var(--o) * .98); }
+  68%  { opacity: calc(var(--o) * .95); }
+  76%  { opacity: calc(var(--o) * 1); }
+  84%  { opacity: calc(var(--o) * .96); }
+  91%  { opacity: calc(var(--o) * .99); }
+  100% { opacity: var(--o); }
+}
+
+/* ---------- THE LED FIELD -----------------------------------
+   One point of light per hole in the grille, on the same honeycomb the
+   grille is cut from, so the band resolves into individual lit cells the
+   way a real LED panel behind a perforated sheet does.
+
+   The lattice: the grille tiles at 11 × 6.3504, with a hex centred at
+   (3.667, 3.1752) and another at (9.167, 0). Together those give rows
+   3.1752 apart, every other row shifted half a column across. Every
+   background-position below is a point on that lattice.                */
+.leds {
+  --o: 1;
+  position: absolute; inset: 0;
+  opacity: var(--o);
+  mix-blend-mode: screen;
+  /* the band, matched to the ring layers above: 86.5%→90.5% lit, feathered
+     from 83.5% and out to 94%. Half the width it used to be. */
+  -webkit-mask-image: radial-gradient(circle calc(var(--ring-size) / 2) at 50% 60%,
+      transparent 0 83.5%, #000 86.5% 90.5%, transparent 94%);
+  mask-image: radial-gradient(circle calc(var(--ring-size) / 2) at 50% 60%,
+      transparent 0 83.5%, #000 86.5% 90.5%, transparent 94%);
+  animation: flicker 7.8s linear infinite;
+}
+/* low-frequency noise so brightness wanders instead of being uniform */
+.leds__noise {
+  position: absolute; inset: 0;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.045' numOctaves='4' seed='9'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.72' intercept='0.3'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.045' numOctaves='4' seed='9'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.72' intercept='0.3'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E");
+  -webkit-mask-size: 260px 260px; mask-size: 260px 260px;
+  -webkit-mask-repeat: repeat; mask-repeat: repeat;
+}
+/* the dominant colour, one dot in every cell — two layers because the
+   honeycomb puts two hexes in each tile */
+.leds__dots {
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgb(var(--ring)) 0 1.9px, rgb(var(--ring) / .4) 2.6px, transparent 3.1px),
+    radial-gradient(circle at 50% 50%, rgb(var(--ring)) 0 1.9px, rgb(var(--ring) / .4) 2.6px, transparent 3.1px);
+  background-size: 11px 6.3504px;
+  background-position: 9.167px 0, 3.667px 3.1752px;
+}
+/* The contrasting particles. This element paints over .leds__dots, so an
+   accent lands *instead of* the dominant dot in the cell it falls on
+   rather than adding to it — the way one LED in a panel reads a different
+   colour from its neighbours.
+
+   Two columns by four rows of the lattice, every other cell taken, and the
+   one taken steps half a column right on each row down — an alternating
+   field rather than stripes. Half the cells end up accented, the two
+   accent hues alternating row by row. The positions are fixed: a cell
+   keeps its colour, the light just breathes over the top of it. */
+.leds__accents {
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgb(var(--led-b)) 0 1.8px, rgb(var(--led-b) / .34) 2.5px, transparent 3px),
+    radial-gradient(circle at 50% 50%, rgb(var(--led-b)) 0 1.8px, rgb(var(--led-b) / .34) 2.5px, transparent 3px),
+    radial-gradient(circle at 50% 50%, rgb(var(--led-c)) 0 1.8px, rgb(var(--led-c) / .34) 2.5px, transparent 3px),
+    radial-gradient(circle at 50% 50%, rgb(var(--led-c)) 0 1.8px, rgb(var(--led-c) / .34) 2.5px, transparent 3px);
+  background-size: 22px 12.7008px;
+  background-position: 20.167px 6.3504px, 9.167px 0, 3.667px 9.5256px, 14.667px 3.1752px;
+}
+
+/* ---------- PERFORATED METAL SHEET --------------------------
+   Fewer, wider holes. Everything below tiles from the viewport origin,
+   so the sheet and the accent grid stay locked to each other.        */
+/* Both the mesh and the weave tile the same honeycomb — a flat-top hex,
+   "radius" 6, drawn at (18 × 10.392) so the 2-column / 1-row-height unit
+   repeats seamlessly (the col-1 hexes are split across the tile's edges
+   on purpose; they stitch back into whole hexagons once tiled). */
+.env__mesh {
+  position: absolute; inset: 0;
+  background-color: #050506;
+  /* holes are drawn a touch smaller than the lattice spacing (r5 holes on
+     an r6 grid) so no three cells meet at one exact point — they did at
+     full size, and that coincidence broke the evenodd fill outright */
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='10.392' viewBox='0 0 18 10.392'%3E%3Cpath fill='white' fill-rule='evenodd' d='M0,0H18V10.392H0Z M11,5.196 8.5,9.526 3.5,9.526 1,5.196 3.5,0.866 8.5,0.866Z M20,0 17.5,4.33 12.5,4.33 10,0 12.5,-4.33 17.5,-4.33Z M20,10.392 17.5,14.722 12.5,14.722 10,10.392 12.5,6.062 17.5,6.062Z M2,0 -0.5,4.33 -5.5,4.33 -8,0 -5.5,-4.33 -0.5,-4.33Z M2,10.392 -0.5,14.722 -5.5,14.722 -8,10.392 -5.5,6.062 -0.5,6.062Z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='10.392' viewBox='0 0 18 10.392'%3E%3Cpath fill='white' fill-rule='evenodd' d='M0,0H18V10.392H0Z M11,5.196 8.5,9.526 3.5,9.526 1,5.196 3.5,0.866 8.5,0.866Z M20,0 17.5,4.33 12.5,4.33 10,0 12.5,-4.33 17.5,-4.33Z M20,10.392 17.5,14.722 12.5,14.722 10,10.392 12.5,6.062 17.5,6.062Z M2,0 -0.5,4.33 -5.5,4.33 -8,0 -5.5,-4.33 -0.5,-4.33Z M2,10.392 -0.5,14.722 -5.5,14.722 -8,10.392 -5.5,6.062 -0.5,6.062Z'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: repeat; mask-repeat: repeat;
+  /* finer than it was (15px) — the holes come out ~5.3px across, which is
+     what the LED lattice above is spaced to */
+  -webkit-mask-size: 11px 6.3504px; mask-size: 11px 6.3504px;
+}
+
+/* sized and positioned from app.js (it is drawn once and jogged by
+   transform — see sizeGrain), so only the paint-independent bits are here */
+.env__grain { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .055;
+              will-change: transform; }
+.env__halo  { position: absolute; top: 0; left: 0; opacity: 0; mix-blend-mode: screen;
+              transition: opacity 1.2s ease; will-change: transform; }
+.env__halo.is-live { opacity: .2; }
+
+.env__vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(96% 84% at 50% 50%, transparent 58%, rgba(0, 0, 0, .34) 86%, rgba(0, 0, 0, .6) 100%);
+}
+
+/* ---------- LAGGING CURSOR --------------------------------
+   Above the gate, so the room still has its own cursor while you are
+   standing outside it. */
+.cursor { position: fixed; top: 0; left: 0; z-index: 110; pointer-events: none; }
+.cursor__dot {
+  position: absolute; top: 0; left: 0;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 14px rgba(255, 255, 255, .75);
+  transform: translate(-50%, -50%);
+  will-change: transform;
+  transition: width .6s var(--ease), height .6s var(--ease), opacity .5s ease;
+}
+body.is-pointing .cursor__dot { width: 13px; height: 13px; }
+body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
+
+@media (hover: hover) and (pointer: fine) {
+  body, a, button, .block { cursor: none; }
+}
+@media (hover: none), (pointer: coarse) {
+  .cursor, .env__halo { display: none; }
+}
+
+/* ============================================================
+   TOP BAR
+   ============================================================ */
+.topbar {
+  position: fixed; z-index: 40;
+  top: clamp(20px, 3.4vh, 40px);
+  left: clamp(20px, 3.4vw, 48px);
+  right: clamp(20px, 3.4vw, 48px);
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 20px;
+}
+
+/* small, quiet, bottom-left — matches the rest of the icon system
+   (thin white stroke, no fill) rather than the usual filled glyph */
+.social {
+  position: fixed; z-index: 40;
+  left: clamp(20px, 3.4vw, 48px);
+  bottom: clamp(18px, 3vh, 34px);
+  display: block;
+  width: clamp(19px, 2vw, 24px);
+  opacity: .7;
+  transition: opacity .8s var(--ease), transform .8s var(--ease);
+}
+.social svg { width: 100%; fill: none; stroke: #fff; stroke-width: 1.5; }
+.social:hover { opacity: 1; transform: scale(1.12); }
+.wordmark {
+  font-family: var(--display);
+  text-transform: uppercase;
+  line-height: 1;
+  transition: text-shadow .9s var(--ease);
+}
+.wordmark:hover { text-shadow: 0 0 30px rgba(255, 255, 255, .5); }
+.wordmark__main {
+  display: block;
+  font-weight: 800;
+  font-size: clamp(23px, 2.7vw, 40px);
+  letter-spacing: .015em;
+  /* the lone "A" reads as an oversized gap either side of it at normal
+     word-spacing — tighten just the word gaps, not the letters within
+     KEEP/SECRET */
+  word-spacing: -.3em;
+}
+.wordmark__sub {
+  display: block;
+  margin-top: clamp(6px, .7vw, 11px);
+  font-weight: 400;
+  font-size: clamp(8px, .78vw, 11px);
+  letter-spacing: .42em;
+  color: var(--w-48);
+}
+.wordmark img { height: clamp(22px, 2.6vw, 38px); width: auto; }
+
+/* ---------- SUB-LINE DECRYPT ---------------------------------
+   The one piece of motion left on arrival, on "Private Demo Portal"
+   alone (js/app.js, playSubIntro). Every letter cell holds two
+   overlapping copies of itself: `__final` is the real character at
+   visibility:hidden, reserving the exact width that letter will occupy —
+   which matters more here than anywhere, since this line carries .42em of
+   letter-spacing and any width wobble would shift the whole row. `__glyph`
+   is absolutely positioned on top of it, so whatever it happens to be
+   showing can never affect that width, and is the only part that changes.
+   A plain space stays a plain space. */
+.decrypt-char {
+  position: relative;
+  display: inline-block;
+}
+.decrypt-char__final { visibility: hidden; }
+.decrypt-char__glyph {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+/* mid-scramble: visible, and swapping character on a timer from JS. Held
+   dimmer than the settled text — the noise should read as something
+   resolving underneath the line rather than as the line itself flashing */
+.decrypt-char.is-active .decrypt-char__glyph {
+  opacity: .55;
+  color: var(--w-30);
+}
+/* landed: the true character, easing up to the line's own colour */
+.decrypt-char.is-locked .decrypt-char__glyph {
+  opacity: 1;
+  color: inherit;
+  animation: decrypt-settle .42s var(--ease);
+}
+@keyframes decrypt-settle {
+  from { opacity: .5; }
+  to   { opacity: 1; }
+}
+
+.tag {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(23px, 2.7vw, 40px);
+  letter-spacing: .015em;
+  text-transform: uppercase;
+  color: var(--white);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   STAGE + CAROUSEL
+   ============================================================ */
+.stage {
+  position: relative; z-index: 10;
+  height: 100vh;
+  height: 100dvh;   /* survives the mobile URL bar */
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: clamp(96px, 14vh, 132px) 0 clamp(32px, 6vh, 64px);
+}
+
+/* big, quiet arrows either side, independent of the carousel's own
+   drag/peek so they stay put in the middle of the viewport */
+.nav {
+  position: fixed; z-index: 35;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid; place-items: center;
+  width: clamp(30px, 4vw, 46px); height: clamp(56px, 9vh, 88px);
+  color: rgba(255, 255, 255, .6);
+  transition: color .6s var(--ease), transform .6s var(--ease);
+}
+/* These sit right on top of the lit band, which on a pale track is the
+   brightest thing on screen — a thin white stroke disappears into it. The
+   drop-shadow is a dark halo tight to the glyph: it buys contrast without
+   adding a fill or a plate, so the arrows still read as the same hairline
+   icon system as everything else. They earn it now that they are the only
+   way to change track with the mouse. */
+.nav svg {
+  width: 62%; fill: none; stroke: currentColor;
+  stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(0, 0, 0, .85)) drop-shadow(0 0 2px rgba(0, 0, 0, .7));
+}
+.nav:hover { color: #fff; }
+.nav--prev { left: clamp(10px, 2.6vw, 34px); }
+.nav--prev:hover { transform: translateY(-50%) translateX(-3px); }
+.nav--next { right: clamp(10px, 2.6vw, 34px); }
+.nav--next:hover { transform: translateY(-50%) translateX(3px); }
+@media (max-width: 760px) { .nav { display: none; } }
+
+.carousel {
+  position: relative;
+  width: var(--panel);
+  height: var(--panel);
+  touch-action: pan-y;
+}
+
+.block {
+  position: absolute; inset: 0;
+  will-change: transform, opacity, filter, scale;
+  -webkit-tap-highlight-color: transparent;
+}
+/* A flat horizontal slide, nothing more. The block leaving centre blurs
+   and fades as it travels out of frame; the one arriving comes in from the
+   opposite edge blurred and sharpens as it settles. No scale: shrinking a
+   panel on its way out is what read as "passing behind" the centre one,
+   and this is meant to read as one panel sliding aside for the next. */
+.block.is-animating {
+  transition: transform var(--slow) var(--ease-slide),
+              opacity var(--slow) var(--ease-slide),
+              filter var(--slow) var(--ease-slide);
+}
+
+/* white light bloom behind a lifted block */
+.block::after {
+  content: '';
+  position: absolute; inset: -14%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .26), rgba(255, 255, 255, .07) 55%, transparent 76%);
+  filter: blur(46px);
+  opacity: 0;
+  transition: opacity 1s var(--ease);
+}
+.block.is-active:hover::after { opacity: 1; }
+
+/* side blocks are a single click target — their contents are inert */
+.block:not(.is-active) { cursor: pointer; }
+.block:not(.is-active) > * { pointer-events: none; }
+
+/* ============================================================
+   BLOCK 1 — PLAYER
+   ============================================================ */
+/* No card, no panel — the artwork and the controls sit straight on the
+   background and the only shadow in the composition is under the cover. */
+.player {
+  container-type: inline-size;
+  position: relative;
+  height: 100%;
+  display: flex; flex-direction: column;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+
+/* ---------- cover stack ----------------------------------- */
+.covers {
+  position: relative;
+  flex: 1 1 0%;
+  min-height: 0;
+  aspect-ratio: 1;
+  align-self: center;
+  max-width: 100%;
+  container-type: inline-size;
+}
+.cover {
+  position: absolute; top: 50%; left: 50%;
+  width: 100%; aspect-ratio: 1;
+  border-radius: clamp(9px, 1.5vw, 17px);
+  overflow: hidden;
+  background: #060607;
+  /* the one shadow left in the composition — soft, low, under the cover */
+  box-shadow: 0 26px 50px -28px rgba(0, 0, 0, .85), inset 0 0 0 1px rgba(255, 255, 255, .07);
+  transform: translate(-50%, -50%);
+  /* The hover lift rides on the standalone `translate` property rather than
+     being folded into `transform`, which app.js owns and rewrites on every
+     track change. Individual transform properties are applied outside
+     `transform`, so this is a clean screen-space nudge that survives
+     whatever placeCovers() writes — and it gets its own, much faster
+     timing instead of inheriting the 1s carousel slide. */
+  translate: 0 0;
+  /* the horizontal carousel slide when switching tracks */
+  transition: transform 1s var(--ease), opacity 1s var(--ease),
+              filter 1s var(--ease), box-shadow .5s var(--ease),
+              translate .5s var(--ease);
+  will-change: transform, opacity;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Only the playing cover lifts to the cursor. The two behind it sit mostly
+   underneath it, so a lift there fired and unfired as the pointer crossed
+   the overlap — it read as a twitch, not a response. They come out from
+   under their shade instead, which says "you can pick this" without moving
+   anything.
+
+   Gated behind `.covers:not(.is-changing)`: the small transport buttons sit
+   directly under the artwork, so the pointer is usually still resting on a
+   cover when a track change lands one under it — without this guard, that
+   cover's own hover lift/veil-fade would kick in on top of the slide
+   already running, compounding into an extra "hop" the big arrows never
+   showed (nothing to hover all the way out at the screen edge). `load()`
+   toggles `.is-changing` for exactly as long as the slide below takes, so
+   every trigger — big arrows, small buttons, keyboard, clicking a cover
+   directly — now produces the identical, single motion. */
+.covers:not(.is-changing) .cover:not(.cover--side):hover {
+  translate: 0 -12px;
+  box-shadow: 0 40px 60px -30px rgba(0, 0, 0, .9), inset 0 0 0 1px rgba(255, 255, 255, .12);
+}
+.cover img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.cover--side { cursor: pointer; }
+.cover--side::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(4, 4, 5, .38);
+  transition: background .45s var(--ease);
+}
+.covers:not(.is-changing) .cover--side:hover::after { background: rgba(4, 4, 5, 0); }
+
+/* DEMO placeholder artwork */
+.cover__demo {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background: #030303;
+}
+.cover__demo span {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 19cqw;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: #fff;
+}
+
+.player__meta {
+  padding-top: clamp(13px, 4cqw, 30px);
+  text-align: center;
+}
+.player__title {
+  margin: 0;
+  /* Fixed to the size this box would be at full font-size, regardless of
+     how far fitTitle() shrinks the text to fit a long title. .covers sits
+     below this in the same flex column and is sized by whatever height is
+     left over — so before this, a long title (a smaller font, a shorter
+     box) handed .covers extra room, which changed the artwork's measured
+     width, which changed --art-w, which changed the timeline's width
+     under it. The box is now constant no matter which track is showing;
+     only the text inside it shrinks. */
+  height: calc(clamp(15px, 5.4cqw, 30px) * 1.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(15px, 5.4cqw, 30px);
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  white-space: nowrap;
+  transition: opacity .5s var(--ease);
+}
+.player__artist {
+  margin: clamp(7px, 2cqw, 15px) 0 0;
+  font-size: clamp(7.5px, 2cqw, 11px);
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .58);
+  transition: opacity .5s var(--ease);
+}
+/* Out fast, in slow. The swap happens at the bottom of the fade, so the
+   out leg has to be *finished* by then — it used to run 500ms against a
+   260ms timer, which meant the words changed at half opacity, in plain
+   sight. Now they are gone before they are replaced, and the new title
+   takes its time coming back. */
+.player__meta.is-swapping .player__title,
+.player__meta.is-swapping .player__artist {
+  opacity: 0;
+  transition-duration: .22s;
+}
+
+/* ---------- transport ------------------------------------- */
+.transport { padding-top: clamp(12px, 3.2cqw, 24px); }
+/* the scrub bar is only ever as wide as the artwork above it — --art-w is
+   measured off the real cover width in app.js, since that width is a flex
+   result and can't be reached with a plain CSS percentage. The time
+   labels are pinned just outside its left/right edge, on purpose — they
+   read as belonging to the timeline without adding to its width. */
+.timeline {
+  position: relative;
+  width: var(--art-w, 100%);
+  max-width: 100%;
+  margin: 0 auto;
+}
+.timeline__t {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: clamp(6.5px, 1.5cqw, 8.5px);
+  letter-spacing: .14em;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  white-space: nowrap;
+}
+.timeline__t:first-child { right: calc(100% + clamp(8px, 2cqw, 16px)); }
+.timeline__t:last-child  { left:  calc(100% + clamp(8px, 2cqw, 16px)); }
+.scrub { position: relative; padding: 8px 0; touch-action: none; }
+.scrub__track {
+  height: 1px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, .45);
+  overflow: hidden;
+}
+.scrub__fill {
+  height: 100%; width: 0;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, .6);
+  transition: width .18s linear;
+}
+.scrub__head {
+  position: absolute; top: 50%; left: 0;
+  width: 9px; height: 9px;
+  margin-left: -4.5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 16px rgba(255, 255, 255, .8);
+  transform: translateY(-50%) scale(0);
+  transition: transform .5s var(--ease), left .18s linear;
+}
+.scrub:hover .scrub__head, .scrub.is-scrubbing .scrub__head { transform: translateY(-50%) scale(1); }
+.scrub:hover .scrub__track { background: rgba(255, 255, 255, .65); }
+/* while dragging, the bar should sit under the finger rather than easing
+   toward it — the .18s smoothing is there for playback, where it fills in
+   between updates, and reads as lag the moment you take hold of it */
+.scrub.is-scrubbing .scrub__fill { transition: none; }
+.scrub.is-scrubbing .scrub__head { transition: transform .5s var(--ease); }
+
+.controls {
+  display: flex; align-items: center; justify-content: center;
+  gap: clamp(16px, 4.6cqw, 34px);
+  padding-top: clamp(6px, 1.8cqw, 14px);
+}
+/* thin white icons, floating free — no plates or containers */
+.ctrl {
+  display: grid; place-items: center;
+  border-radius: 50%;
+  opacity: 1;
+  transition: transform .8s var(--ease), opacity .6s ease, filter .8s var(--ease);
+}
+.ctrl svg { fill: none; stroke: #fff; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+
+.ctrl--side {
+  width: clamp(22px, 5.6cqw, 30px); height: clamp(22px, 5.6cqw, 30px);
+  /* the same small directional nudge as .nav--prev/.nav--next, on the same
+     .6s timing — these two buttons step through exactly the same tracks
+     the big arrows do, so their own feedback shouldn't read as a different
+     gesture (the old scale-up + glow was a separate animation of its own;
+     this is deliberately the nav arrows' motion, not a new one) */
+  transition: transform .6s var(--ease), opacity .6s ease, filter .6s var(--ease);
+}
+.ctrl--side svg { width: 58%; }
+.ctrl--side[data-prev]:hover { transform: translateX(-3px); }
+.ctrl--side[data-next]:hover { transform: translateX(3px); }
+
+.ctrl--play {
+  position: relative;
+  width: clamp(38px, 9.6cqw, 52px); height: clamp(38px, 9.6cqw, 52px);
+  /* thicker than the hairline the rest of the icon system uses on purpose —
+     this is the one control everything else exists to lead the eye to, and
+     a bolder ring reads as more solid, more clickable, more premium than
+     the same weight as a side arrow */
+  border: 2px solid #fff;
+  background: none;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, .28));
+  transition: transform .8s var(--ease), opacity .6s ease,
+              border-color .8s var(--ease), filter .8s var(--ease);
+}
+/* a heavier stroke to match the bolder ring, overriding the shared
+   hairline .ctrl svg rule */
+.ctrl--play svg { width: 36%; stroke-width: 2.1; }
+.ctrl--play:hover {
+  border-color: #fff;
+  filter: drop-shadow(0 0 18px rgba(255, 255, 255, .5));
+  transform: scale(1.06);
+}
+/* the glow lifts while it is actually playing */
+.ctrl--play[data-state='playing'] { filter: drop-shadow(0 0 16px rgba(255, 255, 255, .45)); }
+.ctrl__icon { position: absolute; transition: opacity .45s ease, transform .45s var(--ease); }
+.ctrl__icon--play { transform: translateX(6%); }
+.ctrl--play[data-state='playing'] .ctrl__icon--play  { opacity: 0; transform: scale(.7); }
+.ctrl--play[data-state='paused']  .ctrl__icon--pause { opacity: 0; transform: scale(.7); }
+
+.player__note {
+  margin: clamp(5px, 1.4cqw, 10px) 0 0;
+  text-align: center;
+  font-size: 7.5px;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .28);
+}
+
+/* The TikTok and Bio panels were removed from index.html; their styles
+   went with them. CONFIG.tiktok and CONFIG.bio still hold the content if
+   either ever comes back. */
+
+/* ============================================================
+   THE GATE
+   ============================================================ */
+.gate {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-items: center;
+  padding: 32px;
+  background: #000;
+  transition: opacity 1.6s var(--ease);
+}
+/* the gate dissolving and the room coming up are the same move — both are
+   black at the crossover, so it reads as one slow fade rather than a swap */
+.gate.is-open { opacity: 0; pointer-events: none; }
+.gate__inner { width: min(340px, 100%); text-align: center; }
+
+.gate__mark {
+  margin: 0;
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(20px, 2.3vw, 28px);
+  letter-spacing: .015em; word-spacing: -.3em;
+  text-transform: uppercase;
+}
+.gate__eyebrow {
+  margin: 14px 0 0;
+  font-size: 9px; letter-spacing: .42em; text-indent: .42em;
+  text-transform: uppercase;
+  color: var(--w-30);
+}
+
+.gate__form {
+  margin-top: clamp(36px, 7vh, 60px);
+  display: grid; gap: 24px; justify-items: center;
+}
+/* no box — a single hairline, the way the rest of the site draws a rule */
+.gate__input {
+  width: 100%;
+  padding: 12px 4px;
+  background: none; border: 0;
+  border-bottom: 1px solid var(--hairline);
+  font-family: var(--display); font-weight: 400;
+  font-size: 15px; letter-spacing: .32em; text-indent: .32em;
+  text-align: center; text-transform: uppercase;
+  color: var(--white);
+  caret-color: var(--w-48);
+  transition: border-color .7s var(--ease);
+}
+.gate__input:focus { outline: none; border-bottom-color: var(--w-48); }
+.gate__input::placeholder {
+  font-size: 10px; letter-spacing: .34em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .18);
+}
+.gate__btn {
+  padding: 13px 34px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  font-size: 10px; letter-spacing: .34em; text-indent: .34em;
+  text-transform: uppercase;
+  color: var(--w-72);
+  transition: color .7s var(--ease), border-color .7s var(--ease), background-color .7s var(--ease);
+}
+.gate__btn:hover { color: var(--white); border-color: var(--w-30); background: rgba(255, 255, 255, .04); }
+
+/* a wrong password is answered with a shake and nothing else — no red, no
+   copy, in keeping with a door that isn't explaining itself */
+.gate.is-wrong .gate__inner { animation: refuse .5s var(--ease); }
+.gate.is-wrong .gate__input { border-bottom-color: var(--w-48); }
+@keyframes refuse {
+  0%, 100% { transform: translateX(0); }
+  18% { transform: translateX(-7px); }
+  38% { transform: translateX(6px); }
+  58% { transform: translateX(-4px); }
+  78% { transform: translateX(2px); }
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 760px) {
+  :root { --panel: clamp(240px, min(60vh, 78vw), 520px); --ring-size: min(136vh, 245vw); }
+  .stage { padding-top: clamp(88px, 15vh, 120px); }
+  .player { padding: 14px 15px 16px; }
+}
+@media (max-height: 620px) {
+  :root { --panel: clamp(230px, 64vh, 420px); }
+  .stage { padding: 76px 0 28px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .12s !important; }
+  .env__grain, .env__halo { display: none; }
+}

@@ -1,0 +1,9 @@
+.DS_Store
+
+# Original lossless masters — 25-52MB each, over Cloudflare Pages' 25MB
+# per-file limit and not needed for the live site. The .m4a copies in
+# audio/ (js/config.js points at those) are what actually ships.
+audio/*.wav
+
+# Claude Code local tooling state — not part of the site
+.claude/

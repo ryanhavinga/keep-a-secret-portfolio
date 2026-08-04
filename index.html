@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keep A Secret — Private Listening</title>
+<meta name="description" content="A private listening room. By invitation only.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#08080a">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- The doorman. Everything behind it is already in the page and the
+     password is in js/config.js, so this gates the link, not the content —
+     see the note on CONFIG.gate. -->
+<div class="gate" data-gate>
+  <div class="gate__inner">
+    <p class="gate__mark">Keep A Secret</p>
+    <p class="gate__eyebrow">By invitation</p>
+    <form class="gate__form" data-gate-form>
+      <input class="gate__input" data-gate-input type="password" placeholder="Password"
+             aria-label="Password" autocomplete="off" autocapitalize="characters"
+             autocorrect="off" spellcheck="false" autofocus>
+      <button class="gate__btn" type="submit">Enter</button>
+    </form>
+  </div>
+</div>
+
+<!-- cinematic environment layers -->
+<div class="env" aria-hidden="true">
+  <!-- The track-change surge (brighter, more saturated, easing back down)
+       lives on these two `.light-surge` wrappers rather than on the ring/
+       leds elements themselves, which each carry their own infinite
+       `flicker` animation — kept on a plain ancestor instead so the two
+       effects are never fighting for the same element's style. `filter`
+       on the wrapper still visually reaches every pixel underneath it.
+       Split in two because .env__mesh has to sit between the main light
+       and the bloom in front of it. -->
+  <div class="light-surge">
+    <!-- the light: a bright band, big enough to run off the bottom of the screen -->
+    <div class="ring ring--glow"></div>
+    <div class="ring ring--core"></div>
+    <!-- the lamp itself: one lit point per hole in the grille, band-masked,
+         then broken up by low-frequency noise so it never reads as a flat
+         glow. __accents paints over __dots, scattering cells of a
+         contrasting hue through the field. -->
+    <div class="leds">
+      <div class="leds__noise">
+        <div class="leds__dots"></div>
+        <div class="leds__accents"></div>
+      </div>
+    </div>
+  </div>
+  <!-- the perforated black grille sits on top, one hole per lit point -->
+  <div class="env__mesh"></div>
+  <!-- bloom in front of the grille -->
+  <div class="light-surge">
+    <div class="ring ring--bloom"></div>
+  </div>
+  <canvas class="env__grain" data-grain></canvas>
+  <canvas class="env__halo" data-halo></canvas>
+  <div class="env__vignette"></div>
+</div>
+
+<!-- lagging cursor -->
+<div class="cursor" data-cursor aria-hidden="true">
+  <span class="cursor__dot"></span>
+</div>
+
+<header class="topbar">
+  <div class="wordmark" data-logo>
+    <span class="wordmark__main" data-logo-main>Keep A Secret</span>
+    <span class="wordmark__sub" data-logo-sub>Portfolio</span>
+  </div>
+  <span class="tag" data-tagline>Private Session</span>
+</header>
+
+<main class="stage">
+  <!-- the big arrows step through the tracks — the carousel they used to
+       drive is down to a single panel, so there are no sections to move
+       between any more -->
+  <button class="nav nav--prev" data-nav-prev aria-label="Previous track">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4 8 12l8 8"/></svg>
+  </button>
+  <button class="nav nav--next" data-nav-next aria-label="Next track">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4l8 8-8 8"/></svg>
+  </button>
+
+  <div class="carousel" data-carousel>
+
+    <!-- ══════════ BLOCK 1 — MUSIC PLAYER ══════════ -->
+    <article class="block block--player" data-block="player" tabindex="0">
+      <div class="player">
+
+        <!-- cover stack: the playing track, with its neighbours tucked behind.
+             Built from CONFIG.tracks by app.js — click a side cover to switch. -->
+        <div class="covers" data-covers></div>
+
+        <div class="player__meta">
+          <h1 class="player__title" data-title>—</h1>
+          <p class="player__artist" data-artist>Keep A Secret</p>
+        </div>
+
+        <div class="transport">
+          <div class="timeline">
+            <span class="timeline__t" data-current>0:00</span>
+            <div class="scrub" data-scrub role="slider" tabindex="0"
+                 aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="scrub__track"><div class="scrub__fill" data-fill></div></div>
+              <span class="scrub__head" data-head></span>
+            </div>
+            <span class="timeline__t" data-duration>0:00</span>
+          </div>
+
+          <div class="controls">
+            <button class="ctrl ctrl--side" data-prev aria-label="Previous track">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 9.5 12 18 18Z"/><path d="M6 6v12"/></svg>
+            </button>
+
+            <button class="ctrl ctrl--play" data-play aria-label="Play">
+              <svg class="ctrl__icon ctrl__icon--play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5 19 12 9 18.5Z"/></svg>
+              <svg class="ctrl__icon ctrl__icon--pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6v12"/><path d="M14.5 6v12"/></svg>
+            </button>
+
+            <button class="ctrl ctrl--side" data-next aria-label="Next track">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 14.5 12 6 18Z"/><path d="M18 6v12"/></svg>
+            </button>
+          </div>
+
+          <p class="player__note" data-note hidden>Preview timeline — audio pending</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- The TikTok and Bio panels used to live here. Their content is still
+         in js/config.js (CONFIG.tiktok, CONFIG.bio) so nothing is lost —
+         app.js just skips anything whose markup isn't in the page. -->
+
+  </div>
+</main>
+
+<a class="social" data-instagram href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="3.5" y="3.5" width="17" height="17" rx="5"/>
+    <circle cx="12" cy="12" r="4.2"/>
+    <circle cx="17.1" cy="6.9" r="1"/>
+  </svg>
+</a>
+
+<audio data-audio preload="metadata"></audio>
+
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
