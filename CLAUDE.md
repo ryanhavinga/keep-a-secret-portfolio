@@ -5,9 +5,22 @@ This site is live and connected to GitHub + Cloudflare. Read this before making 
 ## Where it lives
 
 - **GitHub repo:** https://github.com/ryanhavinga/keep-a-secret-portfolio (public)
-- **Live site:** https://keepasecret.ryanhavinga2003.workers.dev/
+- **Live site:** https://keepasecret.nl — custom domain, bought through Yourname, DNS
+  delegated to Cloudflare (nameservers `noor.ns.cloudflare.com` / `rustam.ns.cloudflare.com`).
+  `https://keepasecret.ryanhavinga2003.workers.dev/` still works too (the Worker's default
+  URL) but keepasecret.nl is the one to give out.
+- **www.keepasecret.nl** should redirect to the bare domain via a Cloudflare Redirect Rule
+  (Rules → Redirect Rules) plus a proxied `www` CNAME in DNS — set up alongside the custom
+  domain, dashboard-side; nothing in this repo depends on it.
+- **demo-portal.keepasecret.nl** is reserved as a Custom Domain on this same Worker for now,
+  earmarked for a separate "demo portal" project the user is building. Right now it just
+  serves this same site — if that project needs to go live before this note is updated, either
+  move the Custom Domain to a new Worker or add hostname-based routing here.
 - Deployed as a Cloudflare Worker (not classic Pages) with Git integration — every push to
   `main` auto-builds and redeploys, live within ~30-60s. No dashboard step needed.
+- Domain/DNS/Custom Domain changes happen in the Cloudflare dashboard by hand — no API token
+  is configured here (`wrangler whoami` is unauthenticated), so these can only be talked
+  through, not done directly from a session.
 - `gh` (GitHub CLI) is installed and already authenticated as `ryanhavinga` — `git push` and
   `gh` commands work without any login prompt.
 
