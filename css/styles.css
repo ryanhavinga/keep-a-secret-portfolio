@@ -643,17 +643,17 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
   /* the one shadow left in the composition — soft, low, under the cover */
   box-shadow: 0 26px 50px -28px rgba(0, 0, 0, .85), inset 0 0 0 1px rgba(255, 255, 255, .07);
   transform: translate(-50%, -50%);
-  /* The hover lift rides on the standalone `translate` property rather than
+  /* The hover zoom rides on the standalone `scale` property rather than
      being folded into `transform`, which app.js owns and rewrites on every
      track change. Individual transform properties are applied outside
-     `transform`, so this is a clean screen-space nudge that survives
+     `transform`, so this is a clean, self-contained nudge that survives
      whatever placeCovers() writes — and it gets its own, much faster
      timing instead of inheriting the 1s carousel slide. */
-  translate: 0 0;
+  scale: 1;
   /* the horizontal carousel slide when switching tracks */
   transition: transform 1s var(--ease), opacity 1s var(--ease),
               filter 1s var(--ease), box-shadow .5s var(--ease),
-              translate .5s var(--ease);
+              scale .5s var(--ease);
   /* filter included alongside transform/opacity now that paintCover()
      writes a continuously-changing blur during a drag, not just a flip
      between two fixed values on a track change — same reasoning as
@@ -670,14 +670,21 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
    Gated behind `.covers:not(.is-changing)`: the small transport buttons sit
    directly under the artwork, so the pointer is usually still resting on a
    cover when a track change lands one under it — without this guard, that
-   cover's own hover lift/veil-fade would kick in on top of the slide
+   cover's own hover zoom/veil-fade would kick in on top of the slide
    already running, compounding into an extra "hop" the big arrows never
    showed (nothing to hover all the way out at the screen edge). `load()`
    toggles `.is-changing` for exactly as long as the slide below takes, so
    every trigger — big arrows, small buttons, keyboard, clicking a cover
-   directly — now produces the identical, single motion. */
-.covers:not(.is-changing) .cover:not(.cover--side):hover {
-  translate: 0 -12px;
+   directly — now produces the identical, single motion.
+
+   Also gated behind `:not(.is-dragging)` — without it, the pointer sitting
+   still over the centre cover mid-drag (any slow, deliberate drag does
+   this) fired this hover on top of placeCovers()'s own transform writes,
+   which is what read as the cover jumping vertically while being dragged
+   horizontally: two different properties, `scale`/`translate` here versus
+   `transform` there, both trying to place the same element at once. */
+.covers:not(.is-changing):not(.is-dragging) .cover:not(.cover--side):hover {
+  scale: 1.035;
   box-shadow: 0 40px 60px -30px rgba(0, 0, 0, .9), inset 0 0 0 1px rgba(255, 255, 255, .12);
 }
 .cover img {
@@ -708,6 +715,53 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
   text-transform: uppercase;
   line-height: 1;
   color: #fff;
+}
+
+/* ---------- volume flyout --------------------------------------
+   Lives inside .covers rather than .transport, so "alongside the
+   artwork" is literal — positioned off the cover stack itself, clear of
+   the tucked side covers peeking in from the right. Hidden by default and
+   scaled up from its own bottom edge when .vol-toggle opens it (js/app.js,
+   the Volume module) — a rise, not a generic fade, matching "slide out
+   upward" rather than just appearing in place. */
+.volume {
+  position: absolute;
+  right: clamp(-46px, -11cqw, -18px);
+  bottom: clamp(6px, 2.4cqw, 16px);
+  height: clamp(120px, 46cqw, 210px);
+  width: clamp(26px, 5.6cqw, 36px);
+  display: flex; align-items: center; justify-content: center;
+  transform-origin: 50% 100%;
+  transform: scaleY(0);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .45s var(--ease), opacity .3s ease;
+  /* above the covers — the active one reaches z-index:10 (js/app.js,
+     paintCover), which would otherwise sit on top of this when open */
+  z-index: 20;
+}
+.volume.is-open { transform: scaleY(1); opacity: 1; pointer-events: auto; }
+.volume__track {
+  position: relative;
+  width: 3px; height: 100%;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, .28);
+  touch-action: none;
+}
+.volume__fill {
+  position: absolute;
+  bottom: 0; left: 0; width: 100%; height: 100%;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, .6);
+}
+.volume__head {
+  position: absolute; left: 50%; bottom: 0;
+  width: 11px; height: 11px;
+  margin-left: -5.5px; margin-bottom: -5.5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 16px rgba(255, 255, 255, .8);
 }
 
 .player__meta {
@@ -746,13 +800,26 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
   color: rgba(255, 255, 255, .58);
   transition: opacity .5s var(--ease);
 }
+/* BPM/key — a quieter echo of the artist line beneath it, same size and
+   tracking scale as .wordmark__sub's relationship to the wordmark. Set by
+   app.js from CONFIG.tracks[i].bpm/key; hidden entirely if a track has
+   neither (fillContent already sets [hidden] in that case). */
+.player__stats {
+  margin: clamp(5px, 1.4cqw, 10px) 0 0;
+  font-size: clamp(6.5px, 1.7cqw, 9.5px);
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .36);
+  transition: opacity .5s var(--ease);
+}
 /* Out fast, in slow. The swap happens at the bottom of the fade, so the
    out leg has to be *finished* by then — it used to run 500ms against a
    260ms timer, which meant the words changed at half opacity, in plain
    sight. Now they are gone before they are replaced, and the new title
    takes its time coming back. */
 .player__meta.is-swapping .player__title,
-.player__meta.is-swapping .player__artist {
+.player__meta.is-swapping .player__artist,
+.player__meta.is-swapping .player__stats {
   opacity: 0;
   transition-duration: .22s;
 }
@@ -766,6 +833,9 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
    read as belonging to the timeline without adding to its width. */
 .timeline {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 1.6cqw, 12px);
   width: var(--art-w, 100%);
   max-width: 100%;
   margin: 0 auto;
@@ -774,7 +844,7 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  font-size: clamp(6.5px, 1.5cqw, 8.5px);
+  font-size: clamp(9px, 1.9cqw, 11px);
   letter-spacing: .14em;
   font-variant-numeric: tabular-nums;
   color: #fff;
@@ -782,7 +852,10 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
 }
 .timeline__t:first-child { right: calc(100% + clamp(8px, 2cqw, 16px)); }
 .timeline__t:last-child  { left:  calc(100% + clamp(8px, 2cqw, 16px)); }
-.scrub { position: relative; padding: 8px 0; touch-action: none; }
+/* the scrub track gives up a little of its own width to the volume button
+   beside it — .timeline's overall box stays exactly var(--art-w), matching
+   the artwork above it, same as before this button existed */
+.scrub { position: relative; flex: 1 1 auto; min-width: 0; padding: 8px 0; touch-action: none; }
 .scrub__track {
   height: 1px;
   border-radius: 1px;
@@ -812,6 +885,25 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
    between updates, and reads as lag the moment you take hold of it */
 .scrub.is-scrubbing .scrub__fill { transition: none; }
 .scrub.is-scrubbing .scrub__head { transition: transform .5s var(--ease); }
+
+/* ---------- volume ------------------------------------------
+   The toggle sits inline in the timeline row, sized off the same scale as
+   the time labels either side of it. The flyout it opens (.volume, in the
+   cover stack markup so it can sit beside the artwork) is styled further
+   down, alongside .covers. */
+.vol-toggle {
+  flex: 0 0 auto;
+  display: grid; place-items: center;
+  width: clamp(16px, 3.4cqw, 20px); height: clamp(16px, 3.4cqw, 20px);
+  color: rgba(255, 255, 255, .7);
+  transition: color .5s var(--ease);
+}
+.vol-toggle:hover, .vol-toggle.is-open { color: #fff; }
+.vol-toggle__icon {
+  width: 100%;
+  fill: currentColor; stroke: currentColor;
+  stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
+}
 
 .controls {
   display: flex; align-items: center; justify-content: center;
@@ -1048,14 +1140,13 @@ body.page-contact,
   text-shadow: 0 0 26px rgba(255, 255, 255, .4);
 }
 .contact__social {
-  font-size: 10px;
-  letter-spacing: .34em;
-  text-indent: .34em;
-  text-transform: uppercase;
-  color: var(--w-30);
-  transition: color .7s var(--ease);
+  display: block;
+  width: clamp(19px, 2vw, 24px);
+  opacity: .55;
+  transition: opacity .7s var(--ease), transform .7s var(--ease);
 }
-.contact__social:hover { color: var(--w-72); }
+.contact__social svg { width: 100%; fill: none; stroke: #fff; stroke-width: 1.5; }
+.contact__social:hover { opacity: 1; transform: scale(1.12); }
 
 /* ============================================================
    RESPONSIVE

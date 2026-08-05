@@ -95,11 +95,25 @@
 
         <!-- cover stack: the playing track, with its neighbours tucked behind.
              Built from CONFIG.tracks by app.js — click a side cover to switch. -->
-        <div class="covers" data-covers></div>
+        <div class="covers" data-covers>
+          <!-- volume flyout: slides up alongside the artwork when the
+               timeline's volume button (below) is toggled. Positioned here
+               rather than in .transport so it can sit beside the cover
+               stack regardless of how tall the meta/transport rows are. -->
+          <div class="volume" data-volume id="volume-flyout">
+            <div class="volume__track" data-vol-track role="slider" tabindex="0"
+                 aria-label="Volume" aria-orientation="vertical"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+              <div class="volume__fill" data-vol-fill></div>
+              <span class="volume__head" data-vol-head></span>
+            </div>
+          </div>
+        </div>
 
         <div class="player__meta">
           <h1 class="player__title" data-title>—</h1>
           <p class="player__artist" data-artist>Keep A Secret</p>
+          <p class="player__stats" data-stats hidden></p>
         </div>
 
         <div class="transport">
@@ -110,6 +124,14 @@
               <div class="scrub__track"><div class="scrub__fill" data-fill></div></div>
               <span class="scrub__head" data-head></span>
             </div>
+            <button class="vol-toggle" data-vol-toggle type="button"
+                    aria-label="Volume" aria-expanded="false" aria-controls="volume-flyout">
+              <svg class="vol-toggle__icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 9.5h3.4L12 6v12l-4.6-3.5H4Z"/>
+                <path d="M15.2 9.2a3.6 3.6 0 0 1 0 5.6" fill="none"/>
+                <path d="M17.4 6.8a7 7 0 0 1 0 10.4" fill="none"/>
+              </svg>
+            </button>
             <span class="timeline__t" data-duration>0:00</span>
           </div>
 

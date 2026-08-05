@@ -37,6 +37,8 @@ const CONFIG = {
      color   : fallback dominant colour of the artwork (hex).
                The player samples the real image at runtime; this is the safety net.
      duration: fallback length in seconds, used only when no audio file loads.
+     bpm/key : shown under the artist line. Set either to null to hide that line
+               entirely (e.g. for a track it doesn't make sense on).
   ------------------------------------------------------------ */
   tracks: [
     {
@@ -45,7 +47,9 @@ const CONFIG = {
       artwork: 'img/track-1.png',
       audio: 'audio/track 1 - Nergens Liever.m4a',
       color: '#9d386f',
-      duration: 194
+      duration: 194,
+      bpm: 122,
+      key: 'A Minor'
     },
     {
       title: 'Boemerang',
@@ -53,7 +57,9 @@ const CONFIG = {
       artwork: 'img/track-2.png',
       audio: 'audio/track 2 - Boemerang.m4a',
       color: '#c465de',
-      duration: 181
+      duration: 181,
+      bpm: 128,
+      key: 'F# Minor'
     },
     {
       title: 'Beter dan ooit',
@@ -61,7 +67,9 @@ const CONFIG = {
       artwork: 'img/track-3.png',
       audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',
       color: '#022137',
-      duration: 208
+      duration: 208,
+      bpm: 94,
+      key: 'C Major'
     },
     {
       title: 'Alles Waar Je Spijt Van Hebt',
@@ -70,7 +78,9 @@ const CONFIG = {
       audio: 'audio/track 4 - Alles Waar Je Spijt Van Hebt.m4a',
       color: '#0e0e10',
       duration: 133,
-      demo: true
+      demo: true,
+      bpm: 140,
+      key: 'D Minor'
     }
   ],
 

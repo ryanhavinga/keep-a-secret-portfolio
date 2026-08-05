@@ -280,6 +280,19 @@
         cursor.style.opacity = 0;
         cursor.style.transition = 'opacity .8s ease';
         requestAnimationFrame(frame);
+      },
+      /* Re-arms the "wait for a real move before showing the cursor" gate.
+         Without this, the mouse movement it almost always takes to click
+         the gate's own Enter button already counted as "live" — so the
+         instant the room appeared, the cursor was already showing right
+         where that click happened, which often lands on or near the
+         artwork rather than wherever the visitor moves next. Called once
+         the room is revealed (js/app.js boot, via Gate.init's `enter`). */
+      hideCursorUntilMove() {
+        if (reduced || !fine) return;
+        live = false;
+        halo.classList.remove('is-live');
+        cursor.style.opacity = 0;
       }
     };
   })();
@@ -447,11 +460,13 @@
     const audio = $('[data-audio]');
     const el = {
       covers: $('[data-covers]'), meta: $('.player__meta'),
-      title: $('[data-title]'), artist: $('[data-artist]'),
+      title: $('[data-title]'), artist: $('[data-artist]'), stats: $('[data-stats]'),
       fill: $('[data-fill]'), head: $('[data-head]'),
       cur: $('[data-current]'), dur: $('[data-duration]'),
       play: $('[data-play]'), prev: $('[data-prev]'), next: $('[data-next]'),
-      scrub: $('[data-scrub]'), note: $('[data-note]')
+      scrub: $('[data-scrub]'), note: $('[data-note]'),
+      volToggle: $('[data-vol-toggle]'), volume: $('[data-volume]'),
+      volTrack: $('[data-vol-track]'), volFill: $('[data-vol-fill]'), volHead: $('[data-vol-head]')
     };
 
     let tracks = [], covers = [], i = 0,
@@ -624,7 +639,10 @@
     /* build one cover per track — the artwork is a plain <img>, so swapping a
        cover later is just a new path in js/config.js */
     function buildCovers() {
-      el.covers.innerHTML = '';
+      /* only the cover buttons, not innerHTML = '' — .volume (the flyout
+         slider) lives in this same container so it can sit beside the
+         artwork, and a blanket clear would delete it along with them. */
+      $$('.cover', el.covers).forEach(c => c.remove());
       lastD = null;   // rebuilt covers have no history — re-derive on next placeCovers
       covers = tracks.map((t, n) => {
         const c = document.createElement('button');
@@ -779,7 +797,11 @@
        index to the covers' continuous `d` slots. `coverMoved` tells a
        real drag apart from a tap on a side cover, which still switches
        tracks the old way (the existing click listener in buildCovers). */
-    const DRAG_SLOT = .9;    // fraction of the stack's width that counts as one full slot of drag
+    /* fraction of the stack's width that counts as one full slot of drag —
+       lower is more sensitive. .9 read as heavy/unresponsive, needing
+       almost the artwork's full width dragged before anything moved;
+       matched closer to Carousel's own .62 instead. */
+    const DRAG_SLOT = .58;
     const DRAG_COMMIT = .18; // matches Carousel's own commit threshold
 
     function coverDown(e) {
@@ -882,6 +904,12 @@
       swapTimer = setTimeout(() => {
         el.title.textContent = t.title;
         el.artist.textContent = t.artist || '';
+        if (t.bpm && t.key) {
+          el.stats.textContent = `${t.bpm} BPM · ${t.key}`;
+          el.stats.hidden = false;
+        } else {
+          el.stats.hidden = true;
+        }
         fitTitle();
         el.meta.classList.remove('is-swapping');
       }, 240);
@@ -1055,6 +1083,35 @@
       paint();
     }
 
+    /* ---- volume -----------------------------------------------
+       A vertical fader in the flyout .volume opens beside the artwork
+       (js/app.js Volume wiring in init(), styles in css/styles.css). Reads
+       bottom-up, like a physical fader: 0% at the bottom, 100% at the top. */
+    let volDragging = false;
+    function setVolume(v, { persist = true } = {}) {
+      v = clamp(v, 0, 1);
+      audio.volume = v;
+      const pct = `${(v * 100).toFixed(1)}%`;
+      el.volFill.style.height = pct;
+      el.volHead.style.bottom = pct;
+      el.volTrack.setAttribute('aria-valuenow', String(Math.round(v * 100)));
+      if (persist) { try { localStorage.setItem('kas-volume', String(v)); } catch (_) {} }
+    }
+    function volumeFromEvent(e) {
+      const r = el.volTrack.getBoundingClientRect();
+      setVolume((r.bottom - e.clientY) / r.height);
+    }
+    function openVolume() {
+      el.volume.classList.add('is-open');
+      el.volToggle.classList.add('is-open');
+      el.volToggle.setAttribute('aria-expanded', 'true');
+    }
+    function closeVolume() {
+      el.volume.classList.remove('is-open');
+      el.volToggle.classList.remove('is-open');
+      el.volToggle.setAttribute('aria-expanded', 'false');
+    }
+
     return {
       init(list) {
         tracks = list;
@@ -1112,6 +1169,41 @@
         addEventListener('keydown', e => {
           if (e.code === 'Space' && Carousel.current() === 'player'
               && !e.target.closest('a, button')) { e.preventDefault(); toggle(); }
+        });
+
+        /* volume */
+        let savedVolume = 1;
+        try {
+          const sv = parseFloat(localStorage.getItem('kas-volume'));
+          if (isFinite(sv)) savedVolume = clamp(sv, 0, 1);
+        } catch (_) {}
+        setVolume(savedVolume, { persist: false });
+
+        el.volToggle.addEventListener('click', e => {
+          e.stopPropagation();
+          if (el.volume.classList.contains('is-open')) closeVolume(); else openVolume();
+        });
+        /* closes on any press outside the flyout or its toggle — pointerdown
+           rather than click, so it shuts the instant a drag starts
+           elsewhere instead of waiting for that gesture to finish */
+        document.addEventListener('pointerdown', e => {
+          if (!el.volume.classList.contains('is-open')) return;
+          if (e.target.closest('.volume, [data-vol-toggle]')) return;
+          closeVolume();
+        });
+        el.volTrack.addEventListener('pointerdown', e => {
+          volDragging = true;
+          el.volTrack.setPointerCapture?.(e.pointerId);
+          volumeFromEvent(e);
+        });
+        el.volTrack.addEventListener('pointermove', e => volDragging && volumeFromEvent(e));
+        el.volTrack.addEventListener('pointerup', e => {
+          volDragging = false;
+          el.volTrack.releasePointerCapture?.(e.pointerId);
+        });
+        el.volTrack.addEventListener('keydown', e => {
+          if (e.key === 'ArrowUp')   { e.preventDefault(); setVolume(audio.volume + .05); }
+          if (e.key === 'ArrowDown') { e.preventDefault(); setVolume(audio.volume - .05); }
         });
 
         /* the artwork's width is a flex-layout result (driven by available
@@ -1388,7 +1480,9 @@
 
   /* Everything behind the gate is already on screen, at full opacity, the
      instant it opens — the only thing left to run is the sub-line
-     resolving, which starts immediately either way. The lamp is the one
-     thing reserved for an actual password entry. */
-  Gate.init(playSubIntro, playEntranceLamp);
+     resolving, which starts immediately either way, and re-arming the
+     cursor so it waits for a fresh move inside the room rather than
+     showing up already wherever the gate's Enter button was clicked. The
+     lamp is the one thing reserved for an actual password entry. */
+  Gate.init(() => { playSubIntro(); Env.hideCursorUntilMove(); }, playEntranceLamp);
 })();
