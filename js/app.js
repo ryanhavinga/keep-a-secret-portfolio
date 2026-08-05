@@ -788,6 +788,16 @@
       coverDragging = true; coverCaptured = false; coverMoved = 0;
       coverStartX = e.clientX; dragExtra = 0; coverPid = e.pointerId;
     }
+    /* Pointermove can fire far faster than the screen redraws — a real
+       mouse or trackpad easily beats 60Hz — and placeCovers() writes
+       transform/opacity/filter on every cover each time it runs. Without
+       this, a fast drag was queuing up several full repaints per frame
+       for paint work the previous one hadn't even reached the screen
+       for yet, which is exactly the kind of self-inflicted lag that also
+       drags the cursor down with it. Only the latest pointer position
+       before each frame ever needs painting, so pending moves collapse
+       into one instead of piling up. */
+    let coverMoveQueued = false;
     function coverMove(e) {
       if (!coverDragging) return;
       const dx = e.clientX - coverStartX;
@@ -800,7 +810,12 @@
       }
       const w = el.covers.offsetWidth || 1;
       dragExtra = clamp(dx / (w * DRAG_SLOT), -1, 1);
-      placeCovers(dragExtra);
+      if (coverMoveQueued) return;
+      coverMoveQueued = true;
+      requestAnimationFrame(() => {
+        coverMoveQueued = false;
+        if (coverCaptured) placeCovers(dragExtra);
+      });
     }
     function coverUp(e) {
       if (!coverDragging) return;

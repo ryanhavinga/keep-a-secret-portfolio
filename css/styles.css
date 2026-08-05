@@ -654,7 +654,11 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
   transition: transform 1s var(--ease), opacity 1s var(--ease),
               filter 1s var(--ease), box-shadow .5s var(--ease),
               translate .5s var(--ease);
-  will-change: transform, opacity;
+  /* filter included alongside transform/opacity now that paintCover()
+     writes a continuously-changing blur during a drag, not just a flip
+     between two fixed values on a track change — same reasoning as
+     .light-surge's will-change, just for the covers. */
+  will-change: transform, opacity, filter;
   -webkit-tap-highlight-color: transparent;
 }
 /* Only the playing cover lifts to the cursor. The two behind it sit mostly
