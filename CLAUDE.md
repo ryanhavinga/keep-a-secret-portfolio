@@ -7,8 +7,10 @@ This site is live and connected to GitHub + Cloudflare. Read this before making 
 - **GitHub repo:** https://github.com/ryanhavinga/keep-a-secret-portfolio (public)
 - **Live site:** https://keepasecret.nl — custom domain, bought through Yourname, DNS
   delegated to Cloudflare (nameservers `noor.ns.cloudflare.com` / `rustam.ns.cloudflare.com`).
-  `https://keepasecret.ryanhavinga2003.workers.dev/` still works too (the Worker's default
-  URL) but keepasecret.nl is the one to give out.
+  This is the only live URL — the Worker's default `keepasecret.ryanhavinga2003.workers.dev`
+  URL is deliberately disabled (Worker URL toggle off in Domains & Routes), and GitHub Pages
+  is disabled too (was briefly, accidentally live at the same domain via a `CNAME` file —
+  removed; Pages source is now "None").
 - **www.keepasecret.nl** should redirect to the bare domain via a Cloudflare Redirect Rule
   (Rules → Redirect Rules) plus a proxied `www` CNAME in DNS — set up alongside the custom
   domain, dashboard-side; nothing in this repo depends on it.
