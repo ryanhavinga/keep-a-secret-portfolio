@@ -160,14 +160,13 @@
   const Env = (() => {
     const grain = $('[data-grain]');
     const halo  = $('[data-halo]');
-    const cursor = $('[data-cursor]');
-    const dot   = $('.cursor__dot');
 
     const HALO = 260;
-    const target = { x: innerWidth / 2, y: innerHeight / 2 };
-    const soft   = { x: target.x, y: target.y };   // dot — slight delay
-    const slow   = { x: target.x, y: target.y };   // ring + halo — more delay
-    let gctx, hctx, pattern, haloPattern, haloMask, last = 0, live = false;
+    /* the halo trails further behind than the dot does — the dot itself
+       belongs to js/cursor.js now, which owns the pointer position and
+       the one rAF loop both of these run on */
+    const slow  = { x: innerWidth / 2, y: innerHeight / 2 };
+    let gctx, hctx, pattern, haloPattern, haloMask, last = 0;
 
     const tile = (alpha, size = 128) => {
       const c = document.createElement('canvas');
@@ -232,16 +231,17 @@
       hctx.globalCompositeOperation = 'source-over';
     }
 
-    /* the whole per-frame budget: three transform writes, no pixels
-       touched, nothing read back off the DOM */
-    function frame(t) {
-      soft.x = lerp(soft.x, target.x, .28);            // the premium lag
-      soft.y = lerp(soft.y, target.y, .28);
-      slow.x = lerp(slow.x, target.x, .16);
-      slow.y = lerp(slow.y, target.y, .16);
+    /* The whole per-frame budget: two transform writes, no pixels
+       touched, nothing read back off the DOM. Runs on js/cursor.js's
+       loop — the same smoothing factor as before, just re-derived from
+       real elapsed time so it holds up at any refresh rate. */
+    const HALO_EASE = .16, STEP = 1000 / 60;
+    const smooth = (from, to, dt) => from + (to - from) * (1 - Math.pow(1 - HALO_EASE, dt / STEP));
 
-      if (fine) {
-        dot.style.transform  = `translate3d(${soft.x}px, ${soft.y}px, 0) translate(-50%, -50%)`;
+    function frame(target, dt, t) {
+      if (fine && halo) {
+        slow.x = smooth(slow.x, target.x, dt);
+        slow.y = smooth(slow.y, target.y, dt);
         halo.style.transform = `translate3d(${slow.x - HALO / 2}px, ${slow.y - HALO / 2}px, 0)`;
       }
 
@@ -250,50 +250,21 @@
         grain.style.transform =
           `translate3d(${-Math.random() * GRAIN_PAD}px, ${-Math.random() * GRAIN_PAD}px, 0)`;
       }
-      requestAnimationFrame(frame);
     }
 
     return {
       init() {
-        if (reduced || !fine) {
-          cursor.remove();
-          document.body.style.cursor = 'auto';
-          if (reduced) return;
-        }
+        if (reduced) return;   // cursor.js sits out too, so there is no loop to hook
         sizeGrain();
         addEventListener('resize', sizeGrain);
         if (fine) setupHalo();
 
-        addEventListener('pointermove', e => {
-          target.x = e.clientX; target.y = e.clientY;
-          if (!live) { live = true; halo.classList.add('is-live'); cursor.style.opacity = 1; }
-        }, { passive: true });
-
-        addEventListener('pointerdown', () => document.body.classList.add('is-pressed'));
-        addEventListener('pointerup',   () => document.body.classList.remove('is-pressed'));
-
-        document.addEventListener('pointerover', e => {
-          const hot = e.target.closest?.('button, a, .scrub, .block:not(.is-active)');
-          document.body.classList.toggle('is-pointing', !!hot);
-        });
-
-        cursor.style.opacity = 0;
-        cursor.style.transition = 'opacity .8s ease';
-        requestAnimationFrame(frame);
+        /* the halo fades in and out with the dot rather than tracking a
+           second copy of the same "has the pointer moved yet" state */
+        Cursor.onLive(v => halo?.classList.toggle('is-live', v));
+        Cursor.onFrame(frame);
       },
-      /* Re-arms the "wait for a real move before showing the cursor" gate.
-         Without this, the mouse movement it almost always takes to click
-         the gate's own Enter button already counted as "live" — so the
-         instant the room appeared, the cursor was already showing right
-         where that click happened, which often lands on or near the
-         artwork rather than wherever the visitor moves next. Called once
-         the room is revealed (js/app.js boot, via Gate.init's `enter`). */
-      hideCursorUntilMove() {
-        if (reduced || !fine) return;
-        live = false;
-        halo.classList.remove('is-live');
-        cursor.style.opacity = 0;
-      }
+      hideCursorUntilMove() { Cursor.hideUntilMove(); }
     };
   })();
 
@@ -460,7 +431,7 @@
     const audio = $('[data-audio]');
     const el = {
       covers: $('[data-covers]'), meta: $('.player__meta'),
-      title: $('[data-title]'), artist: $('[data-artist]'), stats: $('[data-stats]'),
+      title: $('[data-title]'), artist: $('[data-artist]'),
       fill: $('[data-fill]'), head: $('[data-head]'),
       cur: $('[data-current]'), dur: $('[data-duration]'),
       play: $('[data-play]'), prev: $('[data-prev]'), next: $('[data-next]'),
@@ -525,6 +496,28 @@
         size = Math.max(10, size * (max / natural) * .995);
         el.title.style.fontSize = `${size}px`;
       }
+    }
+
+    /* Artist, BPM and key on one line — "Gilles * 122 BPM * A Minor".
+       Built out of nodes rather than a template string so a title with an
+       & or a < in it can never be read as markup, and so each separator
+       can be its own element: it is dimmer than the text around it, and
+       aria-hidden, so the line is still read aloud as three plain facts
+       rather than with an "asterisk" between each one. Any of the three
+       being absent just drops that segment and its separator. */
+    function writeMeta(t) {
+      const bits = [t.artist, t.bpm ? `${t.bpm} BPM` : null, t.key].filter(Boolean);
+      el.artist.textContent = '';
+      bits.forEach((bit, n) => {
+        if (n) {
+          const sep = document.createElement('span');
+          sep.className = 'player__sep';
+          sep.setAttribute('aria-hidden', 'true');
+          sep.textContent = '*';
+          el.artist.appendChild(sep);
+        }
+        el.artist.appendChild(document.createTextNode(bit));
+      });
     }
 
     function applyLight({ panel, ring, deep, b, c }) {
@@ -903,13 +896,7 @@
          where nothing can see it */
       swapTimer = setTimeout(() => {
         el.title.textContent = t.title;
-        el.artist.textContent = t.artist || '';
-        if (t.bpm && t.key) {
-          el.stats.textContent = `${t.bpm} BPM · ${t.key}`;
-          el.stats.hidden = false;
-        } else {
-          el.stats.hidden = true;
-        }
+        writeMeta(t);
         fitTitle();
         el.meta.classList.remove('is-swapping');
       }, 240);

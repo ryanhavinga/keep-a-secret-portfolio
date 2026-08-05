@@ -11,6 +11,13 @@
 </head>
 <body class="page-contact">
 
+<!-- the same lagging cursor the portal has — js/cursor.js at the foot of
+     this page drives it, and only hides the system pointer once it is
+     actually running -->
+<div class="cursor" data-cursor aria-hidden="true">
+  <span class="cursor__dot"></span>
+</div>
+
 <header class="contact__bar">
   <a class="contact__mark" href="index.html">Keep A Secret</a>
   <a class="contact__back" href="index.html">Back</a>
@@ -31,5 +38,6 @@
   </div>
 </main>
 
+<script src="js/cursor.js"></script>
 </body>
 </html>

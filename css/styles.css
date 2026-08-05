@@ -386,8 +386,13 @@ body.is-unlocked .leds {
 
 /* ---------- LAGGING CURSOR --------------------------------
    Above the gate, so the room still has its own cursor while you are
-   standing outside it. */
-.cursor { position: fixed; top: 0; left: 0; z-index: 110; pointer-events: none; }
+   standing outside it. Driven by js/cursor.js, which every page loads. */
+.cursor {
+  position: fixed; top: 0; left: 0; z-index: 110;
+  pointer-events: none;
+  opacity: 0;                       /* until the pointer actually moves */
+  transition: opacity .8s ease;
+}
 .cursor__dot {
   position: absolute; top: 0; left: 0;
   width: 6px; height: 6px;
@@ -395,15 +400,33 @@ body.is-unlocked .leds {
   background: #fff;
   box-shadow: 0 0 14px rgba(255, 255, 255, .75);
   transform: translate(-50%, -50%);
-  will-change: transform;
-  transition: width .6s var(--ease), height .6s var(--ease), opacity .5s ease;
+  /* The hover/press states ride the standalone `scale` property, not
+     width/height. Animating the box meant a layout pass on every frame
+     of a .6s transition, on the one element that is also being moved
+     every frame — scale is a compositor-only change, and it rides
+     outside `transform`, which cursor.js rewrites per frame. */
+  scale: 1;
+  will-change: transform, scale;
+  transition: scale .6s var(--ease);
 }
-body.is-pointing .cursor__dot { width: 13px; height: 13px; }
-body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
+body.is-pointing .cursor__dot { scale: 2.17; }   /* 13px at the 6px base */
+body.is-pressed  .cursor__dot { scale: .83; }    /* 5px  — must stay after is-pointing */
 
-@media (hover: hover) and (pointer: fine) {
-  body, a, button, .block { cursor: none; }
-}
+/* The system cursor only goes away once js/cursor.js has confirmed a
+   replacement is actually running (it adds `has-cursor`). Hiding it from
+   a bare media query left any page where that script failed to run with
+   no pointer at all. The descendant selectors also have to out-specify
+   component-level `cursor: pointer` rules further down — .cover--side is
+   a <button> and used to win, which put a real arrow on top of the dot
+   whenever you hovered a side cover. */
+html.has-cursor,
+html.has-cursor a,
+html.has-cursor button,
+html.has-cursor .block,
+html.has-cursor .scrub,
+html.has-cursor .cover,
+html.has-cursor .volume__track { cursor: none; }
+
 @media (hover: none), (pointer: coarse) {
   .cursor, .env__halo { display: none; }
 }
@@ -800,17 +823,20 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
   color: rgba(255, 255, 255, .58);
   transition: opacity .5s var(--ease);
 }
-/* BPM/key — a quieter echo of the artist line beneath it, same size and
-   tracking scale as .wordmark__sub's relationship to the wordmark. Set by
-   app.js from CONFIG.tracks[i].bpm/key; hidden entirely if a track has
-   neither (fillContent already sets [hidden] in that case). */
-.player__stats {
-  margin: clamp(5px, 1.4cqw, 10px) 0 0;
-  font-size: clamp(6.5px, 1.7cqw, 9.5px);
-  letter-spacing: .28em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, .36);
-  transition: opacity .5s var(--ease);
+/* The separator between artist, BPM and key, which share one line —
+   dimmer than the text either side so it reads as punctuation rather
+   than as a third thing being said. Nudged up because an asterisk sits
+   on the cap line in most faces, and this line is all caps. */
+.player__sep {
+  display: inline-block;
+  margin: 0 .5em;
+  /* Pulled down onto the optical middle of the caps. An asterisk is
+     drawn up at the cap line for use as a superscript footnote mark, so
+     left alone it hangs off the top of an all-caps line like this one —
+     measured against the cap height at .72em, its own centre needs to
+     come down about this far to sit level with the letters. */
+  vertical-align: -.22em;
+  color: rgba(255, 255, 255, .3);
 }
 /* Out fast, in slow. The swap happens at the bottom of the fade, so the
    out leg has to be *finished* by then — it used to run 500ms against a
@@ -818,8 +844,7 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
    sight. Now they are gone before they are replaced, and the new title
    takes its time coming back. */
 .player__meta.is-swapping .player__title,
-.player__meta.is-swapping .player__artist,
-.player__meta.is-swapping .player__stats {
+.player__meta.is-swapping .player__artist {
   opacity: 0;
   transition-duration: .22s;
 }
@@ -1054,12 +1079,6 @@ body.is-pressed  .cursor__dot { width: 5px; height: 5px; }
    the same type, none of the lamp. One centred block, a hairline above
    it, and a header small enough to stay out of the way.
    ============================================================ */
-/* the portal hides the system cursor and draws its own; this page does
-   not load app.js, so it has to hand the real one back or there would be
-   no pointer at all */
-body.page-contact,
-.page-contact a { cursor: auto; }
-
 .page-contact {
   min-height: 100vh;
   min-height: 100dvh;
