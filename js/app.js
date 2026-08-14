@@ -973,8 +973,19 @@
         audio.load();
         audio.addEventListener('loadedmetadata', () => {
           if (n !== i) return;
-          if (at) audio.currentTime = at;
-          if (wasPlaying) audio.play().catch(() => {});
+          const resume = () => { if (wasPlaying) audio.play().catch(() => {}); };
+          /* Resuming right after setting currentTime, without waiting for the
+             seek to actually land, is a race: the browser can start playback
+             from 0 instead, which is exactly what this function exists to
+             avoid — the track would audibly jump back to the beginning the
+             moment the background download finished. `seeked` is the
+             browser's own confirmation the position took. */
+          if (at) {
+            audio.addEventListener('seeked', resume, { once: true });
+            audio.currentTime = at;
+          } else {
+            resume();
+          }
         }, { once: true });
       });
     }

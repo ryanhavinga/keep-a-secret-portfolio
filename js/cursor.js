@@ -91,8 +91,18 @@ window.Cursor = (() => {
       });
 
       /* Gone the moment the pointer leaves the page or the window loses
-         focus, rather than left stranded wherever it last was. */
+         focus, rather than left stranded wherever it last was. Both
+         listeners exist because neither is reliable alone: `pointerleave`
+         on `document` can miss a fast exit right at a viewport edge (the
+         common case — flicking the mouse up toward the browser's own tabs
+         or window controls), silently leaving the dot parked in whatever
+         corner it was heading for. `pointerout` with a null `relatedTarget`
+         is the browser's own "there is nothing after this, the pointer left
+         the page" signal and catches exactly that gap. */
       document.addEventListener('pointerleave', () => setLive(false));
+      document.documentElement.addEventListener('pointerout', e => {
+        if (!e.relatedTarget) setLive(false);
+      });
       addEventListener('blur', () => setLive(false));
     }
 
