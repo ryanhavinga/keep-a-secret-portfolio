@@ -92,9 +92,19 @@ window.Cursor = (() => {
       addEventListener('pointerup',   () => document.body.classList.remove('is-pressed'));
 
       /* what counts as "there is something here to click" — also what
-         tightens the dot's tracking, see EASE_HOT above */
+         tightens the dot's tracking, see EASE_HOT above. Snapped rather
+         than eased into that tighter tracking: approaching a button or the
+         artwork always leaves the dot trailing slightly behind (ordinary
+         EASE lag), and switching to EASE_HOT right at that instant doesn't
+         remove that gap, it just closes it faster — which is a sudden,
+         visible lurch toward the pointer exactly when hovering starts.
+         Confirmed by frame-diffing an actual recording of it: a steady
+         ~35px/frame sweep spiked to 230px then 376px in the two frames
+         after crossing onto the artwork. Snapping removes the gap outright
+         instead of animating it away. */
       document.addEventListener('pointerover', e => {
         hot = !!e.target.closest?.('button, a, .scrub, .volume__track, .block:not(.is-active)');
+        if (hot) { soft.x = target.x; soft.y = target.y; }
         document.body.classList.toggle('is-pointing', hot);
       });
 
