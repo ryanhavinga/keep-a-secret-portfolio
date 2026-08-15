@@ -19,25 +19,18 @@ window.Cursor = (() => {
   const fine    = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   const el  = document.querySelector('[data-cursor]');
-  const dot = el && el.querySelector('.cursor__dot');
 
   /* the real pointer, and the dot chasing it a beat behind */
   const target = { x: innerWidth / 2, y: innerHeight / 2 };
   const soft   = { x: target.x, y: target.y };
 
-  let live = false, hot = false, lastT = 0;
+  let live = false, lastT = 0;
   const frameFns = [], liveFns = [];
 
   /* How hard the dot is pulled toward the pointer each 60Hz frame. The
      lag is the whole character of it — high enough to feel attached,
-     low enough to trail — but at EASE's normal strength that trail is
-     tens of pixels wide during an ordinary fast sweep of the mouse, which
-     reads as atmospheric over bare background and as the dot getting
-     dragged around behind you the moment you're trying to land on
-     something — a button, the artwork. EASE_HOT only applies while
-     hovering exactly that kind of target, so the trail stays for the
-     cinematic moments and gets out of the way for the interactive ones. */
-  const EASE = .28, EASE_HOT = .6;
+     low enough to trail. */
+  const EASE = .28;
   const STEP = 1000 / 60;
 
   /* Frame-rate independent, which a plain lerp(a, b, .28) is not: that
@@ -46,7 +39,7 @@ window.Cursor = (() => {
      ran long. Re-deriving the factor from how much time actually passed
      makes the motion identical everywhere and immune to a dropped
      frame — the two things that read as "the cursor is janky". */
-  const smooth = (from, to, dt, ease) => from + (to - from) * (1 - Math.pow(1 - ease, dt / STEP));
+  const smooth = (from, to, dt) => from + (to - from) * (1 - Math.pow(1 - EASE, dt / STEP));
 
   function frame(t) {
     /* Clamped: coming back to a backgrounded tab hands over a dt of
@@ -55,11 +48,22 @@ window.Cursor = (() => {
     const dt = lastT ? Math.min(t - lastT, 64) : STEP;
     lastT = t;
 
-    const ease = hot ? EASE_HOT : EASE;
-    soft.x = smooth(soft.x, target.x, dt, ease);
-    soft.y = smooth(soft.y, target.y, dt, ease);
+    soft.x = smooth(soft.x, target.x, dt);
+    soft.y = smooth(soft.y, target.y, dt);
 
-    if (dot) dot.style.transform = `translate3d(${soft.x}px, ${soft.y}px, 0) translate(-50%, -50%)`;
+    /* The position goes on the WRAPPER, never on .cursor__dot — the dot is
+       the element carrying the hover/press `scale`, and the individual
+       `scale` property does not compose with `transform` side by side: the
+       used matrix is translate × rotate × scale × transform, so `scale`
+       multiplies whatever translation `transform` carries. With the
+       position written here, hovering anything clickable (every cover is a
+       <button>) put the dot at 2.17 × its real coordinates — measured
+       directly: asking for x=1000 rendered at 2166.5. That is the cursor
+       being dragged right and down, further the further right you were,
+       until it left the viewport entirely and read as stuck in a corner,
+       smeared over the .6s the scale transition takes. The wrapper has no
+       scale of its own, so its translation is left alone. */
+    if (el) el.style.transform = `translate3d(${soft.x}px, ${soft.y}px, 0)`;
 
     for (let n = 0; n < frameFns.length; n++) frameFns[n](target, dt, t);
     requestAnimationFrame(frame);
@@ -91,47 +95,15 @@ window.Cursor = (() => {
       addEventListener('pointerdown', () => document.body.classList.add('is-pressed'));
       addEventListener('pointerup',   () => document.body.classList.remove('is-pressed'));
 
-      /* what counts as "there is something here to click" — also what
-         tightens the dot's tracking, see EASE_HOT above. Snapped rather
-         than eased into that tighter tracking: approaching a button or the
-         artwork always leaves the dot trailing slightly behind (ordinary
-         EASE lag), and switching to EASE_HOT right at that instant doesn't
-         remove that gap, it just closes it faster — which is a sudden,
-         visible lurch toward the pointer exactly when hovering starts.
-         Confirmed by frame-diffing an actual recording of it: a steady
-         ~35px/frame sweep spiked to 230px then 376px in the two frames
-         after crossing onto the artwork. Snapping removes the gap outright
-         instead of animating it away. */
+      /* what counts as "there is something here to click" */
       document.addEventListener('pointerover', e => {
-        hot = !!e.target.closest?.('button, a, .scrub, .volume__track, .block:not(.is-active)');
-        if (hot) { soft.x = target.x; soft.y = target.y; }
-        document.body.classList.toggle('is-pointing', hot);
+        const hot = e.target.closest?.('button, a, .scrub, .volume__track, .block:not(.is-active)');
+        document.body.classList.toggle('is-pointing', !!hot);
       });
 
       /* Gone the moment the pointer leaves the page or the window loses
-         focus, rather than left stranded wherever it last was. Both
-         listeners exist because neither is reliable alone: `pointerleave`
-         on `document` can miss a fast exit right at a viewport edge (the
-         common case — flicking the mouse up toward the browser's own tabs
-         or window controls), silently leaving the dot parked in whatever
-         corner it was heading for. `pointerout` with a null `relatedTarget`
-         is the browser's own "there is nothing after this, the pointer left
-         the page" signal and catches exactly that gap — but it bubbles from
-         every element, and Chrome can report a null `relatedTarget` for an
-         entirely ordinary hop onto a `pointer-events: none` child (every
-         cover's `<img>`, for one) without the pointer having gone anywhere
-         near the edge. Trusting that blindly hid the dot mid-hover over the
-         artwork, and the next move snapped it back instead of easing —
-         which is what read as the dot getting yanked toward wherever the
-         mouse was heading. Requiring the pointer to actually be at the
-         viewport edge keeps the real exit case covered without the false
-         positives from ordinary hovering. */
+         focus, rather than left stranded wherever it last was. */
       document.addEventListener('pointerleave', () => setLive(false));
-      document.documentElement.addEventListener('pointerout', e => {
-        const atEdge = e.clientX <= 0 || e.clientY <= 0
-          || e.clientX >= innerWidth - 1 || e.clientY >= innerHeight - 1;
-        if (!e.relatedTarget && atEdge) setLive(false);
-      });
       addEventListener('blur', () => setLive(false));
     }
 

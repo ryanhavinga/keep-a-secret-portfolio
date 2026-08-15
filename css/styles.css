@@ -387,26 +387,37 @@ body.is-unlocked .leds {
 /* ---------- LAGGING CURSOR --------------------------------
    Above the gate, so the room still has its own cursor while you are
    standing outside it. Driven by js/cursor.js, which every page loads. */
+/* The wrapper is what gets moved — cursor.js writes the pointer position
+   here as a translate3d, and nothing else on this element transforms it.
+   That separation is load-bearing, see the note on .cursor__dot below. */
 .cursor {
   position: fixed; top: 0; left: 0; z-index: 110;
   pointer-events: none;
   opacity: 0;                       /* until the pointer actually moves */
   transition: opacity .8s ease;
+  will-change: transform;
 }
 .cursor__dot {
-  position: absolute; top: 0; left: 0;
+  /* Centred on the wrapper's origin by offsetting the box itself half its
+     own size, rather than by a `transform: translate(-50%, -50%)`. That
+     matters: `scale` multiplies any translation `transform` carries, so a
+     translate-based centring shifts by a few px as the dot grows and
+     shrinks — a small drift, but drift of exactly the kind this element
+     must not have, and it would animate over the .6s below. Offsetting the
+     box leaves `scale` with nothing to multiply: the element's own centre
+     sits on the origin, and scaling about that centre keeps it there at
+     every size. The pointer position is never written here at all — it
+     goes on the wrapper, see js/cursor.js. */
+  position: absolute; top: -3px; left: -3px;
   width: 6px; height: 6px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 0 14px rgba(255, 255, 255, .75);
-  transform: translate(-50%, -50%);
   /* The hover/press states ride the standalone `scale` property, not
      width/height. Animating the box meant a layout pass on every frame
-     of a .6s transition, on the one element that is also being moved
-     every frame — scale is a compositor-only change, and it rides
-     outside `transform`, which cursor.js rewrites per frame. */
+     of a .6s transition — scale is a compositor-only change. */
   scale: 1;
-  will-change: transform, scale;
+  will-change: scale;
   transition: scale .6s var(--ease);
 }
 body.is-pointing .cursor__dot { scale: 2.17; }   /* 13px at the 6px base */
