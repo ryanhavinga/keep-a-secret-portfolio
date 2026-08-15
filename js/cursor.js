@@ -98,10 +98,21 @@ window.Cursor = (() => {
          or window controls), silently leaving the dot parked in whatever
          corner it was heading for. `pointerout` with a null `relatedTarget`
          is the browser's own "there is nothing after this, the pointer left
-         the page" signal and catches exactly that gap. */
+         the page" signal and catches exactly that gap — but it bubbles from
+         every element, and Chrome can report a null `relatedTarget` for an
+         entirely ordinary hop onto a `pointer-events: none` child (every
+         cover's `<img>`, for one) without the pointer having gone anywhere
+         near the edge. Trusting that blindly hid the dot mid-hover over the
+         artwork, and the next move snapped it back instead of easing —
+         which is what read as the dot getting yanked toward wherever the
+         mouse was heading. Requiring the pointer to actually be at the
+         viewport edge keeps the real exit case covered without the false
+         positives from ordinary hovering. */
       document.addEventListener('pointerleave', () => setLive(false));
       document.documentElement.addEventListener('pointerout', e => {
-        if (!e.relatedTarget) setLive(false);
+        const atEdge = e.clientX <= 0 || e.clientY <= 0
+          || e.clientX >= innerWidth - 1 || e.clientY >= innerHeight - 1;
+        if (!e.relatedTarget && atEdge) setLive(false);
       });
       addEventListener('blur', () => setLive(false));
     }
