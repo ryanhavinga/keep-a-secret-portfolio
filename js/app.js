@@ -535,7 +535,7 @@
         group.className = 'credits__group';
 
         const h = document.createElement('h2');
-        h.className = 'credits__heading';
+        h.className = key === 'artist' ? 'credits__heading credits__heading--artist' : 'credits__heading';
         h.textContent = heading;
         h.style.setProperty('--i', n++);
         group.appendChild(h);

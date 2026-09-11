@@ -490,7 +490,7 @@ html.has-cursor .volume__track { cursor: none; }
   font-weight: 400;
   font-size: clamp(8px, .78vw, 11px);
   letter-spacing: .42em;
-  color: var(--w-48);
+  color: var(--w-72);
 }
 .wordmark img { height: clamp(22px, 2.6vw, 38px); width: auto; }
 
@@ -537,11 +537,15 @@ html.has-cursor .volume__track { cursor: none; }
   to   { opacity: 1; }
 }
 
+/* Deliberately a fraction of the wordmark's size now — matching it stride
+   for stride made "Contact" compete with "Keep A Secret" for the same
+   weight of attention, when it's a secondary link, not the other half of
+   a masthead. */
 .tag {
   font-family: var(--display);
   font-weight: 400;
-  font-size: clamp(23px, 2.7vw, 40px);
-  letter-spacing: .015em;
+  font-size: clamp(12px, 1.4vw, 16px);
+  letter-spacing: .04em;
   text-transform: uppercase;
   color: var(--white);
   white-space: nowrap;
@@ -1155,6 +1159,10 @@ body.is-crediting .credits__row {
   text-transform: none;
   color: rgba(255, 255, 255, .97);
 }
+/* "Main Artist" is a heading-plus-one-name pair rather than a heading over
+   a list — sitting that name right underneath reads as one unit, the way
+   the other groups' multi-row lists don't need to. */
+.credits__heading--artist { margin-bottom: 5px; }
 .credits__list { margin: 0; padding: 0; list-style: none; }
 .credits__row + .credits__row { margin-top: 9px; }
 /* pure white like the heading above it — 300 rendered visibly grey on this
@@ -1383,19 +1391,18 @@ body.is-crediting .credits__row {
   .stage { padding-top: clamp(88px, 15vh, 120px); }
   .player { padding: 14px 15px 16px; }
 
-  /* Both were sized off the same desktop clamp (23-40px), which floors at
-     23px regardless of how narrow the phone actually is — wide enough,
-     paired with "Contact" opposite it, to force "Keep A Secret" onto two
-     lines on every iPhone (measured: needs 226px at 23px, and the topbar
-     column only has ~183px left once "Contact" takes its share at that
-     same size). Matched to each other still, the way they are on desktop,
-     just at a floor low enough neither ever wraps — checked against the
-     narrowest common width (375px, iPhone SE/mini) with room to spare. */
-  .wordmark__main,
-  .tag {
+  /* The desktop clamp (23-40px) floors at 23px regardless of how narrow
+     the phone actually is — wide enough to force "Keep A Secret" onto two
+     lines on every iPhone (measured: needs 226px at 23px against a
+     ~183px-wide topbar column). `.tag` no longer shares this problem: its
+     own desktop size is already a fraction of the wordmark's, so its
+     mobile floor never gets wide enough to collide with it — checked
+     against the narrowest common width (375px, iPhone SE/mini) with room
+     to spare. */
+  .wordmark__main {
     font-size: clamp(18px, 5vw, 21px);
+    white-space: nowrap;
   }
-  .wordmark__main { white-space: nowrap; }
   .wordmark__sub {
     white-space: nowrap;
     /* the sub-line's own .42em tracking is what was pushing it onto a
