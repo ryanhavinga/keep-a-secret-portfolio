@@ -664,9 +664,21 @@
         let d;
 
         if (near !== null) {
-          if (near !== 0 && Math.abs(lastD[j]) > 1 && Math.sign(lastD[j]) !== Math.sign(near)) {
-            /* parked on the wrong side to enter smoothly — jump it to the
-               mirrored far position first, invisibly */
+          /* Parked on the wrong side to enter smoothly — jump it to the
+             mirrored far position first, invisibly, then let it slide in
+             from there. With exactly 3 tracks every cover sits at exactly
+             -1, 0 or +1 at rest (never further out), so the old
+             `Math.abs(lastD[j]) > 1` guard here never actually matched a
+             sign flip in ordinary next/prev use — only a cover already
+             out past ±1 mid-drag tripped it. That left the one cover
+             that has to swap sides on every single step (inherent to a
+             3-item circular stack: the "prev" cover is always exactly the
+             next "next" cover too) visibly sweeping straight across the
+             stack instead of entering from its edge like this branch
+             intends. `lastD[j] !== 0` is the correct guard: only a cover
+             that was actually sitting on a side (not centred) needs the
+             teleport, regardless of how far out it was. */
+          if (near !== 0 && lastD[j] !== 0 && Math.sign(lastD[j]) !== Math.sign(near)) {
             c.style.transition = 'none';
             paintCover(c, Math.sign(near) * 2);
             void c.offsetWidth;          // force the jump to land before re-enabling

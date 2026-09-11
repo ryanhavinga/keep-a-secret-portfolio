@@ -791,7 +791,13 @@ body.is-unlocked .leds {
   justify-content: center;
   overflow: hidden;
   font-family: var(--display);
-  font-weight: 600;
+  /* Monument Extended only ships two real weights (400 Regular, 800
+     Ultrabold, see the @font-face rules up top) — anything in between
+     (600 was tried here before) resolves to the nearest registered face
+     per the CSS font-matching algorithm, which for values above 500
+     rounds up to the heavier one it's chasing, i.e. still 800. 400 is
+     the only value that actually renders lighter. */
+  font-weight: 400;
   font-size: clamp(15px, 5.4cqw, 30px);
   letter-spacing: .03em;
   text-transform: uppercase;
@@ -805,7 +811,7 @@ body.is-unlocked .leds {
    mixed-case text */
 .player__artist {
   margin: clamp(7px, 2cqw, 15px) 0 0;
-  font-size: clamp(7.5px, 2cqw, 11px);
+  font-size: clamp(9.5px, 2.4cqw, 14px);
   letter-spacing: .04em;
   color: rgba(255, 255, 255, .82);
   transition: opacity .5s var(--ease);
@@ -925,8 +931,10 @@ body.is-unlocked .leds {
 
 .ctrl--side {
   width: clamp(30px, 7.6cqw, 41px); height: clamp(30px, 7.6cqw, 41px);
-  transition: transform .6s var(--ease), opacity .6s ease, filter .6s var(--ease);
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, .18));
+  transition: opacity .6s ease, filter .6s var(--ease);
 }
+.ctrl--side:hover { filter: drop-shadow(0 0 8px rgba(255, 255, 255, .26)); }
 /* filled to match the play button rather than the shared hairline .ctrl
    svg rule — the stroke stays on at a modest width just to bulk out the
    bar (an open path, so it has no fill area of its own) and round the
@@ -935,15 +943,16 @@ body.is-unlocked .leds {
 
 /* A solid filled glyph rather than a ring around a hairline icon — no
    border, no plate, just the shape itself at a size that makes it the
-   obvious focal point of the transport row. No glow either: a filled
-   shape this size doesn't need a bloom to read as solid the way the old
-   hairline ring did. */
+   obvious focal point of the transport row. A small glow rather than the
+   old ring's much larger bloom — enough to lift it off the background,
+   not a light source of its own. */
 .ctrl--play {
   position: relative;
   width: clamp(58px, 13.5cqw, 78px); height: clamp(58px, 13.5cqw, 78px);
   border: 0;
   background: none;
-  transition: opacity .6s ease;
+  filter: drop-shadow(0 0 7px rgba(255, 255, 255, .22));
+  transition: opacity .6s ease, filter .6s var(--ease);
 }
 /* filled rather than the shared hairline .ctrl svg rule — the stroke
    stays on at a modest width just to round the triangle's corners
@@ -951,9 +960,13 @@ body.is-unlocked .leds {
    and have no fill area of their own to speak of */
 .ctrl--play svg { width: 60%; fill: #fff; stroke: #fff; stroke-width: 1.6; stroke-linejoin: round; }
 .ctrl__icon--pause { stroke-width: 3.6; }
-/* no hover movement, by request — the only motion left on this button is
-   the punch below, on an actual press. js/app.js adds/removes
-   .is-punching for the animation's own duration around every toggle(). */
+/* a touch brighter on hover and while actually playing — filter only,
+   never transform: no hover movement, by request. The only motion left
+   on this button is the punch below, on an actual press. js/app.js adds/
+   removes .is-punching for the animation's own duration around every
+   toggle(). */
+.ctrl--play:hover { filter: drop-shadow(0 0 10px rgba(255, 255, 255, .3)); }
+.ctrl--play[data-state='playing'] { filter: drop-shadow(0 0 9px rgba(255, 255, 255, .3)); }
 @keyframes ctrl-play-punch {
   0%   { transform: scale(1); }
   45%  { transform: scale(.8); }
