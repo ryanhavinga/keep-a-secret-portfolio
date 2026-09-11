@@ -25,7 +25,7 @@ const CONFIG = {
   /* ---------- BRANDING ---------- */
   brand: {
     logo: 'Keep A Secret',       // top-left wordmark (rendered uppercase)
-    sublogo: 'Private Demo Portal', // smaller line under it — set to null to hide
+    sublogo: 'Demo Portal',      // smaller line under it — set to null to hide
     logoImage: null,             // optional: 'img/logo.svg' — replaces the text wordmark
     tagline: 'Contact'           // small top-right label
   },
@@ -37,8 +37,10 @@ const CONFIG = {
      color   : fallback dominant colour of the artwork (hex).
                The player samples the real image at runtime; this is the safety net.
      duration: fallback length in seconds, used only when no audio file loads.
-     bpm/key : shown under the artist line. Set either to null to hide that line
-               entirely (e.g. for a track it doesn't make sense on).
+     credits : what the floating panel shows while the artwork is hovered.
+               Three groups — artist, composition, production — each a list of
+               { name, role }. Leave a group as [] and its heading is skipped,
+               so a track with nothing written down yet simply shows less.
   ------------------------------------------------------------ */
   tracks: [
     {
@@ -48,18 +50,19 @@ const CONFIG = {
       audio: 'audio/track 1 - Nergens Liever.m4a',
       color: '#9d386f',
       duration: 194,
-      bpm: 122,
-      key: 'A Minor'
-    },
-    {
-      title: 'Boemerang',
-      artist: 'Gilles',
-      artwork: 'img/track-2.png',
-      audio: 'audio/track 2 - Boemerang.m4a',
-      color: '#c465de',
-      duration: 181,
-      bpm: 128,
-      key: 'F# Minor'
+      credits: {
+        artist: [
+          { name: 'Gilles', role: 'Main Artist' }
+        ],
+        composition: [
+          { name: 'Ryan Havinga', role: 'Composer • Lyricist' },
+          { name: 'Kelvin Pasman', role: 'Composer • Lyricist' },
+          { name: 'Joris Geluk', role: 'Composer • Lyricist' }
+        ],
+        production: [
+          { name: 'Keep A Secret', role: 'Producer' }
+        ]
+      }
     },
     {
       title: 'Beter dan ooit',
@@ -68,19 +71,57 @@ const CONFIG = {
       audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',
       color: '#022137',
       duration: 208,
-      bpm: 94,
-      key: 'C Major'
+      credits: {
+        artist: [
+          { name: 'Gilles', role: 'Main Artist' }
+        ],
+        composition: [],           // fill in the writers and the group appears
+        production: [
+          { name: 'Keep A Secret', role: 'Producer' }
+        ]
+      }
+    },
+    {
+      title: 'Hoogtes',
+      artist: 'Tim Tiago',
+      artwork: null,               // null  ->  DEMO placeholder card
+      audio: 'audio/track 3 - Hoogtes.m4a',
+      color: '#0e0e10',
+      duration: 200,
+      demo: true,
+      credits: {
+        artist: [
+          { name: 'Tim Tiago', role: 'Main Artist' }
+        ],
+        composition: [],           // fill in the writers and the group appears
+        production: [
+          { name: 'Keep A Secret', role: 'Producer' }
+        ]
+      }
+    }
+  ],
+
+  /* ---------- ARCHIVED TRACKS ----------
+     Taken off the live site but kept here for reference — their audio/
+     artwork files are untouched on disk. Move an entry back into `tracks`
+     above (and give it its own object again) to bring it back live. */
+  archivedTracks: [
+    {
+      title: 'Boemerang',
+      artist: 'Gilles',
+      artwork: 'img/track-2.png',
+      audio: 'audio/track 2 - Boemerang.m4a',
+      color: '#c465de',
+      duration: 181
     },
     {
       title: 'Alles Waar Je Spijt Van Hebt',
       artist: 'Unreleased',
-      artwork: null,               // null  ->  DEMO placeholder card
+      artwork: null,
       audio: 'audio/track 4 - Alles Waar Je Spijt Van Hebt.m4a',
       color: '#0e0e10',
       duration: 133,
-      demo: true,
-      bpm: 140,
-      key: 'D Minor'
+      demo: true
     }
   ],
 

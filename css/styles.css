@@ -572,7 +572,8 @@ html.has-cursor .volume__track { cursor: none; }
   display: grid; place-items: center;
   width: clamp(30px, 4vw, 46px); height: clamp(56px, 9vh, 88px);
   color: rgba(255, 255, 255, .6);
-  transition: color .6s var(--ease), transform .6s var(--ease);
+  transition: color .6s var(--ease), transform .6s var(--ease),
+              opacity .6s var(--ease);
 }
 /* These sit right on top of the lit band, which on a pale track is the
    brightest thing on screen — a thin white stroke disappears into it. The
@@ -677,17 +678,12 @@ html.has-cursor .volume__track { cursor: none; }
   /* the one shadow left in the composition — soft, low, under the cover */
   box-shadow: 0 26px 50px -28px rgba(0, 0, 0, .85), inset 0 0 0 1px rgba(255, 255, 255, .07);
   transform: translate(-50%, -50%);
-  /* The hover zoom rides on the standalone `scale` property rather than
-     being folded into `transform`, which app.js owns and rewrites on every
-     track change. Individual transform properties are applied outside
-     `transform`, so this is a clean, self-contained nudge that survives
-     whatever placeCovers() writes — and it gets its own, much faster
-     timing instead of inheriting the 1s carousel slide. */
   scale: 1;
-  /* the horizontal carousel slide when switching tracks */
+  /* the horizontal carousel slide when switching tracks. box-shadow rides
+     its own slower timing — the hover glow below should ease up and back
+     down gently rather than snap with the slide. */
   transition: transform 1s var(--ease), opacity 1s var(--ease),
-              filter 1s var(--ease), box-shadow .5s var(--ease),
-              scale .5s var(--ease);
+              filter 1s var(--ease), box-shadow 1.1s var(--ease);
   /* filter included alongside transform/opacity now that paintCover()
      writes a continuously-changing blur during a drag, not just a flip
      between two fixed values on a track change — same reasoning as
@@ -695,16 +691,19 @@ html.has-cursor .volume__track { cursor: none; }
   will-change: transform, opacity, filter;
   -webkit-tap-highlight-color: transparent;
 }
-/* Only the playing cover lifts to the cursor. The two behind it sit mostly
-   underneath it, so a lift there fired and unfired as the pointer crossed
-   the overlap — it read as a twitch, not a response. They come out from
-   under their shade instead, which says "you can pick this" without moving
-   anything.
+/* Only the playing cover lights up under the cursor — no lift, no zoom,
+   just a brighter edge and a slightly deeper shadow, on the same slow
+   timing as the side covers' veil-fade below so the whole stack reads as
+   one light source responding at one speed. The two covers behind it sit
+   mostly underneath it, so a hover response there fired and unfired as the
+   pointer crossed the overlap — it read as a twitch, not a response. They
+   come out from under their shade instead, which says "you can pick this"
+   without moving anything.
 
    Gated behind `.covers:not(.is-changing)`: the small transport buttons sit
    directly under the artwork, so the pointer is usually still resting on a
    cover when a track change lands one under it — without this guard, that
-   cover's own hover zoom/veil-fade would kick in on top of the slide
+   cover's own hover glow/veil-fade would kick in on top of the slide
    already running, compounding into an extra "hop" the big arrows never
    showed (nothing to hover all the way out at the screen edge). `load()`
    toggles `.is-changing` for exactly as long as the slide below takes, so
@@ -714,12 +713,11 @@ html.has-cursor .volume__track { cursor: none; }
    Also gated behind `:not(.is-dragging)` — without it, the pointer sitting
    still over the centre cover mid-drag (any slow, deliberate drag does
    this) fired this hover on top of placeCovers()'s own transform writes,
-   which is what read as the cover jumping vertically while being dragged
-   horizontally: two different properties, `scale`/`translate` here versus
-   `transform` there, both trying to place the same element at once. */
+   which read as the cover jumping while being dragged: two different
+   properties, `box-shadow` here versus `transform` there, both trying to
+   describe the same element at once. */
 .covers:not(.is-changing):not(.is-dragging) .cover:not(.cover--side):hover {
-  scale: 1.035;
-  box-shadow: 0 40px 60px -30px rgba(0, 0, 0, .9), inset 0 0 0 1px rgba(255, 255, 255, .12);
+  box-shadow: 0 30px 54px -28px rgba(0, 0, 0, .88), inset 0 0 0 1px rgba(255, 255, 255, .12);
 }
 .cover img {
   width: 100%; height: 100%;
@@ -731,7 +729,7 @@ html.has-cursor .volume__track { cursor: none; }
   content: '';
   position: absolute; inset: 0;
   background: rgba(4, 4, 5, .38);
-  transition: background .45s var(--ease);
+  transition: background 1.1s var(--ease);
 }
 .covers:not(.is-changing) .cover--side:hover::after { background: rgba(4, 4, 5, 0); }
 
@@ -833,21 +831,6 @@ html.has-cursor .volume__track { cursor: none; }
   text-transform: uppercase;
   color: rgba(255, 255, 255, .58);
   transition: opacity .5s var(--ease);
-}
-/* The separator between artist, BPM and key, which share one line —
-   dimmer than the text either side so it reads as punctuation rather
-   than as a third thing being said. Nudged up because an asterisk sits
-   on the cap line in most faces, and this line is all caps. */
-.player__sep {
-  display: inline-block;
-  margin: 0 .5em;
-  /* Pulled down onto the optical middle of the caps. An asterisk is
-     drawn up at the cap line for use as a superscript footnote mark, so
-     left alone it hangs off the top of an all-caps line like this one —
-     measured against the cap height at .72em, its own centre needs to
-     come down about this far to sit level with the letters. */
-  vertical-align: -.22em;
-  color: rgba(255, 255, 255, .3);
 }
 /* Out fast, in slow. The swap happens at the bottom of the fade, so the
    out leg has to be *finished* by then — it used to run 500ms against a
@@ -975,7 +958,7 @@ html.has-cursor .volume__track { cursor: none; }
      this is the one control everything else exists to lead the eye to, and
      a bolder ring reads as more solid, more clickable, more premium than
      the same weight as a side arrow */
-  border: 2px solid #fff;
+  border: 3px solid #fff;
   background: none;
   filter: drop-shadow(0 0 10px rgba(255, 255, 255, .28));
   transition: transform .8s var(--ease), opacity .6s ease,
@@ -996,13 +979,238 @@ html.has-cursor .volume__track { cursor: none; }
 .ctrl--play[data-state='playing'] .ctrl__icon--play  { opacity: 0; transform: scale(.7); }
 .ctrl--play[data-state='paused']  .ctrl__icon--pause { opacity: 0; transform: scale(.7); }
 
+/* Out of the flex flow on purpose. .covers takes whatever height this
+   column has left over, so a note appearing under the controls used to
+   shrink the artwork — which moved --art-w, which moved the timeline, and
+   re-fitted the title with it. One track falling back to the preview clock
+   would visibly re-lay-out the whole player. It is a footnote about the
+   audio, not part of the composition, so it hangs below the controls
+   instead of taking room from them. */
 .player__note {
-  margin: clamp(5px, 1.4cqw, 10px) 0 0;
+  position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  margin: clamp(6px, 1.6cqw, 12px) 0 0;
+  white-space: nowrap;
   text-align: center;
   font-size: 7.5px;
   letter-spacing: .26em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, .28);
+}
+
+/* ============================================================
+   FLOATING CREDITS
+   ============================================================ */
+/* The room goes soft while the credits are up. Sits above .env (z-index 0)
+   and below .stage (10), so the light, the LED field and the grain blur
+   while the artwork and the controls stay sharp — a backdrop-filter takes
+   everything painted *under* it, which is exactly that split.
+
+   visibility, not just opacity: a backdrop-filter at zero opacity can still
+   keep the browser maintaining a filtered copy of the whole viewport, and
+   this one sits over a field that repaints constantly (flicker, grain,
+   the cursor halo). Hidden outright when closed, it costs nothing; the
+   delayed visibility transition lets the fade-out finish first. */
+.scene-blur {
+  position: fixed; inset: 0; z-index: 5;
+  pointer-events: none;
+  background: rgba(4, 4, 5, .3);
+  backdrop-filter: blur(7px) saturate(94%);
+  -webkit-backdrop-filter: blur(7px) saturate(94%);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .62s var(--ease), visibility 0s linear .62s;
+}
+body.is-crediting .scene-blur {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .62s var(--ease), visibility 0s;
+}
+
+/* Fixed to the right edge rather than anchored to the cover: the cover
+   stack owns its own transforms (placeCovers rewrites them on every track
+   change and on every frame of a drag), and hanging a panel off that would
+   put this into the same fight the hover glow was in. The flex container
+   spans the viewport height and does the vertical centring, which leaves
+   the panel's own `translate`/`scale` free for the unfold and `transform`
+   free for the float — three properties, three jobs, no interference. */
+.credits {
+  position: fixed; z-index: 30;
+  top: 0; bottom: 0;
+  /* far enough in to clear the next-track arrow, which lives out at this
+     same edge and keeps its own z-index above the panel */
+  right: clamp(20px, 7vw, 104px);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+.credits__panel {
+  position: relative;
+  width: clamp(190px, 21vw, 290px);
+  padding: clamp(14px, 1.3vw, 19px) clamp(15px, 1.5vw, 21px) clamp(15px, 1.5vw, 20px);
+  border-radius: 13px;
+  background: linear-gradient(157deg, rgba(31, 31, 35, .84), rgba(13, 13, 15, .9));
+  backdrop-filter: blur(18px) saturate(115%);
+  -webkit-backdrop-filter: blur(18px) saturate(115%);
+  border: 1px solid rgba(255, 255, 255, .1);
+  box-shadow: 0 34px 60px -34px rgba(0, 0, 0, .95),
+              inset 0 1px 0 rgba(255, 255, 255, .07);
+
+  /* closed: a thin horizontal sliver, set back and slightly small. The
+     clip-path is what makes it read as unfolding rather than just fading
+     — the panel opens out of its own centre line. */
+  opacity: 0;
+  translate: 16px 0;
+  scale: .94;
+  clip-path: inset(45% 0 45% 0 round 13px);
+  transition: opacity .3s var(--ease), translate .38s var(--ease),
+              scale .38s var(--ease), clip-path .36s var(--ease);
+
+  /* the drift — paused while closed, so a panel nobody is looking at is
+     not animating a compositor layer in the background */
+  animation: credits-float 9.5s ease-in-out infinite;
+  animation-play-state: paused;
+}
+body.is-crediting .credits__panel {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  clip-path: inset(0 0 0 0 round 13px);
+  animation-play-state: running;
+  /* in slower than out: unfolding is the event, closing should just be
+     gone by the time the eye follows the cursor back */
+  transition-duration: .5s, .72s, .72s, .68s;
+}
+
+/* HUD corner ticks — last in, first out */
+.credits__panel::before,
+.credits__panel::after {
+  content: '';
+  position: absolute;
+  width: 9px; height: 9px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  opacity: 0;
+  transition: opacity .3s var(--ease);
+}
+.credits__panel::before {
+  top: 7px; left: 7px;
+  border-right: 0; border-bottom: 0;
+  border-radius: 4px 0 0 0;
+}
+.credits__panel::after {
+  bottom: 7px; right: 7px;
+  border-left: 0; border-top: 0;
+  border-radius: 0 0 4px 0;
+}
+body.is-crediting .credits__panel::before,
+body.is-crediting .credits__panel::after {
+  opacity: 1;
+  transition-duration: .7s;
+  transition-delay: .26s;
+}
+
+/* the lit edge the panel unfolds from — carries the room's own lamp
+   colour, so it shifts with the artwork like everything else does */
+.credits__edge {
+  position: absolute;
+  /* a pixel in from the border rather than on it — sitting at left:0 it
+     was landing exactly on the rounded clip boundary and being shaved */
+  left: 1px; top: 13%; bottom: 13%;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, transparent, rgb(var(--ring) / .9), transparent);
+  box-shadow: 0 0 12px rgb(var(--ring) / .45);
+  scale: 1 0;
+  opacity: 0;
+  transition: scale .3s var(--ease), opacity .26s var(--ease);
+}
+body.is-crediting .credits__edge {
+  scale: 1 1;
+  opacity: 1;
+  transition-duration: .68s, .45s;
+  transition-delay: .05s;
+}
+
+@keyframes credits-float {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
+  28%  { transform: translate3d(-3px, -6px, 0) rotate(-.32deg); }
+  62%  { transform: translate3d(2px, 4px, 0) rotate(.26deg); }
+  100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+}
+
+/* Every line rides in on the same stagger, counted straight down the panel
+   — app.js numbers them as it builds the groups (--i), so a track with
+   more writers simply takes a beat longer to finish arriving. */
+.credits__eyebrow,
+.credits__heading,
+.credits__row {
+  opacity: 0;
+  translate: 0 6px;
+  transition: opacity .26s var(--ease), translate .26s var(--ease);
+}
+body.is-crediting .credits__eyebrow,
+body.is-crediting .credits__heading,
+body.is-crediting .credits__row {
+  opacity: 1;
+  translate: 0 0;
+  transition-duration: .55s;
+  transition-delay: calc(.14s + var(--i, 0) * .055s);
+}
+
+.credits__eyebrow {
+  margin: 0 0 clamp(11px, 1.1vw, 15px);
+  font-size: 7.5px;
+  letter-spacing: .42em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .36);
+}
+.credits__group + .credits__group { margin-top: clamp(12px, 1.15vw, 16px); }
+.credits__heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 7.5px;
+  font-weight: 400;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .42);
+}
+/* a rule that runs out of the heading and fades — the futuristic tell,
+   done with one pseudo-element instead of a second colour */
+.credits__heading::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(to right, rgba(255, 255, 255, .16), transparent);
+}
+.credits__list { margin: 0; padding: 0; list-style: none; }
+.credits__row + .credits__row { margin-top: 7px; }
+.credits__name {
+  display: block;
+  font-size: clamp(10.5px, .86vw, 12.5px);
+  letter-spacing: .035em;
+  color: rgba(255, 255, 255, .93);
+}
+.credits__role {
+  display: block;
+  margin-top: 2px;
+  font-size: 8px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .34);
+}
+
+/* the room recedes while the credits are up — including the arrows, which
+   are the one other thing living out at the edges of the screen */
+body.is-crediting .nav { opacity: .22; }
+
+/* No room beside the artwork on a narrow screen, and nothing to hover with
+   on a touchscreen — the panel is a pointer affordance, so it simply isn't
+   there. app.js checks the same two things before it ever opens. */
+@media (max-width: 1000px), (hover: none), (pointer: coarse) {
+  .credits, .scene-blur { display: none; }
 }
 
 /* The TikTok and Bio panels were removed from index.html; their styles

@@ -27,17 +27,17 @@
   const NEUTRAL_H = .72;
 
   /* A track with no artwork has no colour to borrow, so the room falls back
-     to its own house light: a bright white lamp with yellow alternating
-     through it cell by cell. Both accents are yellow — one saturated, one
-     pale — so the checkerboard reads white against yellow rather than
-     white against white. The base is a hair off #fff on purpose: a pure
+     to its own house light: a bright, near-neutral white lamp with only a
+     whisper of warmth alternating through it cell by cell — kept faint on
+     purpose so the checkerboard reads white against white rather than
+     white against yellow. The base is a hair off #fff on purpose: a pure
      white lamp reads as a blown highlight instead of as light. */
   const DEMO_LIGHT = {
     panel: [16, 16, 19],
-    ring:  [255, 253, 247],
-    deep:  [70, 58, 34],
-    b:     [255, 212, 84],
-    c:     [252, 233, 152]
+    ring:  [255, 255, 253],
+    deep:  [62, 61, 57],
+    b:     [255, 247, 227],
+    c:     [255, 253, 244]
   };
 
   const Colour = {
@@ -498,26 +498,87 @@
       }
     }
 
-    /* Artist, BPM and key on one line — "Gilles * 122 BPM * A Minor".
-       Built out of nodes rather than a template string so a title with an
-       & or a < in it can never be read as markup, and so each separator
-       can be its own element: it is dimmer than the text around it, and
-       aria-hidden, so the line is still read aloud as three plain facts
-       rather than with an "asterisk" between each one. Any of the three
-       being absent just drops that segment and its separator. */
-    function writeMeta(t) {
-      const bits = [t.artist, t.bpm ? `${t.bpm} BPM` : null, t.key].filter(Boolean);
-      el.artist.textContent = '';
-      bits.forEach((bit, n) => {
-        if (n) {
-          const sep = document.createElement('span');
-          sep.className = 'player__sep';
-          sep.setAttribute('aria-hidden', 'true');
-          sep.textContent = '*';
-          el.artist.appendChild(sep);
-        }
-        el.artist.appendChild(document.createTextNode(bit));
+    /* ---- floating credits ------------------------------------
+       The panel that unfolds beside the artwork while the pointer rests on
+       it. Built out of nodes rather than a template string so a name with
+       an & or a < in it can never be read as markup. */
+    const creditsBody = $('[data-credits-body]');
+    const CREDIT_GROUPS = [
+      ['artist',      'Artist'],
+      ['composition', 'Composition & Lyrics'],
+      ['production',  'Production']
+    ];
+    /* The same two questions the stylesheet asks before it makes room for
+       the panel: is there a real pointer to hover with, and is there space
+       out at the edge of the screen to put it. */
+    const creditsRoom = matchMedia('(hover: hover) and (pointer: fine) and (min-width: 1001px)');
+    let hasCredits = false;
+
+    function writeCredits(t) {
+      const c = t.credits || {};
+      creditsBody.textContent = '';
+      /* one running count down the whole panel, so the stagger reads as a
+         single cascade rather than restarting at each heading. 0 is the
+         eyebrow, which is already in the page. */
+      let n = 1;
+      CREDIT_GROUPS.forEach(([key, heading]) => {
+        const people = c[key];
+        if (!people || !people.length) return;
+
+        const group = document.createElement('section');
+        group.className = 'credits__group';
+
+        const h = document.createElement('h2');
+        h.className = 'credits__heading';
+        h.textContent = heading;
+        h.style.setProperty('--i', n++);
+        group.appendChild(h);
+
+        const list = document.createElement('ul');
+        list.className = 'credits__list';
+        people.forEach(p => {
+          const row = document.createElement('li');
+          row.className = 'credits__row';
+          row.style.setProperty('--i', n++);
+
+          const name = document.createElement('span');
+          name.className = 'credits__name';
+          name.textContent = p.name;
+          row.appendChild(name);
+
+          if (p.role) {
+            const role = document.createElement('span');
+            role.className = 'credits__role';
+            role.textContent = p.role;
+            row.appendChild(role);
+          }
+          list.appendChild(row);
+        });
+        group.appendChild(list);
+        creditsBody.appendChild(group);
       });
+      hasCredits = !!creditsBody.children.length;
+    }
+
+    /* Gated behind the same two states as the cover's own hover glow: a
+       cover sliding into place under a resting cursor should not drag the
+       panel open behind it, and neither should a drag. */
+    function openCredits() {
+      if (!hasCredits || !creditsRoom.matches) return;
+      if (el.covers.classList.contains('is-changing')) return;
+      if (el.covers.classList.contains('is-dragging')) return;
+      document.body.classList.add('is-crediting');
+    }
+    function closeCredits() {
+      document.body.classList.remove('is-crediting');
+    }
+    /* Asked once a track change has finished rather than waited for as an
+       event: when the covers slide, the element under a stationary cursor
+       changes without the pointer having moved, and not every browser
+       dispatches enter/leave for that. The :hover state itself is always
+       current, so read that instead. */
+    function creditsRecheck() {
+      if (el.covers.querySelector('.cover:not(.cover--side):hover')) openCredits();
     }
 
     function applyLight({ panel, ring, deep, b, c }) {
@@ -822,6 +883,7 @@
         coverCaptured = true;
         el.covers.setPointerCapture?.(coverPid);
         el.covers.classList.add('is-dragging');
+        closeCredits();
       }
       const w = el.covers.offsetWidth || 1;
       dragExtra = clamp(dx / (w * DRAG_SLOT), -1, 1);
@@ -886,7 +948,15 @@
          time rather than flickering back on between them. */
       el.covers.classList.add('is-changing');
       clearTimeout(changeTimer);
-      changeTimer = setTimeout(() => el.covers.classList.remove('is-changing'), 1000);
+      changeTimer = setTimeout(() => {
+        el.covers.classList.remove('is-changing');
+        /* the pointer may have been resting on the artwork the whole time —
+           if it still is, the new track's credits belong on screen */
+        creditsRecheck();
+      }, 1000);
+      /* the outgoing track's credits go with the outgoing artwork; the new
+         ones are written at the bottom of the fade below, out of sight */
+      closeCredits();
 
       placeCovers();
       el.meta.classList.add('is-swapping');
@@ -896,8 +966,9 @@
          where nothing can see it */
       swapTimer = setTimeout(() => {
         el.title.textContent = t.title;
-        writeMeta(t);
+        el.artist.textContent = t.artist;
         fitTitle();
+        writeCredits(t);
         el.meta.classList.remove('is-swapping');
       }, 240);
 
@@ -1121,6 +1192,19 @@
         el.play.addEventListener('click', toggle);
         el.prev.addEventListener('click', prevTrack);
         el.next.addEventListener('click', nextTrack);
+
+        /* Credits follow the pointer onto the playing artwork and leave with
+           it. enter/leave rather than over/out: they ignore moves between a
+           cover and its own children, which is most of the traffic here. A
+           side cover is not the playing track, so it opens nothing — but its
+           leave still closes, which is what makes sliding across the stack
+           from a side cover to the centre and back behave. */
+        covers.forEach(c => {
+          c.addEventListener('pointerenter', () => {
+            if (!c.classList.contains('cover--side')) openCredits();
+          });
+          c.addEventListener('pointerleave', closeCredits);
+        });
 
         /* drag the cover stack itself to step through tracks, in either
            direction — see coverDown/coverMove/coverUp above */

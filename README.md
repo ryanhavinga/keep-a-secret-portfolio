@@ -58,7 +58,8 @@ Set `logoImage: 'img/logo.svg'` to swap the whole wordmark for an image.
   one switches to it.
 * `artist` is the only credit shown under the title, centred on its own.
 * **DEMO card** — set `artwork: null` and the track shows the black *DEMO* placeholder
-  instead. That's track 4 today.
+  instead. That's *Hoogtes* today. A track with no artwork has no colour to borrow, so the
+  room lights itself with its own near-white house lamp instead of sampling the cover.
 * **Audio** — drop files in `audio/` and point `audio` at them. Spaces in filenames are fine.
   Until a file is there the player runs a preview timeline and shows a small
   *audio pending* line under the controls; both disappear the moment real audio loads.
@@ -74,6 +75,27 @@ Set `logoImage: 'img/logo.svg'` to swap the whole wordmark for an image.
 > ```
 > (macOS's `afconvert` can *read* MP3 but has no MP3 *encoder* — AAC is what it actually
 > produces. For true `.mp3` output, encode with `ffmpeg` or a DAW's export instead.)
+
+### Credits
+Each track can carry a `credits` block. Hovering the playing artwork blurs the room behind it
+and unfolds a small floating panel out at the right-hand edge of the screen; moving off the
+artwork folds it away again.
+
+```js
+credits: {
+  artist:      [{ name: 'Gilles', role: 'Main Artist' }],
+  composition: [{ name: 'Ryan Havinga', role: 'Composer • Lyricist' }],
+  production:  [{ name: 'Keep A Secret', role: 'Producer' }]
+}
+```
+
+* Three groups, in this order — *Artist*, *Composition & Lyrics*, *Production*. Each is a list,
+  so add as many people to one as the track needs.
+* Leave a group as `[]` and its heading is skipped entirely, which is how a track with nothing
+  written down yet simply shows less rather than showing a gap.
+* A track with no `credits` at all never opens the panel.
+* It is a pointer affordance and nothing else: no room for it below 1000px wide, and no hover
+  to open it with on a touchscreen, so on a phone it isn't there at all.
 
 ### TikTok and Bio — removed from the page
 Both panels were taken out of `index.html`. Their settings are still in `js/config.js`
