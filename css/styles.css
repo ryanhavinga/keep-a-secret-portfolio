@@ -1201,13 +1201,15 @@ body.is-crediting .credits__row {
 }
 
 /* the one word in the panel bigger than any heading below it — same weight
-   as those headings ("even dik"), pure white, so the eye lands here first */
+   as those headings ("even dik"), pure white, so the eye lands here first.
+   Sentence case rather than tracked-out caps, same reasoning as the
+   headings below it: it reads as a title, not a label. */
 .credits__eyebrow {
   margin: 0 0 3px;
   font-size: clamp(15px, 1.25vw, 18px);
   font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
+  letter-spacing: .01em;
+  text-transform: none;
   color: #fff;
 }
 /* the track title, right under the eyebrow — bold and white like it, but
@@ -1224,7 +1226,7 @@ body.is-crediting .credits__row {
    larger, heavier and closer to full white than anything below it, plain
    case rather than tracked-out caps so it reads as a title, not a label */
 .credits__heading {
-  margin: 0 0 9px;
+  margin: 0 0 clamp(13px, 1.1vw, 16px);
   font-size: clamp(13px, 1.05vw, 16px);
   font-weight: 700;
   letter-spacing: 0;
@@ -1233,20 +1235,22 @@ body.is-crediting .credits__row {
 }
 .credits__list { margin: 0; padding: 0; list-style: none; }
 .credits__row + .credits__row { margin-top: 9px; }
-/* pure white like the heading above it — only the lighter weight (still
-   thin) and the smaller size now say "this is data, not a title" */
+/* pure white like the heading above it — 300 rendered visibly grey on this
+   typeface (a synthetic-thin fallback, not a real light cut), which read
+   as "not actually white" even at color:#fff. 400 is thin enough to still
+   sit under the heading's 700 while actually painting solid white. */
 .credits__name {
   display: block;
   font-size: clamp(11.5px, .95vw, 13.5px);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: .015em;
   color: #fff;
 }
 /* a size down from the name and short of pure white — dimmer than the
-   name it belongs to, but not so dim it reads as an afterthought.
-   Multiple roles on one person stay separated by "•" in the data itself
-   (js/config.js), so nothing here has to build a list out of single-role
-   spans. */
+   name it belongs to, but legible at a glance rather than requiring a
+   lean-in. Multiple roles on one person stay separated by "•" in the data
+   itself (js/config.js), so nothing here has to build a list out of
+   single-role spans. */
 .credits__role {
   display: block;
   margin-top: 2px;
@@ -1254,7 +1258,7 @@ body.is-crediting .credits__row {
   font-weight: 300;
   letter-spacing: .02em;
   text-transform: none;
-  color: rgba(255, 255, 255, .56);
+  color: rgba(255, 255, 255, .74);
 }
 
 /* the room recedes while the credits are up — including the arrows, which

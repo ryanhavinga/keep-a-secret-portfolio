@@ -75,7 +75,11 @@ const CONFIG = {
         artist: [
           { name: 'Gilles', role: 'Main Artist' }
         ],
-        composition: [],           // fill in the writers and the group appears
+        composition: [
+          { name: 'Ryan Havinga', role: 'Composer • Lyricist' },
+          { name: 'Kelvin Pasman', role: 'Composer • Lyricist' },
+          { name: 'Joris Geluk', role: 'Composer • Lyricist' }
+        ],
         production: [
           { name: 'Keep A Secret', role: 'Producer' }
         ]
@@ -93,7 +97,11 @@ const CONFIG = {
         artist: [
           { name: 'Tim Tiago', role: 'Main Artist' }
         ],
-        composition: [],           // fill in the writers and the group appears
+        composition: [
+          { name: 'Ryan Havinga', role: 'Composer • Lyricist' },
+          { name: 'Kelvin Pasman', role: 'Composer • Lyricist' },
+          { name: 'Joris Geluk', role: 'Composer • Lyricist' }
+        ],
         production: [
           { name: 'Keep A Secret', role: 'Producer' }
         ]
