@@ -1031,18 +1031,18 @@ body.is-crediting .scene-blur {
 /* Fixed to the right edge rather than anchored to the cover: the cover
    stack owns its own transforms (placeCovers rewrites them on every track
    change and on every frame of a drag), and hanging a panel off that would
-   put this into the same fight the hover glow was in. The flex container
-   spans the viewport height and does the vertical centring, which leaves
-   the panel's own `translate`/`scale` free for the unfold and `transform`
-   free for the float — three properties, three jobs, no interference. */
+   put this into the same fight the hover glow was in. `--credits-y` is the
+   cover's own vertical centre in viewport px — app.js measures it the same
+   way it measures --art-w, off the real box rather than a CSS guess, since
+   the meta/transport rows under the artwork mean that centre is not the
+   viewport's. `top` plus a `translateY(-50%)` on the panel itself keeps
+   that centring independent of the panel's own unfold/float transforms. */
 .credits {
   position: fixed; z-index: 30;
-  top: 0; bottom: 0;
-  /* far enough in to clear the next-track arrow, which lives out at this
-     same edge and keeps its own z-index above the panel */
-  right: clamp(20px, 7vw, 104px);
-  display: flex;
-  align-items: center;
+  top: var(--credits-y, 50%);
+  /* a little further in than the next-track arrow it clears, and further
+     from the edge than a plain clamp of the viewport would put it */
+  right: clamp(48px, 10vw, 148px);
   pointer-events: none;
 }
 .credits__panel {
@@ -1059,9 +1059,12 @@ body.is-crediting .scene-blur {
 
   /* closed: a thin horizontal sliver, set back and slightly small. The
      clip-path is what makes it read as unfolding rather than just fading
-     — the panel opens out of its own centre line. */
+     — the panel opens out of its own centre line. The -50% Y term is the
+     panel's own centring on --credits-y (its `top`), carried through both
+     states since `translate` is a single shorthand and the open state
+     below would otherwise overwrite it away. */
   opacity: 0;
-  translate: 16px 0;
+  translate: 16px -50%;
   scale: .94;
   clip-path: inset(45% 0 45% 0 round 13px);
   transition: opacity .3s var(--ease), translate .38s var(--ease),
@@ -1074,7 +1077,7 @@ body.is-crediting .scene-blur {
 }
 body.is-crediting .credits__panel {
   opacity: 1;
-  translate: 0 0;
+  translate: 0 -50%;
   scale: 1;
   clip-path: inset(0 0 0 0 round 13px);
   animation-play-state: running;
@@ -1165,17 +1168,20 @@ body.is-crediting .credits__row {
   text-transform: uppercase;
   color: rgba(255, 255, 255, .36);
 }
-.credits__group + .credits__group { margin-top: clamp(12px, 1.15vw, 16px); }
+.credits__group + .credits__group { margin-top: clamp(13px, 1.25vw, 18px); }
+/* the one line in the panel meant to read as a heading rather than data —
+   larger, heavier and closer to full white than anything below it, plain
+   case rather than tracked-out caps so it reads as a title, not a label */
 .credits__heading {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 8px;
-  font-size: 7.5px;
-  font-weight: 400;
-  letter-spacing: .26em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, .42);
+  margin: 0 0 9px;
+  font-size: clamp(13px, 1.05vw, 16px);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgba(255, 255, 255, .97);
 }
 /* a rule that runs out of the heading and fades — the futuristic tell,
    done with one pseudo-element instead of a second colour */
@@ -1186,20 +1192,27 @@ body.is-crediting .credits__row {
   background: linear-gradient(to right, rgba(255, 255, 255, .16), transparent);
 }
 .credits__list { margin: 0; padding: 0; list-style: none; }
-.credits__row + .credits__row { margin-top: 7px; }
+.credits__row + .credits__row { margin-top: 8px; }
+/* lighter and a size down from the heading above it — the heading carries
+   the weight in this hierarchy, names are just the data under it */
 .credits__name {
   display: block;
-  font-size: clamp(10.5px, .86vw, 12.5px);
-  letter-spacing: .035em;
-  color: rgba(255, 255, 255, .93);
+  font-size: clamp(9.5px, .74vw, 11px);
+  font-weight: 300;
+  letter-spacing: .02em;
+  color: rgba(255, 255, 255, .82);
 }
+/* smallest and dimmest line in the panel — multiple roles on one person
+   stay separated by "•" in the data itself (js/config.js), so nothing
+   here has to build a list out of single-role spans */
 .credits__role {
   display: block;
   margin-top: 2px;
-  font-size: 8px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, .34);
+  font-size: 7px;
+  font-weight: 300;
+  letter-spacing: .03em;
+  text-transform: none;
+  color: rgba(255, 255, 255, .26);
 }
 
 /* the room recedes while the credits are up — including the arrows, which

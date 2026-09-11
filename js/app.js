@@ -502,11 +502,12 @@
        The panel that unfolds beside the artwork while the pointer rests on
        it. Built out of nodes rather than a template string so a name with
        an & or a < in it can never be read as markup. */
+    const creditsEl = $('[data-credits]');
     const creditsBody = $('[data-credits-body]');
     const CREDIT_GROUPS = [
-      ['artist',      'Artist'],
+      ['artist',      'Main Artist'],
       ['composition', 'Composition & Lyrics'],
-      ['production',  'Production']
+      ['production',  'Production & Engineering']
     ];
     /* The same two questions the stylesheet asks before it makes room for
        the panel: is there a real pointer to hover with, and is there space
@@ -546,7 +547,10 @@
           name.textContent = p.name;
           row.appendChild(name);
 
-          if (p.role) {
+          /* Skipped when it just repeats the heading above it — a role of
+             "Main Artist" under a "Main Artist" heading says nothing a
+             second time that the heading didn't already say. */
+          if (p.role && p.role.toLowerCase() !== heading.toLowerCase()) {
             const role = document.createElement('span');
             role.className = 'credits__role';
             role.textContent = p.role;
@@ -1297,13 +1301,24 @@
            invalidates style for the whole document each time. Only the
            timeline reads it, and the timeline is in here. */
         const player = el.covers.closest('.player');
-        let lastArtW = 0;
+        let lastArtW = 0, lastCreditsY = 0;
         const syncArtWidth = () => {
-          const w = Math.round(el.covers.getBoundingClientRect().width);
+          const r = el.covers.getBoundingClientRect();
+          const w = Math.round(r.width);
           if (w && w !== lastArtW) {
             lastArtW = w;
             player.style.setProperty('--art-w', `${w}px`);
             fitTitle();
+          }
+          /* the credits panel centres on the artwork, not the viewport —
+             the meta/transport rows underneath push the artwork's real
+             centre above viewport-middle, and this is the same
+             measure-the-real-box approach as --art-w just above, for the
+             same reason: no CSS value describes this box from outside it. */
+          const y = Math.round(r.top + r.height / 2);
+          if (y && y !== lastCreditsY) {
+            lastCreditsY = y;
+            creditsEl.style.setProperty('--credits-y', `${y}px`);
           }
         };
         new ResizeObserver(syncArtWidth).observe(el.covers);
