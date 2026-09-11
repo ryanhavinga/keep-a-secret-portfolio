@@ -457,7 +457,7 @@ body.is-unlocked .leds {
   font-size: 9.5px;
   letter-spacing: .2em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, .3);
+  color: rgba(255, 255, 255, .62);
 }
 @media (max-width: 620px) {
   /* too long to sit on one line at this width without colliding with the
