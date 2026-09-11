@@ -693,17 +693,22 @@
       });
     }
 
-    /* Continuous versions of the three discrete states the old fixed-`d`
-       calls used to jump between (centre / side / far) — `a` is the same
-       distance-from-centre used for those, just not rounded, so a cover
-       fades and shrinks smoothly under a dragging finger instead of
-       snapping at each integer boundary. */
+    /* Continuous version of the old fixed-`d` calls' discrete states
+       (centre / side / far) — `a` is the same distance-from-centre used
+       for those, just not rounded, so a cover shrinks smoothly under a
+       dragging finger instead of snapping at each integer boundary. No
+       opacity fade: a side cover used to ease from full opacity toward
+       transparent, which on a 3-track stack (every cover is always
+       either centred or one of the two sides — there's no fourth, fully
+       hidden slot to fade toward) meant the track behind it visibly
+       showed through mid-slide. Covers stay fully solid; the veil
+       pseudo-element (.cover--side::after, below) is what dims a side
+       cover, and that's a flat overlay, not a transparency change on the
+       cover itself. */
     function paintCover(c, d) {
       const a = clamp(Math.abs(d), 0, 2);
-      const opacity = a <= 1 ? lerp(1, .9, a) : lerp(.9, 0, a - 1);
       const scale = lerp(1, .86, clamp(a, 0, 1));
       c.style.transform = `translate(-50%, -50%) translateX(${(d * 19).toFixed(2)}%) scale(${scale.toFixed(3)})`;
-      c.style.opacity = opacity.toFixed(3);
     }
 
     /* ---- drag-to-rotate --------------------------------------
@@ -972,7 +977,21 @@
       el.play.setAttribute('aria-label', 'Play');
       if (!fallback) audio.pause();
     }
-    const toggle = () => playing ? pause() : play();
+    /* the button's own "punch" on every press — a brief scale-down-and-back
+       (css/styles.css, .ctrl--play.is-punching) layered under the icon
+       swap's grow-from-nothing. Restarted from scratch (remove, force a
+       reflow, re-add) rather than just re-adding, so mashing the button
+       replays the punch each time instead of the class already being
+       present doing nothing on the second press. */
+    let punchTimer = null;
+    function punchPlay() {
+      el.play.classList.remove('is-punching');
+      void el.play.offsetWidth;
+      el.play.classList.add('is-punching');
+      clearTimeout(punchTimer);
+      punchTimer = setTimeout(() => el.play.classList.remove('is-punching'), 380);
+    }
+    const toggle = () => { punchPlay(); playing ? pause() : play(); };
 
     function tick(now) {
       if (playing && fallback && !scrubbing) {

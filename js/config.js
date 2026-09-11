@@ -119,7 +119,7 @@ const CONFIG = {
       'The catalogue moves through pop, alternative and everything that refuses a genre. Some of it is released. Most of it is not.',
       'Placements, sessions and unreleased material are shared here by invitation only.'
     ],
-    contact: 'contact@keepasecret.com'   // set to null to hide
+    contact: 'contact@keepasecret.nl'   // set to null to hide
   },
 
   /* ---------- CAROUSEL ORDER ----------
