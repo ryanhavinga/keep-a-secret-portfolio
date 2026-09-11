@@ -1332,9 +1332,7 @@
         load(0, false);
         requestAnimationFrame(tick);
       },
-      pause,
-      prev: () => prevTrack(),
-      next: () => nextTrack()
+      pause
     };
   })();
 
@@ -1574,11 +1572,6 @@
   Carousel.init(CONFIG.order);
   Player.init(CONFIG.tracks);
   Env.init();
-
-  /* the big arrows drive the player, not the carousel — there is only one
-     panel left to sit in */
-  $('[data-nav-prev]').addEventListener('click', Player.prev);
-  $('[data-nav-next]').addEventListener('click', Player.next);
 
   /* Everything behind the gate is already on screen, at full opacity, the
      instant it opens — the only thing left to run is the sub-line

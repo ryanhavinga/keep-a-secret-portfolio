@@ -563,36 +563,6 @@ html.has-cursor .volume__track { cursor: none; }
   padding: clamp(96px, 14vh, 132px) 0 clamp(32px, 6vh, 64px);
 }
 
-/* big, quiet arrows either side, independent of the carousel's own
-   drag/peek so they stay put in the middle of the viewport */
-.nav {
-  position: fixed; z-index: 35;
-  top: 50%;
-  transform: translateY(-50%);
-  display: grid; place-items: center;
-  width: clamp(30px, 4vw, 46px); height: clamp(56px, 9vh, 88px);
-  color: rgba(255, 255, 255, .6);
-  transition: color .6s var(--ease), transform .6s var(--ease),
-              opacity .6s var(--ease);
-}
-/* These sit right on top of the lit band, which on a pale track is the
-   brightest thing on screen — a thin white stroke disappears into it. The
-   drop-shadow is a dark halo tight to the glyph: it buys contrast without
-   adding a fill or a plate, so the arrows still read as the same hairline
-   icon system as everything else. They earn it now that they are the only
-   way to change track with the mouse. */
-.nav svg {
-  width: 62%; fill: none; stroke: currentColor;
-  stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
-  filter: drop-shadow(0 0 6px rgba(0, 0, 0, .85)) drop-shadow(0 0 2px rgba(0, 0, 0, .7));
-}
-.nav:hover { color: #fff; }
-.nav--prev { left: clamp(10px, 2.6vw, 34px); }
-.nav--prev:hover { transform: translateY(-50%) translateX(-3px); }
-.nav--next { right: clamp(10px, 2.6vw, 34px); }
-.nav--next:hover { transform: translateY(-50%) translateX(3px); }
-@media (max-width: 760px) { .nav { display: none; } }
-
 .carousel {
   position: relative;
   width: var(--panel);
@@ -940,11 +910,6 @@ html.has-cursor .volume__track { cursor: none; }
 
 .ctrl--side {
   width: clamp(22px, 5.6cqw, 30px); height: clamp(22px, 5.6cqw, 30px);
-  /* the same small directional nudge as .nav--prev/.nav--next, on the same
-     .6s timing — these two buttons step through exactly the same tracks
-     the big arrows do, so their own feedback shouldn't read as a different
-     gesture (the old scale-up + glow was a separate animation of its own;
-     this is deliberately the nav arrows' motion, not a new one) */
   transition: transform .6s var(--ease), opacity .6s ease, filter .6s var(--ease);
 }
 .ctrl--side svg { width: 58%; }
@@ -1091,27 +1056,20 @@ body.is-crediting .credits__panel {
   transition-duration: .5s, .72s, .72s, .68s;
 }
 
-/* The panel's main "glitchy" tell — fractal noise tiled and stepped rather
-   than eased between positions, which is what makes it read as a
-   flickering signal instead of a smooth drift. Pushed louder than a
-   standard grain overlay: this is meant to be seen, standing in for the
-   window chrome (border, HUD ticks) that used to carry the "something's
-   happening here" read. Sits first in the DOM so the text paints over it
-   without needing a z-index; `overflow: hidden` on .credits__panel keeps
-   it inside the rounded corners. Paused while the panel is closed, same
-   reasoning as the float animation below it not running for a panel
-   nobody can see. */
+/* A loop of analog static behind everything else in the panel — fractal
+   noise tiled and stepped rather than eased between positions, which is
+   what makes it read as a flickering signal instead of a smooth drift.
+   Sits first in the DOM so the text paints over it without needing a
+   z-index; `overflow: hidden` on .credits__panel keeps it inside the
+   rounded corners. Paused while the panel is closed, same reasoning as the
+   float animation below it not running for a panel nobody can see. Kept
+   deliberately subtle — a louder version (screen blend, boosted contrast)
+   read as too much. */
 .credits__static {
   position: absolute; inset: -20%;
   pointer-events: none;
-  opacity: .09;
-  /* overlay (the usual grain blend) barely shows on a base this dark — its
-     formula collapses toward the base colour as luminance drops, which on
-     rgba(21,21,23) is next to nothing. screen always lightens regardless
-     of what's underneath, which is what actually puts visible grain on a
-     surface this dark. */
-  mix-blend-mode: screen;
-  filter: contrast(1.15) brightness(1.05);
+  opacity: .05;
+  mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 140px 140px;
   animation: credits-static 2.4s steps(1) infinite;
@@ -1119,21 +1077,21 @@ body.is-crediting .credits__panel {
 }
 body.is-crediting .credits__static { animation-play-state: running; }
 @keyframes credits-static {
-  0%   { background-position: 0 0;      opacity: .04; }
+  0%   { background-position: 0 0;      opacity: .045; }
   7%   { background-position: -54px 22px; opacity: .09; }
-  8%   { opacity: .015; }
+  8%   { opacity: .02; }
   19%  { background-position: 38px -46px; opacity: .07; }
-  20%  { transform: translateX(2px); }
+  20%  { transform: translateX(1px); }
   21%  { transform: translateX(0); }
-  34%  { background-position: -26px -18px; opacity: .035; }
-  47%  { background-position: 58px 36px;  opacity: .1; }
-  48%  { opacity: .01; }
-  49%  { transform: translateX(-2px); }
+  34%  { background-position: -26px -18px; opacity: .04; }
+  47%  { background-position: 58px 36px;  opacity: .095; }
+  48%  { opacity: .015; }
+  49%  { transform: translateX(-1px); }
   50%  { transform: translateX(0); }
   63%  { background-position: -44px -38px; opacity: .06; }
   76%  { background-position: 18px 54px;  opacity: .08; }
-  88%  { background-position: -60px 12px; opacity: .025; }
-  100% { background-position: 0 0;      opacity: .04; }
+  88%  { background-position: -60px 12px; opacity: .03; }
+  100% { background-position: 0 0;      opacity: .045; }
 }
 
 /* the lit edge the panel unfolds from — carries the room's own lamp
@@ -1224,10 +1182,6 @@ body.is-crediting .credits__row {
   text-transform: none;
   color: rgba(255, 255, 255, .74);
 }
-
-/* the room recedes while the credits are up — including the arrows, which
-   are the one other thing living out at the edges of the screen */
-body.is-crediting .nav { opacity: .22; }
 
 /* No room beside the artwork on a narrow screen, and nothing to hover with
    on a touchscreen — the panel is a pointer affordance, so it simply isn't
