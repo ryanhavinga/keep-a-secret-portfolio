@@ -131,14 +131,13 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* Softens the room behind the volume flyout while it's open — the light
-   and grain blur, the player itself stays sharp, same "recede for
-   legibility" move the credits panel used to make. Sits above .env
-   (z-index 0) and below .stage (10). visibility, not just opacity: a
-   backdrop-filter at zero opacity can still keep the browser maintaining
-   a filtered copy of the whole viewport, which is wasted cost over a
-   field that repaints on its own (the grain jog) even while this is
-   closed. Hidden outright when closed; the delayed visibility transition
-   lets the fade-out finish first. */
+   and grain blur, same "recede for legibility" move the credits panel
+   used to make. Sits above .env (z-index 0) and below .stage (10).
+   visibility, not just opacity: a backdrop-filter at zero opacity can
+   still keep the browser maintaining a filtered copy of the whole
+   viewport, which is wasted cost over a field that repaints on its own
+   (the grain jog) even while this is closed. Hidden outright when closed;
+   the delayed visibility transition lets the fade-out finish first. */
 .scene-blur {
   position: fixed; inset: 0; z-index: 5;
   pointer-events: none;
@@ -153,6 +152,15 @@ body.is-volume-open .scene-blur {
   opacity: 1;
   visibility: visible;
   transition: opacity .5s var(--ease), visibility 0s;
+}
+/* The artwork and title recede too, along with the room behind them —
+   the fader is the only thing meant to hold attention while it's open.
+   .transport itself (the timeline, the play/skip buttons, the fader) is
+   deliberately left out of this: those stay at full strength, since the
+   fader lives among them. */
+body.is-volume-open .covers,
+body.is-volume-open .player__meta {
+  opacity: .3;
 }
 
 /* ---------- THE TRACK-CHANGE SURGE ----------------------------
@@ -421,27 +429,31 @@ body.is-unlocked .leds {
 }
 
 /* small, quiet, bottom-left — matches the rest of the icon system
-   (thin white stroke, no fill) rather than the usual filled glyph */
+   (thin white stroke, no fill) rather than the usual filled glyph.
+   Sized a step up from the other small glyphs on the page (the vol-toggle
+   icon, the corner ticks) — this is the one social link on the whole
+   site, so it earns slightly more presence than a UI icon would. */
 .social {
   position: fixed; z-index: 40;
   left: clamp(20px, 3.4vw, 48px);
-  bottom: clamp(18px, 3vh, 34px);
+  bottom: clamp(16px, 2.6vh, 30px);
   display: block;
-  width: clamp(19px, 2vw, 24px);
+  width: clamp(26px, 2.8vw, 32px);
   opacity: .7;
   transition: opacity .8s var(--ease), transform .8s var(--ease);
 }
 .social svg { width: 100%; fill: none; stroke: #fff; stroke-width: 1.5; }
 .social:hover { opacity: 1; transform: scale(1.12); }
 
-/* bottom-centre, out of the way of the instagram glyph at bottom-left —
-   same thin, tracked-out, low-opacity label style as .player__note */
-.site-credit {
+/* bottom-right, right-edge flush with .tag (Contact) above it — same
+   thin, tracked-out, low-opacity label style .site-credit used to carry */
+.copyright {
   position: fixed; z-index: 40;
-  left: 50%; bottom: clamp(18px, 3vh, 34px);
-  transform: translateX(-50%);
+  right: clamp(20px, 3.4vw, 48px);
+  bottom: clamp(18px, 3vh, 34px);
   margin: 0;
   white-space: nowrap;
+  text-align: right;
   font-size: 7.5px;
   letter-spacing: .2em;
   text-transform: uppercase;
@@ -451,10 +463,9 @@ body.is-unlocked .leds {
   /* too long to sit on one line at this width without colliding with the
      instagram glyph or running off the edge — let it wrap and drop the
      tracking back a touch so two lines still read as one thought */
-  .site-credit {
-    width: min(78vw, 320px);
+  .copyright {
+    width: min(58vw, 240px);
     white-space: normal;
-    text-align: center;
     letter-spacing: .12em;
   }
 }
@@ -628,6 +639,9 @@ body.is-unlocked .leds {
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
+  /* recedes along with .player__meta while the volume flyout is open —
+     see body.is-volume-open further down */
+  transition: opacity .5s var(--ease);
 }
 /* while a drag is live, the covers track the pointer directly — the 1s
    slide transition below is for everything else (arrows, clicks,
@@ -646,14 +660,12 @@ body.is-unlocked .leds {
   scale: 1;
   /* the horizontal carousel slide when switching tracks. box-shadow rides
      its own slower timing — the hover glow below should ease up and back
-     down gently rather than snap with the slide. */
+     down gently rather than snap with the slide. No filter/blur here on
+     purpose — a side cover fades and shrinks under a drag or a track
+     change, but never blurs. */
   transition: transform 1s var(--ease), opacity 1s var(--ease),
-              filter 1s var(--ease), box-shadow 1.1s var(--ease);
-  /* filter included alongside transform/opacity now that paintCover()
-     writes a continuously-changing blur during a drag, not just a flip
-     between two fixed values on a track change — same reasoning as
-     .light-surge's will-change, just for the covers. */
-  will-change: transform, opacity, filter;
+              box-shadow 1.1s var(--ease);
+  will-change: transform, opacity;
   -webkit-tap-highlight-color: transparent;
 }
 /* Only the playing cover lights up under the cursor — no lift, no zoom,
@@ -769,6 +781,7 @@ body.is-unlocked .leds {
 .player__meta {
   padding-top: clamp(13px, 4cqw, 30px);
   text-align: center;
+  transition: opacity .5s var(--ease);
 }
 .player__title {
   margin: 0;

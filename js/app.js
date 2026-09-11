@@ -696,19 +696,14 @@
     /* Continuous versions of the three discrete states the old fixed-`d`
        calls used to jump between (centre / side / far) — `a` is the same
        distance-from-centre used for those, just not rounded, so a cover
-       fades, blurs and shrinks smoothly under a dragging finger instead of
+       fades and shrinks smoothly under a dragging finger instead of
        snapping at each integer boundary. */
     function paintCover(c, d) {
       const a = clamp(Math.abs(d), 0, 2);
       const opacity = a <= 1 ? lerp(1, .9, a) : lerp(.9, 0, a - 1);
-      const blur = lerp(0, 1.5, clamp(a, 0, 1));
       const scale = lerp(1, .86, clamp(a, 0, 1));
       c.style.transform = `translate(-50%, -50%) translateX(${(d * 19).toFixed(2)}%) scale(${scale.toFixed(3)})`;
       c.style.opacity = opacity.toFixed(3);
-      /* blur(0px) rather than none — a filter list interpolates against a
-         matching list, and `none` is not one, so the blur was snapping on
-         and off at the ends of the slide instead of easing with it */
-      c.style.filter = blur > .02 ? `blur(${blur.toFixed(2)}px)` : 'blur(0px)';
     }
 
     /* ---- drag-to-rotate --------------------------------------
