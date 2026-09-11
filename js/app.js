@@ -503,6 +503,7 @@
        it. Built out of nodes rather than a template string so a name with
        an & or a < in it can never be read as markup. */
     const creditsEl = $('[data-credits]');
+    const creditsTrack = $('[data-credits-track]');
     const creditsBody = $('[data-credits-body]');
     const CREDIT_GROUPS = [
       ['artist',      'Main Artist'],
@@ -517,11 +518,13 @@
 
     function writeCredits(t) {
       const c = t.credits || {};
+      creditsTrack.textContent = t.title;
       creditsBody.textContent = '';
       /* one running count down the whole panel, so the stagger reads as a
          single cascade rather than restarting at each heading. 0 is the
-         eyebrow, which is already in the page. */
-      let n = 1;
+         eyebrow, 1 the track title — both already in the page. */
+      let n = 2;
+      creditsTrack.style.setProperty('--i', 1);
       CREDIT_GROUPS.forEach(([key, heading]) => {
         const people = c[key];
         if (!people || !people.length) return;
