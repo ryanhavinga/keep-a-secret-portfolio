@@ -120,11 +120,39 @@ a { color: inherit; text-decoration: none; }
    CINEMATIC ENVIRONMENT
    ============================================================ */
 .env { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+/* falls off faster and darker than it used to — the light needs somewhere
+   genuinely black to stand out against, not a lighter grey that reads as
+   still slightly lit at the edges */
 .env::before {
   content: '';
   position: absolute; inset: 0;
   background:
-    radial-gradient(120% 90% at 50% 34%, #0e0e11 0%, #0a0a0c 44%, #060607 74%, #030304 100%);
+    radial-gradient(120% 90% at 50% 34%, #0e0e11 0%, #08080a 42%, #030304 68%, #000 100%);
+}
+
+/* Softens the room behind the volume flyout while it's open — the light
+   and grain blur, the player itself stays sharp, same "recede for
+   legibility" move the credits panel used to make. Sits above .env
+   (z-index 0) and below .stage (10). visibility, not just opacity: a
+   backdrop-filter at zero opacity can still keep the browser maintaining
+   a filtered copy of the whole viewport, which is wasted cost over a
+   field that repaints on its own (the grain jog) even while this is
+   closed. Hidden outright when closed; the delayed visibility transition
+   lets the fade-out finish first. */
+.scene-blur {
+  position: fixed; inset: 0; z-index: 5;
+  pointer-events: none;
+  background: rgba(4, 4, 5, .3);
+  backdrop-filter: blur(7px) saturate(94%);
+  -webkit-backdrop-filter: blur(7px) saturate(94%);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .5s var(--ease), visibility 0s linear .5s;
+}
+body.is-volume-open .scene-blur {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .5s var(--ease), visibility 0s;
 }
 
 /* ---------- THE TRACK-CHANGE SURGE ----------------------------
@@ -145,7 +173,7 @@ a { color: inherit; text-decoration: none; }
   /* promotes this to its own compositor layer so the filter transition
      below repaints just this layer instead of the whole page underneath
      it — without it, a track-change surge can steal enough main-thread
-     time to make the lagging cursor (js/app.js, Env) stutter. */
+     time to make the grain jog (js/app.js, Env) stutter. */
   will-change: filter;
 }
 body.is-surging .light-surge {
@@ -293,10 +321,9 @@ body.is-entering .light-surge {
    changes it, which is real, ongoing cost. All of it sits behind the
    gate's opaque black the entire time a visitor is looking at the
    password field, so it was spending that cost on frames nobody could
-   see, competing with the one thing that *is* visible there: the
-   lagging cursor. js/app.js adds `is-unlocked` the instant the gate is
-   gone (see Gate.init) — a paused CSS animation resumes exactly where it
-   left off, so there is no jump or restart when it does.
+   see. js/app.js adds `is-unlocked` the instant the gate is gone (see
+   Gate.init) — a paused CSS animation resumes exactly where it left off,
+   so there is no jump or restart when it does.
 
    This has to come after both `.ring` and `.leds` above, not before —
    each sets `animation-play-state` implicitly via the `animation:`
@@ -375,71 +402,10 @@ body.is-unlocked .leds {
    transform — see sizeGrain), so only the paint-independent bits are here */
 .env__grain { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .055;
               will-change: transform; }
-.env__halo  { position: absolute; top: 0; left: 0; opacity: 0; mix-blend-mode: screen;
-              transition: opacity 1.2s ease; will-change: transform; }
-.env__halo.is-live { opacity: .2; }
 
 .env__vignette {
   position: absolute; inset: 0;
   background: radial-gradient(96% 84% at 50% 50%, transparent 58%, rgba(0, 0, 0, .34) 86%, rgba(0, 0, 0, .6) 100%);
-}
-
-/* ---------- LAGGING CURSOR --------------------------------
-   Above the gate, so the room still has its own cursor while you are
-   standing outside it. Driven by js/cursor.js, which every page loads. */
-/* The wrapper is what gets moved — cursor.js writes the pointer position
-   here as a translate3d, and nothing else on this element transforms it.
-   That separation is load-bearing, see the note on .cursor__dot below. */
-.cursor {
-  position: fixed; top: 0; left: 0; z-index: 110;
-  pointer-events: none;
-  opacity: 0;                       /* until the pointer actually moves */
-  transition: opacity .8s ease;
-  will-change: transform;
-}
-.cursor__dot {
-  /* Centred on the wrapper's origin by offsetting the box itself half its
-     own size, rather than by a `transform: translate(-50%, -50%)`. That
-     matters: `scale` multiplies any translation `transform` carries, so a
-     translate-based centring shifts by a few px as the dot grows and
-     shrinks — a small drift, but drift of exactly the kind this element
-     must not have, and it would animate over the .6s below. Offsetting the
-     box leaves `scale` with nothing to multiply: the element's own centre
-     sits on the origin, and scaling about that centre keeps it there at
-     every size. The pointer position is never written here at all — it
-     goes on the wrapper, see js/cursor.js. */
-  position: absolute; top: -3px; left: -3px;
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 14px rgba(255, 255, 255, .75);
-  /* The hover/press states ride the standalone `scale` property, not
-     width/height. Animating the box meant a layout pass on every frame
-     of a .6s transition — scale is a compositor-only change. */
-  scale: 1;
-  will-change: scale;
-  transition: scale .6s var(--ease);
-}
-body.is-pointing .cursor__dot { scale: 2.17; }   /* 13px at the 6px base */
-body.is-pressed  .cursor__dot { scale: .83; }    /* 5px  — must stay after is-pointing */
-
-/* The system cursor only goes away once js/cursor.js has confirmed a
-   replacement is actually running (it adds `has-cursor`). Hiding it from
-   a bare media query left any page where that script failed to run with
-   no pointer at all. The descendant selectors also have to out-specify
-   component-level `cursor: pointer` rules further down — .cover--side is
-   a <button> and used to win, which put a real arrow on top of the dot
-   whenever you hovered a side cover. */
-html.has-cursor,
-html.has-cursor a,
-html.has-cursor button,
-html.has-cursor .block,
-html.has-cursor .scrub,
-html.has-cursor .cover,
-html.has-cursor .volume__track { cursor: none; }
-
-@media (hover: none), (pointer: coarse) {
-  .cursor, .env__halo { display: none; }
 }
 
 /* ============================================================
@@ -749,29 +715,34 @@ html.has-cursor .volume__track { cursor: none; }
 }
 
 /* ---------- volume flyout --------------------------------------
-   Lives inside .covers rather than .transport, so "alongside the
-   artwork" is literal — positioned off the cover stack itself, clear of
-   the tucked side covers peeking in from the right. Hidden by default and
-   scaled up from its own bottom edge when .vol-toggle opens it (js/app.js,
-   the Volume module) — a rise, not a generic fade, matching "slide out
-   upward" rather than just appearing in place. */
+   Anchored to .vol-wrap (in .timeline, alongside .vol-toggle) rather than
+   the cover stack — it rises straight up from the button that opens it.
+   Hidden by default and scaled up from its own bottom edge when
+   .vol-toggle opens it (js/app.js, the Volume module) — a rise, not a
+   generic fade, matching "slide out upward" rather than just appearing in
+   place. `left: 50%` plus the translateX in `transform` centres it on the
+   button; that has to live in the same `transform` declaration as the
+   scaleY reveal below, since a shorthand property only ever holds the one
+   value last written to it. */
 .volume {
   position: absolute;
-  right: clamp(-46px, -11cqw, -18px);
-  bottom: clamp(6px, 2.4cqw, 16px);
-  height: clamp(120px, 46cqw, 210px);
+  left: 50%;
+  bottom: 100%;
+  margin-bottom: clamp(12px, 2.4cqw, 18px);
+  height: clamp(88px, 22cqw, 132px);
   width: clamp(26px, 5.6cqw, 36px);
   display: flex; align-items: center; justify-content: center;
   transform-origin: 50% 100%;
-  transform: scaleY(0);
+  transform: translateX(-50%) scaleY(0);
   opacity: 0;
   pointer-events: none;
   transition: transform .45s var(--ease), opacity .3s ease;
   /* above the covers — the active one reaches z-index:10 (js/app.js,
-     paintCover), which would otherwise sit on top of this when open */
+     paintCover) — since the flyout now rises up past the meta row and
+     can overlap the artwork above it */
   z-index: 20;
 }
-.volume.is-open { transform: scaleY(1); opacity: 1; pointer-events: auto; }
+.volume.is-open { transform: translateX(-50%) scaleY(1); opacity: 1; pointer-events: auto; }
 .volume__track {
   position: relative;
   width: 3px; height: 100%;
@@ -906,11 +877,16 @@ html.has-cursor .volume__track { cursor: none; }
 
 /* ---------- volume ------------------------------------------
    The toggle sits inline in the timeline row, sized off the same scale as
-   the time labels either side of it. The flyout it opens (.volume, in the
-   cover stack markup so it can sit beside the artwork) is styled further
-   down, alongside .covers. */
-.vol-toggle {
+   the time labels either side of it. .vol-wrap is the positioning context
+   for the flyout it opens (.volume, just below) — it rises directly above
+   the button it belongs to, wherever the timeline row happens to land,
+   rather than being pinned beside the artwork above. */
+.vol-wrap {
+  position: relative;
   flex: 0 0 auto;
+  display: flex;
+}
+.vol-toggle {
   display: grid; place-items: center;
   width: clamp(20px, 4.3cqw, 25px); height: clamp(20px, 4.3cqw, 25px);
   color: rgba(255, 255, 255, .7);
@@ -1084,7 +1060,7 @@ html.has-cursor .volume__track { cursor: none; }
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(120% 90% at 50% 30%, #0e0e11 0%, #0a0a0c 46%, #060607 76%, #030304 100%);
+    radial-gradient(120% 90% at 50% 30%, #0e0e11 0%, #08080a 44%, #030304 70%, #000 100%);
   overflow: auto;
 }
 
@@ -1214,5 +1190,5 @@ html.has-cursor .volume__track { cursor: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .12s !important; }
-  .env__grain, .env__halo { display: none; }
+  .env__grain { display: none; }
 }

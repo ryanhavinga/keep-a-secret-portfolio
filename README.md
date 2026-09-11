@@ -7,7 +7,7 @@ whole folder onto any host (Netlify, Vercel, Cloudflare Pages, plain FTP).
 index.html
 css/styles.css      all styling
 js/config.js        ← everything you normally edit lives here
-js/app.js           carousel, player, cursor, grain
+js/app.js           carousel, player, grain
 img/                artwork
 audio/              your audio files
 fonts/              Monument Extended
@@ -97,15 +97,15 @@ its styles, its `fillContent` branch, and adding its name to `order` below.
 order: ['player']
 ```
 One entry now. The carousel still works with several, but with one panel it holds still and
-the big side arrows step through tracks instead.
+the small transport buttons and the keyboard step through tracks instead.
 
 ## Navigating
 
-The big arrows either side, ←/→, and the small transport buttons all step through tracks —
-there are no sections left to move between. Clicking a cover tucked in behind the playing one
-switches to it, and every cover lifts slightly toward the cursor on hover. Space plays and
-pauses. `prev` rewinds to the start of the current track first and only steps back if you use
-it again within the first few seconds.
+The small transport buttons, ←/→, dragging the cover stack, and clicking a cover tucked in
+behind the playing one all step through tracks — there are no sections left to move between.
+The playing cover lights up on hover; nothing moves or lifts. Space plays and pauses. `prev`
+rewinds to the start of the current track first and only steps back if you use it again within
+the first few seconds.
 
 ## Notes
 

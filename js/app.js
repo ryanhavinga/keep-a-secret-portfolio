@@ -1,6 +1,6 @@
 /* ============================================================
    KEEP A SECRET — app
-   Environment · Cursor · Carousel · Player
+   Environment · Carousel · Player
    All editable content lives in js/config.js
    ============================================================ */
 (() => {
@@ -11,7 +11,6 @@
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const lerp  = (a, b, t) => a + (b - a) * t;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const fine    = matchMedia('(hover: hover) and (pointer: fine)').matches;
   const SOUND_ENABLED = true;   // the gate woosh — set false to mute it again
 
   const time = s => {
@@ -155,18 +154,11 @@
   };
 
   /* ==========================================================
-     ENVIRONMENT — grain, cursor halo, lagging cursor
+     ENVIRONMENT — grain
      ========================================================== */
   const Env = (() => {
     const grain = $('[data-grain]');
-    const halo  = $('[data-halo]');
-
-    const HALO = 260;
-    /* the halo trails further behind than the dot does — the dot itself
-       belongs to js/cursor.js now, which owns the pointer position and
-       the one rAF loop both of these run on */
-    const slow  = { x: innerWidth / 2, y: innerHeight / 2 };
-    let gctx, hctx, pattern, haloPattern, haloMask, last = 0;
+    let gctx, pattern, last = 0;
 
     const tile = (alpha, size = 128) => {
       const c = document.createElement('canvas');
@@ -186,18 +178,12 @@
        direction without ever pulling its own edge into frame. */
     const GRAIN_PAD = 80;
 
-    /* The grain and the halo are each drawn exactly once and then moved.
-
-       Both used to be re-rendered every 70ms — a pattern fill across a
-       near-viewport-sized canvas, plus a second one for the halo, plus the
-       texture upload that follows any canvas whose pixels changed. That is
-       main-thread and upload work landing ~14 times a second forever, in
-       the same rAF callback that positions the cursor, which is why the
-       cursor could never be reliably smooth: any frame that also carried a
-       grain redraw was a long frame. Since what the redraw actually
-       produced was the same noise at a new random offset, the offset is
-       now all that changes — a transform on an already-uploaded texture,
-       which the compositor does without touching the main thread at all. */
+    /* Drawn exactly once and then moved — a transform on an already-
+       uploaded texture, which the compositor does without touching the
+       main thread at all. Re-rendering the pattern itself on every jog
+       would mean a canvas fill plus a texture upload landing every frame
+       for no visible gain, since the redraw only ever produces the same
+       noise at a new random offset. */
     function sizeGrain() {
       const s = .62;                                   // render at 62% for a softer, cheaper grain
       const w = innerWidth + GRAIN_PAD * 2, h = innerHeight + GRAIN_PAD * 2;
@@ -214,57 +200,22 @@
       gctx.fillRect(0, 0, grain.width, grain.height);
     }
 
-    function setupHalo() {
-      halo.width = halo.height = HALO;
-      hctx = halo.getContext('2d');
-      haloPattern = hctx.createPattern(tile(190, 96), 'repeat');
-      haloMask = hctx.createRadialGradient(HALO / 2, HALO / 2, 0, HALO / 2, HALO / 2, HALO / 2);
-      haloMask.addColorStop(0,   'rgba(0,0,0,.6)');
-      haloMask.addColorStop(.45, 'rgba(0,0,0,.22)');
-      haloMask.addColorStop(1,   'rgba(0,0,0,0)');
-
-      hctx.fillStyle = haloPattern;
-      hctx.fillRect(0, 0, HALO, HALO);
-      hctx.globalCompositeOperation = 'destination-in';
-      hctx.fillStyle = haloMask;
-      hctx.fillRect(0, 0, HALO, HALO);
-      hctx.globalCompositeOperation = 'source-over';
-    }
-
-    /* The whole per-frame budget: two transform writes, no pixels
-       touched, nothing read back off the DOM. Runs on js/cursor.js's
-       loop — the same smoothing factor as before, just re-derived from
-       real elapsed time so it holds up at any refresh rate. */
-    const HALO_EASE = .16, STEP = 1000 / 60;
-    const smooth = (from, to, dt) => from + (to - from) * (1 - Math.pow(1 - HALO_EASE, dt / STEP));
-
-    function frame(target, dt, t) {
-      if (fine && halo) {
-        slow.x = smooth(slow.x, target.x, dt);
-        slow.y = smooth(slow.y, target.y, dt);
-        halo.style.transform = `translate3d(${slow.x - HALO / 2}px, ${slow.y - HALO / 2}px, 0)`;
-      }
-
+    function frame(t) {
       if (t - last > 70) {                             // ~14fps — cinematic, not fizzy
         last = t;
         grain.style.transform =
           `translate3d(${-Math.random() * GRAIN_PAD}px, ${-Math.random() * GRAIN_PAD}px, 0)`;
       }
+      requestAnimationFrame(frame);
     }
 
     return {
       init() {
-        if (reduced) return;   // cursor.js sits out too, so there is no loop to hook
+        if (reduced) return;
         sizeGrain();
         addEventListener('resize', sizeGrain);
-        if (fine) setupHalo();
-
-        /* the halo fades in and out with the dot rather than tracking a
-           second copy of the same "has the pointer moved yet" state */
-        Cursor.onLive(v => halo?.classList.toggle('is-live', v));
-        Cursor.onFrame(frame);
-      },
-      hideCursorUntilMove() { Cursor.hideUntilMove(); }
+        requestAnimationFrame(frame);
+      }
     };
   })();
 
@@ -1081,11 +1032,13 @@
       el.volume.classList.add('is-open');
       el.volToggle.classList.add('is-open');
       el.volToggle.setAttribute('aria-expanded', 'true');
+      document.body.classList.add('is-volume-open');
     }
     function closeVolume() {
       el.volume.classList.remove('is-open');
       el.volToggle.classList.remove('is-open');
       el.volToggle.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('is-volume-open');
     }
 
     return {
@@ -1453,5 +1406,5 @@
      cursor so it waits for a fresh move inside the room rather than
      showing up already wherever the gate's Enter button was clicked. The
      lamp is the one thing reserved for an actual password entry. */
-  Gate.init(() => { playSubIntro(); Env.hideCursorUntilMove(); }, playEntranceLamp);
+  Gate.init(playSubIntro, playEntranceLamp);
 })();
