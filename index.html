@@ -63,11 +63,6 @@
   <div class="env__vignette"></div>
 </div>
 
-<!-- The room goes soft behind the credits panel. It sits above the
-     environment and below the stage, so only the light, the LED field and
-     the grain blur — the artwork and the controls stay sharp. Driven by
-     body.is-crediting, same class-swap mechanism as the light surge. -->
-<div class="scene-blur" aria-hidden="true"></div>
 
 <!-- lagging cursor -->
 <div class="cursor" data-cursor aria-hidden="true">
@@ -161,17 +156,7 @@
   </div>
 </main>
 
-<!-- Floating credits readout. Filled per track by app.js and shown while the
-     pointer rests on the artwork. Deliberately inert (pointer-events: none in
-     the stylesheet): it is a display, not a panel to operate, so it can never
-     come between the cursor and the cover stack it belongs to. -->
-<aside class="credits" data-credits aria-hidden="true">
-  <div class="credits__panel">
-    <span class="credits__static" aria-hidden="true"></span>
-    <span class="credits__edge"></span>
-    <div class="credits__groups" data-credits-body></div>
-  </div>
-</aside>
+<p class="site-credit">Geschreven en geproduceerd door Keep A Secret</p>
 
 <a class="social" data-instagram href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
   <svg viewBox="0 0 24 24" aria-hidden="true">

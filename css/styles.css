@@ -467,6 +467,31 @@ html.has-cursor .volume__track { cursor: none; }
 }
 .social svg { width: 100%; fill: none; stroke: #fff; stroke-width: 1.5; }
 .social:hover { opacity: 1; transform: scale(1.12); }
+
+/* bottom-centre, out of the way of the instagram glyph at bottom-left —
+   same thin, tracked-out, low-opacity label style as .player__note */
+.site-credit {
+  position: fixed; z-index: 40;
+  left: 50%; bottom: clamp(18px, 3vh, 34px);
+  transform: translateX(-50%);
+  margin: 0;
+  white-space: nowrap;
+  font-size: 7.5px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .3);
+}
+@media (max-width: 620px) {
+  /* too long to sit on one line at this width without colliding with the
+     instagram glyph or running off the edge — let it wrap and drop the
+     tracking back a touch so two lines still read as one thought */
+  .site-credit {
+    width: min(78vw, 320px);
+    white-space: normal;
+    text-align: center;
+    letter-spacing: .12em;
+  }
+}
 .wordmark {
   font-family: var(--display);
   text-transform: uppercase;
@@ -966,236 +991,6 @@ html.has-cursor .volume__track { cursor: none; }
   letter-spacing: .26em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, .28);
-}
-
-/* ============================================================
-   FLOATING CREDITS
-   ============================================================ */
-/* The room goes soft while the credits are up. Sits above .env (z-index 0)
-   and below .stage (10), so the light, the LED field and the grain blur
-   while the artwork and the controls stay sharp — a backdrop-filter takes
-   everything painted *under* it, which is exactly that split.
-
-   visibility, not just opacity: a backdrop-filter at zero opacity can still
-   keep the browser maintaining a filtered copy of the whole viewport, and
-   this one sits over a field that repaints constantly (flicker, grain,
-   the cursor halo). Hidden outright when closed, it costs nothing; the
-   delayed visibility transition lets the fade-out finish first. */
-.scene-blur {
-  position: fixed; inset: 0; z-index: 5;
-  pointer-events: none;
-  background: rgba(4, 4, 5, .3);
-  backdrop-filter: blur(7px) saturate(94%);
-  -webkit-backdrop-filter: blur(7px) saturate(94%);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity .62s var(--ease), visibility 0s linear .62s;
-}
-body.is-crediting .scene-blur {
-  opacity: 1;
-  visibility: visible;
-  transition: opacity .62s var(--ease), visibility 0s;
-}
-
-/* Fixed to the right edge rather than anchored to the cover: the cover
-   stack owns its own transforms (placeCovers rewrites them on every track
-   change and on every frame of a drag), and hanging a panel off that would
-   put this into the same fight the hover glow was in. `--credits-y` is the
-   cover's own vertical centre in viewport px — app.js measures it the same
-   way it measures --art-w, off the real box rather than a CSS guess, since
-   the meta/transport rows under the artwork mean that centre is not the
-   viewport's. `top` plus a `translateY(-50%)` on the panel itself keeps
-   that centring independent of the panel's own unfold/float transforms. */
-.credits {
-  position: fixed; z-index: 30;
-  top: var(--credits-y, 50%);
-  /* a little further in than the next-track arrow it clears, and further
-     from the edge than a plain clamp of the viewport would put it */
-  right: clamp(48px, 10vw, 148px);
-  pointer-events: none;
-}
-/* Deliberately less "window" than the rest of the UI's hairline-and-glass
-   language — no border, no crisp HUD corner ticks, a flatter grey instead
-   of the tinted glass gradient. The text is the thing; this is just the
-   dark patch of air it's floating in front of, which is also what the
-   static layer (below) is for — a surface with some grain in it, not a
-   clean panel. */
-.credits__panel {
-  position: relative;
-  overflow: hidden;    /* clips .credits__static to the rounded corners */
-  width: clamp(220px, 24.5vw, 330px);
-  padding: clamp(17px, 1.6vw, 23px) clamp(18px, 1.8vw, 25px) clamp(18px, 1.8vw, 24px);
-  border-radius: 8px;
-  background: rgba(21, 21, 23, .56);
-  backdrop-filter: blur(13px) saturate(88%);
-  -webkit-backdrop-filter: blur(13px) saturate(88%);
-  box-shadow: 0 30px 70px -38px rgba(0, 0, 0, .8);
-
-  /* closed: a thin horizontal sliver, set back and slightly small. The
-     clip-path is what makes it read as unfolding rather than just fading
-     — the panel opens out of its own centre line. The -50% Y term is the
-     panel's own centring on --credits-y (its `top`), carried through both
-     states since `translate` is a single shorthand and the open state
-     below would otherwise overwrite it away. */
-  opacity: 0;
-  translate: 16px -50%;
-  scale: .94;
-  clip-path: inset(45% 0 45% 0 round 8px);
-  transition: opacity .3s var(--ease), translate .38s var(--ease),
-              scale .38s var(--ease), clip-path .36s var(--ease);
-
-  /* the drift — paused while closed, so a panel nobody is looking at is
-     not animating a compositor layer in the background */
-  animation: credits-float 9.5s ease-in-out infinite;
-  animation-play-state: paused;
-}
-body.is-crediting .credits__panel {
-  opacity: 1;
-  translate: 0 -50%;
-  scale: 1;
-  clip-path: inset(0 0 0 0 round 8px);
-  animation-play-state: running;
-  /* in slower than out: unfolding is the event, closing should just be
-     gone by the time the eye follows the cursor back */
-  transition-duration: .5s, .72s, .72s, .68s;
-}
-
-/* A loop of analog static behind everything else in the panel — fractal
-   noise tiled and stepped rather than eased between positions, which is
-   what makes it read as a flickering signal instead of a smooth drift.
-   Sits first in the DOM so the text paints over it without needing a
-   z-index; `overflow: hidden` on .credits__panel keeps it inside the
-   rounded corners. Paused while the panel is closed, same reasoning as the
-   float animation below it not running for a panel nobody can see. Kept
-   deliberately subtle — a louder version (screen blend, boosted contrast)
-   read as too much. */
-.credits__static {
-  position: absolute; inset: -20%;
-  pointer-events: none;
-  opacity: .05;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 140px 140px;
-  animation: credits-static 2.4s steps(1) infinite;
-  animation-play-state: paused;
-}
-body.is-crediting .credits__static { animation-play-state: running; }
-@keyframes credits-static {
-  0%   { background-position: 0 0;      opacity: .045; }
-  7%   { background-position: -54px 22px; opacity: .09; }
-  8%   { opacity: .02; }
-  19%  { background-position: 38px -46px; opacity: .07; }
-  20%  { transform: translateX(1px); }
-  21%  { transform: translateX(0); }
-  34%  { background-position: -26px -18px; opacity: .04; }
-  47%  { background-position: 58px 36px;  opacity: .095; }
-  48%  { opacity: .015; }
-  49%  { transform: translateX(-1px); }
-  50%  { transform: translateX(0); }
-  63%  { background-position: -44px -38px; opacity: .06; }
-  76%  { background-position: 18px 54px;  opacity: .08; }
-  88%  { background-position: -60px 12px; opacity: .03; }
-  100% { background-position: 0 0;      opacity: .045; }
-}
-
-/* the lit edge the panel unfolds from — carries the room's own lamp
-   colour, so it shifts with the artwork like everything else does.
-   `--credits-edge` is set per track in app.js (writeCredits): the room's
-   `--ring` on every track with real artwork to sample a colour from, but
-   plain white on a demo card, which has none. */
-.credits__edge {
-  position: absolute;
-  /* a pixel in from the border rather than on it — sitting at left:0 it
-     was landing exactly on the rounded clip boundary and being shaved */
-  left: 1px; top: 13%; bottom: 13%;
-  width: 2px;
-  border-radius: 2px;
-  background: linear-gradient(to bottom, transparent, rgb(var(--credits-edge, var(--ring)) / .9), transparent);
-  box-shadow: 0 0 12px rgb(var(--credits-edge, var(--ring)) / .45);
-  scale: 1 0;
-  opacity: 0;
-  transition: scale .3s var(--ease), opacity .26s var(--ease);
-}
-body.is-crediting .credits__edge {
-  scale: 1 1;
-  opacity: 1;
-  transition-duration: .68s, .45s;
-  transition-delay: .05s;
-}
-
-@keyframes credits-float {
-  0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
-  28%  { transform: translate3d(-3px, -6px, 0) rotate(-.32deg); }
-  62%  { transform: translate3d(2px, 4px, 0) rotate(.26deg); }
-  100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-}
-
-/* Every line rides in on the same stagger, counted straight down the panel
-   — app.js numbers them as it builds the groups (--i), so a track with
-   more writers simply takes a beat longer to finish arriving. */
-.credits__heading,
-.credits__row {
-  opacity: 0;
-  translate: 0 6px;
-  transition: opacity .26s var(--ease), translate .26s var(--ease);
-}
-body.is-crediting .credits__heading,
-body.is-crediting .credits__row {
-  opacity: 1;
-  translate: 0 0;
-  transition-duration: .55s;
-  transition-delay: calc(.14s + var(--i, 0) * .055s);
-}
-
-.credits__group + .credits__group { margin-top: clamp(13px, 1.25vw, 18px); }
-/* the one line in the panel meant to read as a heading rather than data —
-   larger, heavier and closer to full white than anything below it, plain
-   case rather than tracked-out caps so it reads as a title, not a label */
-.credits__heading {
-  margin: 0 0 clamp(13px, 1.1vw, 16px);
-  font-size: clamp(13px, 1.05vw, 16px);
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
-  color: rgba(255, 255, 255, .97);
-}
-/* "Main Artist" is a heading-plus-one-name pair rather than a heading over
-   a list — sitting that name right underneath reads as one unit, the way
-   the other groups' multi-row lists don't need to. */
-.credits__heading--artist { margin-bottom: 5px; }
-.credits__list { margin: 0; padding: 0; list-style: none; }
-.credits__row + .credits__row { margin-top: 9px; }
-/* pure white like the heading above it — 300 rendered visibly grey on this
-   typeface (a synthetic-thin fallback, not a real light cut), which read
-   as "not actually white" even at color:#fff. 400 is thin enough to still
-   sit under the heading's 700 while actually painting solid white. */
-.credits__name {
-  display: block;
-  font-size: clamp(11.5px, .95vw, 13.5px);
-  font-weight: 400;
-  letter-spacing: .015em;
-  color: #fff;
-}
-/* a size down from the name and short of pure white — dimmer than the
-   name it belongs to, but legible at a glance rather than requiring a
-   lean-in. Multiple roles on one person stay separated by "•" in the data
-   itself (js/config.js), so nothing here has to build a list out of
-   single-role spans. */
-.credits__role {
-  display: block;
-  margin-top: 2px;
-  font-size: clamp(9px, .72vw, 10.5px);
-  font-weight: 300;
-  letter-spacing: .02em;
-  text-transform: none;
-  color: rgba(255, 255, 255, .74);
-}
-
-/* No room beside the artwork on a narrow screen, and nothing to hover with
-   on a touchscreen — the panel is a pointer affordance, so it simply isn't
-   there. app.js checks the same two things before it ever opens. */
-@media (max-width: 1000px), (hover: none), (pointer: coarse) {
-  .credits, .scene-blur { display: none; }
 }
 
 /* The TikTok and Bio panels were removed from index.html; their styles

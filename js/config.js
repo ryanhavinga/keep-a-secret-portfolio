@@ -37,10 +37,6 @@ const CONFIG = {
      color   : fallback dominant colour of the artwork (hex).
                The player samples the real image at runtime; this is the safety net.
      duration: fallback length in seconds, used only when no audio file loads.
-     credits : what the floating panel shows while the artwork is hovered.
-               Three groups — artist, composition, production — each a list of
-               { name, role }. Leave a group as [] and its heading is skipped,
-               so a track with nothing written down yet simply shows less.
   ------------------------------------------------------------ */
   tracks: [
     {
@@ -49,20 +45,7 @@ const CONFIG = {
       artwork: 'img/track-1.png',
       audio: 'audio/track 1 - Nergens Liever.m4a',
       color: '#9d386f',
-      duration: 194,
-      credits: {
-        artist: [
-          { name: 'Gilles', role: 'Main Artist' }
-        ],
-        composition: [
-          { name: 'Ryan Havinga', role: 'Composer • Lyricist' },
-          { name: 'Kelvin Pasman', role: 'Composer • Lyricist' },
-          { name: 'Joris Geluk', role: 'Composer • Lyricist' }
-        ],
-        production: [
-          { name: 'Keep A Secret', role: 'Producer' }
-        ]
-      }
+      duration: 194
     },
     {
       title: 'Beter dan ooit - Akoestisch',
@@ -70,20 +53,7 @@ const CONFIG = {
       artwork: 'img/track-3.png',
       audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',
       color: '#022137',
-      duration: 208,
-      credits: {
-        artist: [
-          { name: 'Gilles', role: 'Main Artist' }
-        ],
-        composition: [
-          { name: 'Ryan Havinga', role: 'Composer • Lyricist' },
-          { name: 'Kelvin Pasman', role: 'Composer • Lyricist' },
-          { name: 'Joris Geluk', role: 'Composer • Lyricist' }
-        ],
-        production: [
-          { name: 'Keep A Secret', role: 'Producer' }
-        ]
-      }
+      duration: 208
     },
     {
       title: 'Hoogtes',
@@ -92,20 +62,7 @@ const CONFIG = {
       audio: 'audio/track 3 - Hoogtes.m4a',
       color: '#0e0e10',
       duration: 200,
-      demo: true,
-      credits: {
-        artist: [
-          { name: 'Tim Tiago', role: 'Main Artist' }
-        ],
-        composition: [
-          { name: 'Ryan Havinga', role: 'Composer • Lyricist' },
-          { name: 'Kelvin Pasman', role: 'Composer • Lyricist' },
-          { name: 'Joris Geluk', role: 'Composer • Lyricist' }
-        ],
-        production: [
-          { name: 'Keep A Secret', role: 'Producer' }
-        ]
-      }
+      demo: true
     }
   ],
 

@@ -76,26 +76,11 @@ Set `logoImage: 'img/logo.svg'` to swap the whole wordmark for an image.
 > (macOS's `afconvert` can *read* MP3 but has no MP3 *encoder* — AAC is what it actually
 > produces. For true `.mp3` output, encode with `ffmpeg` or a DAW's export instead.)
 
-### Credits
-Each track can carry a `credits` block. Hovering the playing artwork blurs the room behind it
-and unfolds a small floating panel out at the right-hand edge of the screen; moving off the
-artwork folds it away again.
-
-```js
-credits: {
-  artist:      [{ name: 'Gilles', role: 'Main Artist' }],
-  composition: [{ name: 'Ryan Havinga', role: 'Composer • Lyricist' }],
-  production:  [{ name: 'Keep A Secret', role: 'Producer' }]
-}
-```
-
-* Three groups, in this order — *Artist*, *Composition & Lyrics*, *Production*. Each is a list,
-  so add as many people to one as the track needs.
-* Leave a group as `[]` and its heading is skipped entirely, which is how a track with nothing
-  written down yet simply shows less rather than showing a gap.
-* A track with no `credits` at all never opens the panel.
-* It is a pointer affordance and nothing else: no room for it below 1000px wide, and no hover
-  to open it with on a touchscreen, so on a phone it isn't there at all.
+### Credit line
+A single fixed line at the bottom-centre of the screen — "Geschreven en geproduceerd door
+Keep A Secret" — set directly in `index.html` (`.site-credit`), not in `js/config.js`. It's
+site-wide rather than per-track, so there's nothing to edit per song; change the text in the
+markup itself if it ever needs to say something else.
 
 ### TikTok and Bio — removed from the page
 Both panels were taken out of `index.html`. Their settings are still in `js/config.js`

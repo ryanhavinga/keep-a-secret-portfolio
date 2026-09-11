@@ -498,98 +498,6 @@
       }
     }
 
-    /* ---- floating credits ------------------------------------
-       The panel that unfolds beside the artwork while the pointer rests on
-       it. Built out of nodes rather than a template string so a name with
-       an & or a < in it can never be read as markup. */
-    const creditsEl = $('[data-credits]');
-    const creditsBody = $('[data-credits-body]');
-    const CREDIT_GROUPS = [
-      ['artist',      'Main Artist'],
-      ['composition', 'Composition & Lyrics'],
-      ['production',  'Production & Engineering']
-    ];
-    /* The same two questions the stylesheet asks before it makes room for
-       the panel: is there a real pointer to hover with, and is there space
-       out at the edge of the screen to put it. */
-    const creditsRoom = matchMedia('(hover: hover) and (pointer: fine) and (min-width: 1001px)');
-    let hasCredits = false;
-
-    function writeCredits(t) {
-      const c = t.credits || {};
-      creditsBody.textContent = '';
-      /* The lit edge is the room's own lamp colour on every other track —
-         but a demo card has no artwork to sample, so that colour is really
-         just the neutral fallback hue (js/app.js Colour.vivid), not
-         anything drawn from the cover. White reads as "no colour assigned
-         yet" rather than a guess at one. */
-      creditsEl.style.setProperty('--credits-edge', t.demo ? '255 255 255' : 'var(--ring)');
-      /* one running count down the whole panel, so the stagger reads as a
-         single cascade rather than restarting at each heading. */
-      let n = 0;
-      CREDIT_GROUPS.forEach(([key, heading]) => {
-        const people = c[key];
-        if (!people || !people.length) return;
-
-        const group = document.createElement('section');
-        group.className = 'credits__group';
-
-        const h = document.createElement('h2');
-        h.className = key === 'artist' ? 'credits__heading credits__heading--artist' : 'credits__heading';
-        h.textContent = heading;
-        h.style.setProperty('--i', n++);
-        group.appendChild(h);
-
-        const list = document.createElement('ul');
-        list.className = 'credits__list';
-        people.forEach(p => {
-          const row = document.createElement('li');
-          row.className = 'credits__row';
-          row.style.setProperty('--i', n++);
-
-          const name = document.createElement('span');
-          name.className = 'credits__name';
-          name.textContent = p.name;
-          row.appendChild(name);
-
-          /* Skipped when it just repeats the heading above it — a role of
-             "Main Artist" under a "Main Artist" heading says nothing a
-             second time that the heading didn't already say. */
-          if (p.role && p.role.toLowerCase() !== heading.toLowerCase()) {
-            const role = document.createElement('span');
-            role.className = 'credits__role';
-            role.textContent = p.role;
-            row.appendChild(role);
-          }
-          list.appendChild(row);
-        });
-        group.appendChild(list);
-        creditsBody.appendChild(group);
-      });
-      hasCredits = !!creditsBody.children.length;
-    }
-
-    /* Gated behind the same two states as the cover's own hover glow: a
-       cover sliding into place under a resting cursor should not drag the
-       panel open behind it, and neither should a drag. */
-    function openCredits() {
-      if (!hasCredits || !creditsRoom.matches) return;
-      if (el.covers.classList.contains('is-changing')) return;
-      if (el.covers.classList.contains('is-dragging')) return;
-      document.body.classList.add('is-crediting');
-    }
-    function closeCredits() {
-      document.body.classList.remove('is-crediting');
-    }
-    /* Asked once a track change has finished rather than waited for as an
-       event: when the covers slide, the element under a stationary cursor
-       changes without the pointer having moved, and not every browser
-       dispatches enter/leave for that. The :hover state itself is always
-       current, so read that instead. */
-    function creditsRecheck() {
-      if (el.covers.querySelector('.cover:not(.cover--side):hover')) openCredits();
-    }
-
     function applyLight({ panel, ring, deep, b, c }) {
       const root = document.documentElement.style;
       const set = (name, [r, g, bl]) => root.setProperty(name, `${r} ${g} ${bl}`);
@@ -892,7 +800,6 @@
         coverCaptured = true;
         el.covers.setPointerCapture?.(coverPid);
         el.covers.classList.add('is-dragging');
-        closeCredits();
       }
       const w = el.covers.offsetWidth || 1;
       dragExtra = clamp(dx / (w * DRAG_SLOT), -1, 1);
@@ -957,15 +864,7 @@
          time rather than flickering back on between them. */
       el.covers.classList.add('is-changing');
       clearTimeout(changeTimer);
-      changeTimer = setTimeout(() => {
-        el.covers.classList.remove('is-changing');
-        /* the pointer may have been resting on the artwork the whole time —
-           if it still is, the new track's credits belong on screen */
-        creditsRecheck();
-      }, 1000);
-      /* the outgoing track's credits go with the outgoing artwork; the new
-         ones are written at the bottom of the fade below, out of sight */
-      closeCredits();
+      changeTimer = setTimeout(() => el.covers.classList.remove('is-changing'), 1000);
 
       placeCovers();
       el.meta.classList.add('is-swapping');
@@ -977,7 +876,6 @@
         el.title.textContent = t.title;
         el.artist.textContent = t.artist;
         fitTitle();
-        writeCredits(t);
         el.meta.classList.remove('is-swapping');
       }, 240);
 
@@ -1202,19 +1100,6 @@
         el.prev.addEventListener('click', prevTrack);
         el.next.addEventListener('click', nextTrack);
 
-        /* Credits follow the pointer onto the playing artwork and leave with
-           it. enter/leave rather than over/out: they ignore moves between a
-           cover and its own children, which is most of the traffic here. A
-           side cover is not the playing track, so it opens nothing — but its
-           leave still closes, which is what makes sliding across the stack
-           from a side cover to the centre and back behave. */
-        covers.forEach(c => {
-          c.addEventListener('pointerenter', () => {
-            if (!c.classList.contains('cover--side')) openCredits();
-          });
-          c.addEventListener('pointerleave', closeCredits);
-        });
-
         /* drag the cover stack itself to step through tracks, in either
            direction — see coverDown/coverMove/coverUp above */
         el.covers.addEventListener('pointerdown', coverDown);
@@ -1306,24 +1191,13 @@
            invalidates style for the whole document each time. Only the
            timeline reads it, and the timeline is in here. */
         const player = el.covers.closest('.player');
-        let lastArtW = 0, lastCreditsY = 0;
+        let lastArtW = 0;
         const syncArtWidth = () => {
-          const r = el.covers.getBoundingClientRect();
-          const w = Math.round(r.width);
+          const w = Math.round(el.covers.getBoundingClientRect().width);
           if (w && w !== lastArtW) {
             lastArtW = w;
             player.style.setProperty('--art-w', `${w}px`);
             fitTitle();
-          }
-          /* the credits panel centres on the artwork, not the viewport —
-             the meta/transport rows underneath push the artwork's real
-             centre above viewport-middle, and this is the same
-             measure-the-real-box approach as --art-w just above, for the
-             same reason: no CSS value describes this box from outside it. */
-          const y = Math.round(r.top + r.height / 2);
-          if (y && y !== lastCreditsY) {
-            lastCreditsY = y;
-            creditsEl.style.setProperty('--credits-y', `${y}px`);
           }
         };
         new ResizeObserver(syncArtWidth).observe(el.covers);
