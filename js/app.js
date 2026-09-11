@@ -503,7 +503,6 @@
        it. Built out of nodes rather than a template string so a name with
        an & or a < in it can never be read as markup. */
     const creditsEl = $('[data-credits]');
-    const creditsTrack = $('[data-credits-track]');
     const creditsBody = $('[data-credits-body]');
     const CREDIT_GROUPS = [
       ['artist',      'Main Artist'],
@@ -518,13 +517,16 @@
 
     function writeCredits(t) {
       const c = t.credits || {};
-      creditsTrack.textContent = t.title;
       creditsBody.textContent = '';
+      /* The lit edge is the room's own lamp colour on every other track —
+         but a demo card has no artwork to sample, so that colour is really
+         just the neutral fallback hue (js/app.js Colour.vivid), not
+         anything drawn from the cover. White reads as "no colour assigned
+         yet" rather than a guess at one. */
+      creditsEl.style.setProperty('--credits-edge', t.demo ? '255 255 255' : 'var(--ring)');
       /* one running count down the whole panel, so the stagger reads as a
-         single cascade rather than restarting at each heading. 0 is the
-         eyebrow, 1 the track title — both already in the page. */
-      let n = 2;
-      creditsTrack.style.setProperty('--i', 1);
+         single cascade rather than restarting at each heading. */
+      let n = 0;
       CREDIT_GROUPS.forEach(([key, heading]) => {
         const people = c[key];
         if (!people || !people.length) return;

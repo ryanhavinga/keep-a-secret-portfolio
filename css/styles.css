@@ -863,7 +863,7 @@ html.has-cursor .volume__track { cursor: none; }
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  font-size: clamp(9px, 1.9cqw, 11px);
+  font-size: clamp(11px, 2.4cqw, 14px);
   letter-spacing: .14em;
   font-variant-numeric: tabular-nums;
   color: #fff;
@@ -878,7 +878,7 @@ html.has-cursor .volume__track { cursor: none; }
 .scrub__track {
   height: 1px;
   border-radius: 1px;
-  background: rgba(255, 255, 255, .45);
+  background: rgba(255, 255, 255, .68);
   overflow: hidden;
 }
 .scrub__fill {
@@ -898,7 +898,7 @@ html.has-cursor .volume__track { cursor: none; }
   transition: transform .5s var(--ease), left .18s linear;
 }
 .scrub:hover .scrub__head, .scrub.is-scrubbing .scrub__head { transform: translateY(-50%) scale(1); }
-.scrub:hover .scrub__track { background: rgba(255, 255, 255, .65); }
+.scrub:hover .scrub__track { background: rgba(255, 255, 255, .88); }
 /* while dragging, the bar should sit under the finger rather than easing
    toward it — the .18s smoothing is there for playback, where it fills in
    between updates, and reads as lag the moment you take hold of it */
@@ -913,7 +913,7 @@ html.has-cursor .volume__track { cursor: none; }
 .vol-toggle {
   flex: 0 0 auto;
   display: grid; place-items: center;
-  width: clamp(16px, 3.4cqw, 20px); height: clamp(16px, 3.4cqw, 20px);
+  width: clamp(20px, 4.3cqw, 25px); height: clamp(20px, 4.3cqw, 25px);
   color: rgba(255, 255, 255, .7);
   transition: color .5s var(--ease);
 }
@@ -1045,18 +1045,22 @@ body.is-crediting .scene-blur {
   right: clamp(48px, 10vw, 148px);
   pointer-events: none;
 }
+/* Deliberately less "window" than the rest of the UI's hairline-and-glass
+   language — no border, no crisp HUD corner ticks, a flatter grey instead
+   of the tinted glass gradient. The text is the thing; this is just the
+   dark patch of air it's floating in front of, which is also what the
+   static layer (below) is for — a surface with some grain in it, not a
+   clean panel. */
 .credits__panel {
   position: relative;
   overflow: hidden;    /* clips .credits__static to the rounded corners */
   width: clamp(220px, 24.5vw, 330px);
   padding: clamp(17px, 1.6vw, 23px) clamp(18px, 1.8vw, 25px) clamp(18px, 1.8vw, 24px);
-  border-radius: 13px;
-  background: linear-gradient(157deg, rgba(40, 40, 45, .84), rgba(18, 18, 21, .9));
-  backdrop-filter: blur(18px) saturate(115%);
-  -webkit-backdrop-filter: blur(18px) saturate(115%);
-  border: 1px solid rgba(255, 255, 255, .13);
-  box-shadow: 0 34px 60px -34px rgba(0, 0, 0, .95),
-              inset 0 1px 0 rgba(255, 255, 255, .09);
+  border-radius: 8px;
+  background: rgba(21, 21, 23, .56);
+  backdrop-filter: blur(13px) saturate(88%);
+  -webkit-backdrop-filter: blur(13px) saturate(88%);
+  box-shadow: 0 30px 70px -38px rgba(0, 0, 0, .8);
 
   /* closed: a thin horizontal sliver, set back and slightly small. The
      clip-path is what makes it read as unfolding rather than just fading
@@ -1067,7 +1071,7 @@ body.is-crediting .scene-blur {
   opacity: 0;
   translate: 16px -50%;
   scale: .94;
-  clip-path: inset(45% 0 45% 0 round 13px);
+  clip-path: inset(45% 0 45% 0 round 8px);
   transition: opacity .3s var(--ease), translate .38s var(--ease),
               scale .38s var(--ease), clip-path .36s var(--ease);
 
@@ -1080,25 +1084,34 @@ body.is-crediting .credits__panel {
   opacity: 1;
   translate: 0 -50%;
   scale: 1;
-  clip-path: inset(0 0 0 0 round 13px);
+  clip-path: inset(0 0 0 0 round 8px);
   animation-play-state: running;
   /* in slower than out: unfolding is the event, closing should just be
      gone by the time the eye follows the cursor back */
   transition-duration: .5s, .72s, .72s, .68s;
 }
 
-/* A loop of analog static behind everything else in the panel — fractal
-   noise tiled and stepped rather than eased between positions, which is
-   what makes it read as a flickering signal instead of a smooth drift.
-   Sits first in the DOM so the text and the ticks paint over it without
-   needing a z-index; `overflow: hidden` on .credits__panel keeps it inside
-   the rounded corners. Paused while the panel is closed, same reasoning as
-   the float animation below it not running for a panel nobody can see. */
+/* The panel's main "glitchy" tell — fractal noise tiled and stepped rather
+   than eased between positions, which is what makes it read as a
+   flickering signal instead of a smooth drift. Pushed louder than a
+   standard grain overlay: this is meant to be seen, standing in for the
+   window chrome (border, HUD ticks) that used to carry the "something's
+   happening here" read. Sits first in the DOM so the text paints over it
+   without needing a z-index; `overflow: hidden` on .credits__panel keeps
+   it inside the rounded corners. Paused while the panel is closed, same
+   reasoning as the float animation below it not running for a panel
+   nobody can see. */
 .credits__static {
   position: absolute; inset: -20%;
   pointer-events: none;
-  opacity: .05;
-  mix-blend-mode: overlay;
+  opacity: .09;
+  /* overlay (the usual grain blend) barely shows on a base this dark — its
+     formula collapses toward the base colour as luminance drops, which on
+     rgba(21,21,23) is next to nothing. screen always lightens regardless
+     of what's underneath, which is what actually puts visible grain on a
+     surface this dark. */
+  mix-blend-mode: screen;
+  filter: contrast(1.15) brightness(1.05);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 140px 140px;
   animation: credits-static 2.4s steps(1) infinite;
@@ -1106,52 +1119,28 @@ body.is-crediting .credits__panel {
 }
 body.is-crediting .credits__static { animation-play-state: running; }
 @keyframes credits-static {
-  0%   { background-position: 0 0;      opacity: .045; }
+  0%   { background-position: 0 0;      opacity: .04; }
   7%   { background-position: -54px 22px; opacity: .09; }
-  8%   { opacity: .02; }
+  8%   { opacity: .015; }
   19%  { background-position: 38px -46px; opacity: .07; }
-  20%  { transform: translateX(1px); }
+  20%  { transform: translateX(2px); }
   21%  { transform: translateX(0); }
-  34%  { background-position: -26px -18px; opacity: .04; }
-  47%  { background-position: 58px 36px;  opacity: .095; }
-  48%  { opacity: .015; }
-  49%  { transform: translateX(-1px); }
+  34%  { background-position: -26px -18px; opacity: .035; }
+  47%  { background-position: 58px 36px;  opacity: .1; }
+  48%  { opacity: .01; }
+  49%  { transform: translateX(-2px); }
   50%  { transform: translateX(0); }
   63%  { background-position: -44px -38px; opacity: .06; }
   76%  { background-position: 18px 54px;  opacity: .08; }
-  88%  { background-position: -60px 12px; opacity: .03; }
-  100% { background-position: 0 0;      opacity: .045; }
-}
-
-/* HUD corner ticks — last in, first out */
-.credits__panel::before,
-.credits__panel::after {
-  content: '';
-  position: absolute;
-  width: 9px; height: 9px;
-  border: 1px solid rgba(255, 255, 255, .24);
-  opacity: 0;
-  transition: opacity .3s var(--ease);
-}
-.credits__panel::before {
-  top: 7px; left: 7px;
-  border-right: 0; border-bottom: 0;
-  border-radius: 4px 0 0 0;
-}
-.credits__panel::after {
-  bottom: 7px; right: 7px;
-  border-left: 0; border-top: 0;
-  border-radius: 0 0 4px 0;
-}
-body.is-crediting .credits__panel::before,
-body.is-crediting .credits__panel::after {
-  opacity: 1;
-  transition-duration: .7s;
-  transition-delay: .26s;
+  88%  { background-position: -60px 12px; opacity: .025; }
+  100% { background-position: 0 0;      opacity: .04; }
 }
 
 /* the lit edge the panel unfolds from — carries the room's own lamp
-   colour, so it shifts with the artwork like everything else does */
+   colour, so it shifts with the artwork like everything else does.
+   `--credits-edge` is set per track in app.js (writeCredits): the room's
+   `--ring` on every track with real artwork to sample a colour from, but
+   plain white on a demo card, which has none. */
 .credits__edge {
   position: absolute;
   /* a pixel in from the border rather than on it — sitting at left:0 it
@@ -1159,8 +1148,8 @@ body.is-crediting .credits__panel::after {
   left: 1px; top: 13%; bottom: 13%;
   width: 2px;
   border-radius: 2px;
-  background: linear-gradient(to bottom, transparent, rgb(var(--ring) / .9), transparent);
-  box-shadow: 0 0 12px rgb(var(--ring) / .45);
+  background: linear-gradient(to bottom, transparent, rgb(var(--credits-edge, var(--ring)) / .9), transparent);
+  box-shadow: 0 0 12px rgb(var(--credits-edge, var(--ring)) / .45);
   scale: 1 0;
   opacity: 0;
   transition: scale .3s var(--ease), opacity .26s var(--ease);
@@ -1182,16 +1171,12 @@ body.is-crediting .credits__edge {
 /* Every line rides in on the same stagger, counted straight down the panel
    — app.js numbers them as it builds the groups (--i), so a track with
    more writers simply takes a beat longer to finish arriving. */
-.credits__eyebrow,
-.credits__track,
 .credits__heading,
 .credits__row {
   opacity: 0;
   translate: 0 6px;
   transition: opacity .26s var(--ease), translate .26s var(--ease);
 }
-body.is-crediting .credits__eyebrow,
-body.is-crediting .credits__track,
 body.is-crediting .credits__heading,
 body.is-crediting .credits__row {
   opacity: 1;
@@ -1200,27 +1185,6 @@ body.is-crediting .credits__row {
   transition-delay: calc(.14s + var(--i, 0) * .055s);
 }
 
-/* the one word in the panel bigger than any heading below it — same weight
-   as those headings ("even dik"), pure white, so the eye lands here first.
-   Sentence case rather than tracked-out caps, same reasoning as the
-   headings below it: it reads as a title, not a label. */
-.credits__eyebrow {
-  margin: 0 0 3px;
-  font-size: clamp(15px, 1.25vw, 18px);
-  font-weight: 700;
-  letter-spacing: .01em;
-  text-transform: none;
-  color: #fff;
-}
-/* the track title, right under the eyebrow — bold and white like it, but
-   a size down, so "Credits" still reads as the bigger of the two */
-.credits__track {
-  margin: 0 0 clamp(13px, 1.3vw, 17px);
-  font-size: clamp(12px, 1vw, 14.5px);
-  font-weight: 700;
-  letter-spacing: .01em;
-  color: #fff;
-}
 .credits__group + .credits__group { margin-top: clamp(13px, 1.25vw, 18px); }
 /* the one line in the panel meant to read as a heading rather than data —
    larger, heavier and closer to full white than anything below it, plain

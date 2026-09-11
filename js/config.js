@@ -65,8 +65,8 @@ const CONFIG = {
       }
     },
     {
-      title: 'Beter dan ooit',
-      artist: 'Gilles — Akoestisch',
+      title: 'Beter dan ooit - Akoestisch',
+      artist: 'Gilles',
       artwork: 'img/track-3.png',
       audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',
       color: '#022137',
