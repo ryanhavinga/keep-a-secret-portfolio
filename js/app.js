@@ -832,15 +832,19 @@
       placeCovers();
       el.meta.classList.add('is-swapping');
       clearTimeout(swapTimer);
-      /* just past the .22s fade-out, so the words are actually invisible
-         when they change — and fitTitle's font-size jump lands here too,
-         where nothing can see it */
+      /* past the .22s fade-out, so the words are actually invisible when
+         they change — and fitTitle's font-size jump lands here too, where
+         nothing can see it. Padded well past the transition's own 220ms
+         (was 240 — only 20ms of slack) since a phone already busy sliding
+         the cover and flashing the light can drop enough frames to still
+         be mid-fade at 240ms, which swaps the text under still-visible old
+         copy and reads as a jump-cut rather than a fade. */
       swapTimer = setTimeout(() => {
         el.title.textContent = t.title;
         el.artist.textContent = t.artist;
         fitTitle();
         el.meta.classList.remove('is-swapping');
-      }, 240);
+      }, 320);
 
       if (t.demo || !t.artwork) {
         applyLight(DEMO_LIGHT);

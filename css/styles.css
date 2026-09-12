@@ -581,7 +581,11 @@ body.is-unlocked .leds {
   position: relative;
   width: var(--panel);
   height: var(--panel);
-  touch-action: pan-y;
+  /* pan-y alone leaves the browser free to swallow a pinch that starts
+     here — pinch-zoom explicitly keeps that native gesture available
+     alongside the vertical pass-through and the app's own JS-driven
+     horizontal drag (pointer-captured, so untouched by either) */
+  touch-action: pan-y pinch-zoom;
 }
 
 .block {
@@ -631,7 +635,11 @@ body.is-unlocked .leds {
   /* claim horizontal drags for the track-switch gesture (js/app.js,
      coverDown/coverMove/coverUp) while still letting a touchscreen
      scroll the page vertically */
-  touch-action: pan-y;
+  /* pan-y alone leaves the browser free to swallow a pinch that starts
+     here — pinch-zoom explicitly keeps that native gesture available
+     alongside the vertical pass-through and the app's own JS-driven
+     horizontal drag (pointer-captured, so untouched by either) */
+  touch-action: pan-y pinch-zoom;
   user-select: none;
   -webkit-user-select: none;
   /* recedes along with .player__meta while the volume flyout is open —
@@ -755,12 +763,23 @@ body.is-unlocked .leds {
   z-index: 20;
 }
 .volume.is-open { transform: translateX(-50%) scaleY(1); opacity: 1; pointer-events: auto; }
+/* the pointer target — spans the whole flyout's width rather than the
+   thin 3px bar it visually centres, since a fingertip can't reliably land
+   a drag on a 3px-wide line. Grabbing anywhere across the flyout now
+   starts the fader, same as .scrub's own padded hit area beyond its
+   visible line. */
 .volume__track {
+  position: relative;
+  width: 100%; height: 100%;
+  display: flex; justify-content: center;
+  touch-action: none;
+}
+.volume__bar {
   position: relative;
   width: 3px; height: 100%;
   border-radius: 2px;
   background: rgba(255, 255, 255, .28);
-  touch-action: none;
+  pointer-events: none;   /* the wider .volume__track above handles input */
 }
 .volume__fill {
   position: absolute;
@@ -912,6 +931,7 @@ body.is-unlocked .leds {
   display: grid; place-items: center;
   width: clamp(20px, 4.3cqw, 25px); height: clamp(20px, 4.3cqw, 25px);
   color: rgba(255, 255, 255, .7);
+  touch-action: manipulation;
   transition: color .5s var(--ease);
 }
 .vol-toggle:hover, .vol-toggle.is-open { color: #fff; }
@@ -933,6 +953,11 @@ body.is-unlocked .leds {
   display: grid; place-items: center;
   border-radius: 50%;
   opacity: 1;
+  /* skips the ~300ms the browser otherwise waits to see whether a tap is
+     going to turn into a double-tap-to-zoom — real on iOS Safari even with
+     width=device-width set, and enough on its own for a tap on a small
+     target to feel like it "didn't take" the first time */
+  touch-action: manipulation;
   transition: transform .8s var(--ease), opacity .6s ease;
 }
 .ctrl svg { fill: none; stroke: #fff; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
@@ -1086,7 +1111,12 @@ body.is-unlocked .leds {
   background: none; border: 0;
   border-bottom: 1px solid var(--hairline);
   font-family: var(--display); font-weight: 400;
-  font-size: 15px; letter-spacing: .32em; text-indent: .32em;
+  /* iOS Safari zooms the whole page in on focus for any input under 16px,
+     and since the gate's submit is intercepted with preventDefault rather
+     than a real navigation, nothing ever resets that zoom afterward — the
+     zoomed-in state just carries straight into the unlocked room. 16px is
+     the threshold where it stops happening at all. */
+  font-size: 16px; letter-spacing: .32em; text-indent: .32em;
   text-align: center; text-transform: uppercase;
   color: var(--white);
   caret-color: var(--w-48);
@@ -1106,6 +1136,7 @@ body.is-unlocked .leds {
   font-size: 10px; letter-spacing: .34em; text-indent: .34em;
   text-transform: uppercase;
   color: var(--white);
+  touch-action: manipulation;
   transition: background-color .7s var(--ease);
 }
 .gate__btn:hover { background: rgba(255, 255, 255, .1); }
@@ -1221,7 +1252,10 @@ body.is-unlocked .leds {
    ============================================================ */
 @media (max-width: 760px) {
   :root {
-    --panel: clamp(300px, min(74vh, 90vw), 620px);
+    /* a step bigger than before (was 300/74vh/90vw/620) — the player and
+       its artwork read as the main event on a phone, so it's worth more
+       of the screen than the desktop ratio gives it */
+    --panel: clamp(320px, min(78vh, 95vw), 640px);
     /* considerably smaller relative to the viewport than the desktop
        ratio (was min(136vh,245vw) — over 2x the viewport width, so only
        its near-vertical side edges ever showed): sized instead to sit
@@ -1233,8 +1267,14 @@ body.is-unlocked .leds {
        its bottom edge well past the transport controls */
     --ring-y: 54%;
   }
-  .stage { padding-top: clamp(88px, 15vh, 120px); }
-  .player { padding: 14px 15px 16px; }
+  /* trimmed a little from before (was 88-120px top / the shared 32-64px
+     bottom) to give the now-bigger panel the room, rather than pushing the
+     page's total height past what a phone's actual visible viewport (the
+     address bar is up more often than not) has to give — see the note on
+     .stage's `100dvh` above, and on .gate__input's font-size, for the two
+     other things that were fighting this same fit-without-scrolling goal */
+  .stage { padding: clamp(78px, 12.5vh, 108px) 0 clamp(20px, 4vh, 40px); }
+  .player { padding: 12px 14px 14px; }
 
   /* The desktop clamp (23-40px) floors at 23px regardless of how narrow
      the phone actually is — wide enough to force "Keep A Secret" onto two
