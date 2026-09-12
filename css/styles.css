@@ -964,7 +964,7 @@ body.is-unlocked .leds {
   /* thicker than the arcs it replaces, and overshooting the speaker's
      own silhouette at both ends — a slash cutting across the whole
      glyph, not a line traced tightly around it */
-  stroke-width: 2.6;
+  stroke-width: 2.2;
   transition: opacity .3s var(--ease);
 }
 .vol-toggle.is-muted .vol-toggle__mute-line { opacity: 1; }
