@@ -881,7 +881,6 @@ body.is-unlocked .leds {
   transition: left .18s linear;
 }
 .scrub:hover .scrub__head, .scrub.is-scrubbing .scrub__head { transform: translateY(-50%) scale(1); }
-.scrub:hover .scrub__track { background: #4a4a4d; }
 /* while dragging, the bar should sit under the finger rather than easing
    toward it — the .18s smoothing is there for playback, where it fills in
    between updates, and reads as lag the moment you take hold of it */
@@ -957,7 +956,7 @@ body.is-unlocked .leds {
    (stroke-linejoin) and bulk out the pause bars, which are open paths
    and have no fill area of their own to speak of */
 .ctrl--play svg { width: 60%; fill: #fff; stroke: #fff; stroke-width: 1.6; stroke-linejoin: round; }
-.ctrl__icon--pause { stroke-width: 3.6; }
+.ctrl__icon--pause { stroke-width: 4.6; }
 /* a touch brighter on hover and while actually playing — filter only,
    never transform: no hover movement, by request. The only motion left
    on this button is the punch below, on an actual press. js/app.js adds/
@@ -975,7 +974,12 @@ body.is-unlocked .leds {
    at its own centre out to full size, rather than just fading — "van
    binnen naar buiten". The outgoing icon does the same in reverse. */
 .ctrl__icon { position: absolute; transition: opacity .38s ease, transform .38s var(--ease); }
+/* the triangle's own weight sits toward its left edge, and the pause bars'
+   toward theirs a little too once thickened — both nudged right by the
+   same amount so they land on the same optical centre, not just the same
+   geometric one */
 .ctrl__icon--play { transform: translateX(6%); }
+.ctrl__icon--pause { transform: translateX(6%); }
 .ctrl--play[data-state='playing'] .ctrl__icon--play  { opacity: 0; transform: scale(0); }
 .ctrl--play[data-state='paused']  .ctrl__icon--pause { opacity: 0; transform: scale(0); }
 
