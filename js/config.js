@@ -45,7 +45,7 @@ const CONFIG = {
       artwork: 'img/track-1.png',
       audio: 'audio/track 1 - Nergens Liever.m4a',
       color: '#9d386f',
-      duration: 194
+      duration: 197
     },
     {
       title: 'Beter dan ooit - Akoestisch',
@@ -53,7 +53,7 @@ const CONFIG = {
       artwork: 'img/track-3.png',
       audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',
       color: '#022137',
-      duration: 208
+      duration: 167
     },
     {
       title: 'Hoogtes',
@@ -77,7 +77,7 @@ const CONFIG = {
       artwork: 'img/track-2.png',
       audio: 'audio/track 2 - Boemerang.m4a',
       color: '#c465de',
-      duration: 181
+      duration: 189
     },
     {
       title: 'Alles Waar Je Spijt Van Hebt',

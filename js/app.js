@@ -860,6 +860,14 @@
       el.note.hidden = true;
       resetPaintCache();
       paint();
+      /* duration() falls back to the config value above until the file's
+         real metadata is in — repaint once it lands so a stale/incorrect
+         config number (or a paused track, which tick()'s loop never
+         touches) still settles on the right total instead of getting
+         stuck. Guarded by track index in case another load() already
+         moved on by the time this fires. */
+      const n = i;
+      audio.addEventListener('loadedmetadata', () => { if (n === i) paint(); }, { once: true });
       if (autoplay) play();
     }
 
