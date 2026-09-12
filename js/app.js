@@ -1382,13 +1382,28 @@
 
         /* scrubbing */
         el.scrub.addEventListener('pointerdown', e => {
-          scrubbing = true; el.scrub.classList.add('is-scrubbing');
-          el.scrub.setPointerCapture(e.pointerId); seekFromEvent(e);
+          scrubbing = true;
+          el.scrub.setPointerCapture(e.pointerId);
+          seekFromEvent(e);   // a plain tap lands here and nowhere else — the
+                               // full .18s ease plays out, untouched by is-scrubbing
         });
-        el.scrub.addEventListener('pointermove', e => scrubbing && seekFromEvent(e));
+        el.scrub.addEventListener('pointermove', e => {
+          if (!scrubbing) return;
+          /* real movement, not just a held tap — from here on the dot and
+             fill should sit under the finger, not ease toward it (that
+             .18s is for playback filling in between updates; dragging it
+             yourself, it reads as lag). Added on the first actual move
+             rather than a timer off pointerdown itself: a timer was
+             cutting the tap's own animation short after one frame
+             regardless of whether the gesture was still just a tap,
+             which defeated the point of it entirely. */
+          el.scrub.classList.add('is-scrubbing');
+          seekFromEvent(e);
+        });
         el.scrub.addEventListener('pointerup', e => {
           if (!scrubbing) return;
-          scrubbing = false; el.scrub.classList.remove('is-scrubbing');
+          scrubbing = false;
+          el.scrub.classList.remove('is-scrubbing');
           el.scrub.releasePointerCapture(e.pointerId);
         });
         el.scrub.addEventListener('keydown', e => {
@@ -1435,11 +1450,19 @@
           if (muted) setMuted(false);   // adjusting the fader by hand always means "audible"
           volDragging = true;
           el.volTrack.setPointerCapture?.(e.pointerId);
+          volumeFromEvent(e);   // a plain tap lands here and nowhere else — the
+                                 // full .45s ease plays out, untouched by is-dragging
+        });
+        el.volTrack.addEventListener('pointermove', e => {
+          if (!volDragging) return;
+          /* real movement — see the identical note on el.scrub's own
+             pointermove above */
+          el.volTrack.classList.add('is-dragging');
           volumeFromEvent(e);
         });
-        el.volTrack.addEventListener('pointermove', e => volDragging && volumeFromEvent(e));
         el.volTrack.addEventListener('pointerup', e => {
           volDragging = false;
+          el.volTrack.classList.remove('is-dragging');
           el.volTrack.releasePointerCapture?.(e.pointerId);
         });
         el.volTrack.addEventListener('keydown', e => {

@@ -813,12 +813,21 @@ body.is-unlocked .leds {
   background: rgba(255, 255, 255, .28);
   pointer-events: none;   /* the wider .volume__track above handles input */
 }
+/* Both animate at the flyout's own opening pace (.volume.is-open above)
+   — a tap landing directly on a value, a mute/unmute, and the fader
+   opening all read as one consistent speed of motion rather than the
+   flyout gliding in and the fader itself snapping. Suppressed during an
+   actual drag (.volume__track.is-dragging below), the same shape as
+   .scrub.is-scrubbing further down: the first jump on touch-down still
+   eases in at that pace, then tracks the finger exactly for the rest of
+   the gesture rather than trailing behind it. */
 .volume__fill {
   position: absolute;
   bottom: 0; left: 0; width: 100%; height: 100%;
   border-radius: 2px;
   background: #fff;
   box-shadow: 0 0 10px rgba(255, 255, 255, .6);
+  transition: height .45s var(--ease);
 }
 .volume__head {
   position: absolute; left: 50%; bottom: 0;
@@ -827,7 +836,10 @@ body.is-unlocked .leds {
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 0 16px rgba(255, 255, 255, .8);
+  transition: bottom .45s var(--ease);
 }
+.volume__track.is-dragging .volume__fill,
+.volume__track.is-dragging .volume__head { transition: none; }
 
 /* A horizontal carousel in its own right, independent of the artwork
    above it — see .meta-item below. The container just needs a fixed box
@@ -942,12 +954,17 @@ body.is-unlocked .leds {
   transition: left .18s linear;
 }
 .scrub:hover .scrub__head, .scrub.is-scrubbing .scrub__head { transform: translateY(-50%) scale(1); }
-/* while dragging (or landing a plain click), both the fill and the dot
-   should sit under the finger rather than easing toward it — the .18s
-   smoothing is there for playback, where it fills in between updates, and
-   reads as lag the moment you take hold of it. Missing this on the head
-   before meant a click snapped the fill instantly but left the dot
-   visibly trailing after it on its own .18s glide. */
+/* Once actually dragging, both the fill and the dot should sit under the
+   finger rather than easing toward it — the .18s smoothing is there for
+   playback, where it fills in between updates, and reads as lag the
+   moment you're moving it yourself. `is-scrubbing` lands a beat after the
+   initial touch-down (see seekFromEvent's call site in init()), so the
+   very first jump to wherever you tapped still gets that same .18s ease
+   — a tiny, deliberate delay rather than a snap — and only the
+   continued dragging after it is instant. Both properties disabled
+   together: a click snapping the fill instantly while the dot eased
+   in on its own .18s glide behind it was the original version of this
+   bug. */
 .scrub.is-scrubbing .scrub__fill,
 .scrub.is-scrubbing .scrub__head { transition: none; }
 
@@ -1326,10 +1343,10 @@ body.is-unlocked .leds {
     /* raised from the shared 60% — centred on the panel, that put the
        band's top edge a whole empty screen-third below the header and
        its bottom edge well past the transport controls. Nudged up
-       another 1cm on top of that (was 0.5cm) — a fixed physical
+       another half a centimetre on top of that — a fixed physical
        distance via calc() rather than another bare percentage, so it
        moves the same real amount regardless of the phone's own height. */
-    --ring-y: calc(54% - 1cm);
+    --ring-y: calc(54% - 0.5cm);
   }
   /* trimmed a little from before (was 88-120px top / the shared 32-64px
      bottom) to give the now-bigger panel the room, rather than pushing the
