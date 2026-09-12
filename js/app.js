@@ -1350,8 +1350,16 @@
              entirely isn't guaranteed to deliver pointerup back to the
              page at all, and without this the drag was left permanently
              "held", chasing every future mousemove around the screen
-             until the page reloaded. */
-          surface.addEventListener('lostpointercapture', swipeUp);
+             until the page reloaded.
+
+             Mouse only, deliberately — iOS Safari fires this one early
+             (right as setPointerCapture is called, not when capture is
+             actually lost) for touch input, which was ending every swipe
+             the instant it started capturing and reads as "swiping does
+             nothing at all". Touch never has the off-window-release
+             problem this exists for in the first place, so scoping it to
+             mouse loses nothing and stops it misfiring there. */
+          surface.addEventListener('lostpointercapture', e => { if (e.pointerType === 'mouse') swipeUp(e); });
           surface.addEventListener('dragstart', e => e.preventDefault());
         }
         /* belt-and-braces alongside lostpointercapture above — losing
