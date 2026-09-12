@@ -396,7 +396,8 @@
 
     /* cover-stack drag state — see coverDown/coverMove/coverUp below */
     let coverDragging = false, coverCaptured = false, coverMoved = 0,
-        coverStartX = 0, dragExtra = 0, coverPid = null;
+        coverStartX = 0, dragExtra = 0, coverPid = null,
+        dragVelocity = 0, lastMoveT = 0;
 
     const track = () => tracks[i];
     const duration = () => (fallback || !isFinite(audio.duration) || !audio.duration)
@@ -738,12 +739,68 @@
        matched closer to Carousel's own .62 instead. */
     const DRAG_SLOT = .58;
     const DRAG_COMMIT = .18; // matches Carousel's own commit threshold
+    /* a flick can commit well short of DRAG_COMMIT's distance if it's
+       fast enough — units are DRAG_SLOT-normalised extra per ms, so this
+       is "cover a little over a third of a slot in 100ms" */
+    const FLICK_VELOCITY = .003;
+
+    /* ---- release physics ---------------------------------------
+       A flick should carry its own speed into the settle rather than
+       every release animating at the same fixed rate regardless of how
+       fast the finger was moving — modelled as a critically damped
+       spring (the fastest response with no overshoot/oscillation:
+       nothing else on this site bounces, so the settle shouldn't either)
+       released from wherever the drag actually left off, at the speed it
+       was actually moving. `.covers.is-dragging` is what keeps .cover's
+       own CSS transition off during this — the same class the drag
+       itself uses — so this reads as the drag continuing under its own
+       momentum after the fingertip lets go, right up until it settles. */
+    const SPRING_STIFFNESS = 210;
+    const SPRING_DAMPING = 2 * Math.sqrt(SPRING_STIFFNESS);
+    const SPRING_REST_EPS = .001;
+    let springRaf = null;
+
+    function stopSpring() {
+      if (springRaf) cancelAnimationFrame(springRaf);
+      springRaf = null;
+      el.covers.classList.remove('is-dragging');
+    }
+
+    function springTo(target, initialVelocity) {
+      stopSpring();
+      el.covers.classList.add('is-dragging');
+      let velocity = initialVelocity, last = performance.now();
+      (function step(now) {
+        const dt = Math.min((now - last) / 1000, 1 / 30);   // clamp a stalled tab's catch-up jump
+        last = now;
+        const accel = -SPRING_STIFFNESS * (dragExtra - target) - SPRING_DAMPING * velocity;
+        velocity += accel * dt;
+        dragExtra += velocity * dt;
+        if (Math.abs(dragExtra - target) < SPRING_REST_EPS && Math.abs(velocity) < SPRING_REST_EPS) {
+          dragExtra = target;
+          placeCovers(dragExtra);
+          springRaf = null;
+          el.covers.classList.remove('is-dragging');
+          return;
+        }
+        placeCovers(dragExtra);
+        springRaf = requestAnimationFrame(step);
+      })(last);
+    }
 
     function coverDown(e) {
       if (tracks.length <= 1) return;   // nothing to drag to
       if (e.target.closest('.ctrl, a, .scrub')) return;
+      /* grabbing the stack again mid-settle picks up from wherever the
+         spring already had it, rather than snapping to 0 first — offset
+         coverStartX so the very next coverMove reconstructs the current
+         dragExtra exactly, and only moves it from there */
+      const w = el.covers.offsetWidth || 1;
+      coverStartX = e.clientX - dragExtra * w * DRAG_SLOT;
+      stopSpring();
       coverDragging = true; coverCaptured = false; coverMoved = 0;
-      coverStartX = e.clientX; dragExtra = 0; coverPid = e.pointerId;
+      dragVelocity = 0; lastMoveT = performance.now();
+      coverPid = e.pointerId;
     }
     /* Pointermove can fire far faster than the screen redraws — a real
        mouse or trackpad easily beats 60Hz — and placeCovers() writes
@@ -753,7 +810,10 @@
        for yet, which is exactly the kind of self-inflicted lag that also
        drags the cursor down with it. Only the latest pointer position
        before each frame ever needs painting, so pending moves collapse
-       into one instead of piling up. */
+       into one instead of piling up. Velocity is tracked here instead,
+       off the raw events rather than the throttled paint, since it's
+       what feeds the release spring below and a paint-frame's worth of
+       lag on that would read as the flick not quite matching the finger. */
     let coverMoveQueued = false;
     function coverMove(e) {
       if (!coverDragging) return;
@@ -766,7 +826,22 @@
         el.covers.classList.add('is-dragging');
       }
       const w = el.covers.offsetWidth || 1;
-      dragExtra = clamp(dx / (w * DRAG_SLOT), -1, 1);
+      const next = clamp(dx / (w * DRAG_SLOT), -1, 1);
+      const now = performance.now(), dt = now - lastMoveT;
+      if (dt > 0) {
+        /* smoothed rather than taken raw — consecutive pointermove deltas
+           are noisy enough (device sampling, sub-pixel jitter) that the
+           instantaneous value alone spikes around on an otherwise steady
+           drag. Weighted toward the newest sample rather than a slower,
+           heavier average: a real flick is over in 2-4 events, and a
+           slower-converging blend was still mostly reflecting the
+           standing-start 0 it began from by the time the finger lifted,
+           never getting the chance to register as fast at all. */
+        const instant = (next - dragExtra) / dt;
+        dragVelocity = dragVelocity * .45 + instant * .55;
+      }
+      lastMoveT = now;
+      dragExtra = next;
       if (coverMoveQueued) return;
       coverMoveQueued = true;
       requestAnimationFrame(() => {
@@ -781,9 +856,18 @@
       coverPid = null;
 
       if (coverCaptured) {
-        el.covers.classList.remove('is-dragging');
-        if (Math.abs(dragExtra) > DRAG_COMMIT) load(i - Math.sign(dragExtra), playing);
-        else placeCovers();          // under threshold — settle back where it started
+        const committed = Math.abs(dragExtra) > DRAG_COMMIT || Math.abs(dragVelocity) > FLICK_VELOCITY;
+        if (committed) {
+          const stepDir = Math.sign(dragExtra) || Math.sign(dragVelocity);
+          load(i - stepDir, playing);
+          /* load() just repainted every cover at rest (extra 0) in the
+             new index's frame — pick the drag back up exactly where it
+             left off, one slot further along, rather than let that
+             flash on screen */
+          dragExtra -= stepDir;
+          placeCovers(dragExtra);
+        }
+        springTo(0, dragVelocity * 1000);   // ms -> seconds, to match the spring's own units
       } else if (coverMoved < 6) {
         /* a tap rather than a drag — same behaviour as the side covers'
            own click listener, just reached through the pointer sequence
@@ -792,7 +876,7 @@
         const n = covers.indexOf(hit);
         if (n > -1 && n !== i) load(n, playing);
       }
-      coverCaptured = false; dragExtra = 0;
+      coverCaptured = false;
     }
 
     /* A guard against accidental rapid re-fires, not a rate limit on
