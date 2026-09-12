@@ -821,36 +821,52 @@
        a side cover, which still switches tracks the old way (the
        existing click listener in buildCovers). */
     /* fraction of the artwork's width that counts as one full slot of
-       drag — lower is more sensitive. .9 read as heavy/unresponsive,
-       needing almost the artwork's full width dragged before anything
-       moved; matched closer to Carousel's own .62 instead. Still
-       measured off the artwork (el.covers) even though it's the meta
-       carousel moving now — same physical surface either way, and a
-       consistent, familiar feel is worth more here than a number
-       re-derived from the text box's own (much larger, full-width)
-       travel. */
-    const DRAG_SLOT = .58;
+       drag — lower is more sensitive. Raised a good deal from an initial
+       .58 (itself close to Carousel's own .62): that read as reacting
+       to almost nothing, a small movement already most of the way to
+       committing. Now wants close to the artwork's own full width
+       dragged before it's given up a full slot. Still measured off the
+       artwork (el.covers) even though it's the meta carousel moving now
+       — same physical surface either way, and a consistent, familiar
+       feel is worth more here than a number re-derived from the text
+       box's own (much larger, full-width) travel. */
+    const DRAG_SLOT = 1.05;
     const DRAG_COMMIT = .18; // matches Carousel's own commit threshold
     /* a flick can commit well short of DRAG_COMMIT's distance if it's
        fast enough — units are DRAG_SLOT-normalised extra per ms, so this
-       is "cover a little over a third of a slot in 100ms" */
-    const FLICK_VELOCITY = .003;
+       is "cover a bit over half a slot in 100ms". Raised alongside
+       DRAG_SLOT above and MAX_SPRING_VELOCITY below — same complaint,
+       one cause: small, fast flicks were both easy to trigger and, once
+       released, energetic enough to overshoot past the very neighbour
+       they'd just committed to (see the note on MAX_SPRING_VELOCITY). */
+    const FLICK_VELOCITY = .006;
 
     /* ---- release physics ---------------------------------------
        A flick should carry its own speed into the settle rather than
        every release animating at the same fixed rate regardless of how
        fast the finger was moving — modelled as a critically damped
-       spring (the fastest response with no overshoot/oscillation:
-       nothing else on this site bounces, so the settle shouldn't either)
-       released from wherever the drag actually left off, at the speed it
-       was actually moving. `.player__meta.is-sliding` is what keeps
-       .meta-item's own CSS transition off during this — the same class
-       the drag itself uses — so this reads as the drag continuing under
-       its own momentum after the fingertip lets go, right up until it
-       settles. */
+       spring released from wherever the drag actually left off, at the
+       speed it was actually moving. `.player__meta.is-sliding` is what
+       keeps .meta-item's own CSS transition off during this — the same
+       class the drag itself uses — so this reads as the drag continuing
+       under its own momentum after the fingertip lets go, right up
+       until it settles.
+
+       Critically damped only rules out *oscillation* (repeatedly
+       crossing the target and correcting) — it doesn't rule out a
+       single overshoot, and a fast enough release velocity absolutely
+       produces one: released close to a neighbouring slot with enough
+       speed, the maths carries it straight through 0 and out the other
+       side, which is exactly how a small, quick flick was showing a
+       *second* neighbour it never should have reached at all. Two belts
+       for that one buckle: the speed actually fed to the spring is
+       capped well below where that becomes possible, and the position
+       is hard-clamped to ±1 every frame regardless — nothing this
+       reads as a track away, however hard the flick, full stop. */
     const SPRING_STIFFNESS = 210;
     const SPRING_DAMPING = 2 * Math.sqrt(SPRING_STIFFNESS);
     const SPRING_REST_EPS = .001;
+    const MAX_SPRING_VELOCITY = 3.5;
     let springRaf = null;
 
     function stopSpring() {
@@ -862,13 +878,14 @@
     function springTo(target, initialVelocity) {
       stopSpring();
       el.meta.classList.add('is-sliding');
-      let velocity = initialVelocity, last = performance.now();
+      let velocity = clamp(initialVelocity, -MAX_SPRING_VELOCITY, MAX_SPRING_VELOCITY);
+      let last = performance.now();
       (function step(now) {
         const dt = Math.min((now - last) / 1000, 1 / 30);   // clamp a stalled tab's catch-up jump
         last = now;
         const accel = -SPRING_STIFFNESS * (dragExtra - target) - SPRING_DAMPING * velocity;
         velocity += accel * dt;
-        dragExtra += velocity * dt;
+        dragExtra = clamp(dragExtra + velocity * dt, -1, 1);
         if (Math.abs(dragExtra - target) < SPRING_REST_EPS && Math.abs(velocity) < SPRING_REST_EPS) {
           dragExtra = target;
           placeMeta(dragExtra);
