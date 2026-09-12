@@ -774,7 +774,7 @@ body.is-unlocked .leds {
 }
 
 .player__meta {
-  padding-top: clamp(20px, 4cqw, 30px);
+  padding-top: clamp(30px, 6cqw, 44px);
   text-align: center;
   transition: opacity .5s var(--ease);
 }
@@ -793,16 +793,13 @@ body.is-unlocked .leds {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  font-family: var(--display);
-  /* Monument Extended only ships two real weights (400 Regular, 800
-     Ultrabold, see the @font-face rules up top) — anything in between
-     (600 was tried here before) resolves to the nearest registered face
-     per the CSS font-matching algorithm, which for values above 500
-     rounds up to the heavier one it's chasing, i.e. still 800. 400 is
-     the only value that actually renders lighter. */
-  font-weight: 400;
+  /* Monument Extended (the site's display face, used on the gate/wordmark)
+     read as too futuristic here — the title and artist use the plain
+     sans stack instead, a step tighter and quieter. */
+  font-family: var(--sans);
+  font-weight: 700;
   font-size: clamp(15px, 5.4cqw, 30px);
-  letter-spacing: .03em;
+  letter-spacing: .01em;
   text-transform: uppercase;
   line-height: 1.1;
   white-space: nowrap;
@@ -814,10 +811,10 @@ body.is-unlocked .leds {
    mixed-case text */
 .player__artist {
   margin: clamp(7px, 2cqw, 15px) 0 0;
-  font-family: var(--display);
-  font-weight: 400;
+  font-family: var(--sans);
+  font-weight: 500;
   font-size: clamp(11px, 2.8cqw, 16px);
-  letter-spacing: .04em;
+  letter-spacing: .01em;
   color: rgba(255, 255, 255, .82);
   transition: opacity .5s var(--ease);
 }
@@ -917,8 +914,8 @@ body.is-unlocked .leds {
 
 .controls {
   display: flex; align-items: center; justify-content: center;
-  gap: clamp(4px, 1.2cqw, 10px);
-  padding-top: clamp(6px, 1.8cqw, 14px);
+  gap: clamp(2px, 0.8cqw, 6px);
+  padding-top: clamp(2px, 0.8cqw, 6px);
 }
 /* Filled white icons, floating free — no plates or containers, no ring or
    border. The base rule (hairline, unfilled) is the fallback for any
@@ -961,7 +958,7 @@ body.is-unlocked .leds {
    (stroke-linejoin) and bulk out the pause bars, which are open paths
    and have no fill area of their own to speak of */
 .ctrl--play svg { width: 60%; fill: #fff; stroke: #fff; stroke-width: 1.6; stroke-linejoin: round; }
-.ctrl__icon--pause { stroke-width: 6; }
+.ctrl__icon--pause { stroke-width: 7; }
 /* a touch brighter on hover and while actually playing — filter only,
    never transform: no hover movement, by request. The only motion left
    on this button is the punch below, on an actual press. js/app.js adds/
