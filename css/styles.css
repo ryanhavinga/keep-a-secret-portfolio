@@ -234,7 +234,17 @@ body.is-entering .light-surge {
   border-radius: 50%;
   opacity: var(--o);
   mix-blend-mode: screen;
-  animation: flicker 8.6s linear infinite;
+  /* stepped for the same reason as --tint-steps elsewhere: this is a
+     blended layer (mix-blend-mode above), so every opacity tick forces a
+     recomposite against everything underneath it rather than the free
+     ride plain opacity usually gets — and unlike the tint fade, this one
+     never stops, the whole time the page is open. ~40 steps across each
+     layer's own duration lands around 3-6 updates a second, comfortably
+     inside what a slow, irregular "mains flicker" should look like
+     anyway (it was never meant to read as perfectly smooth), for a
+     large, continuous cut to the one animation cost that's always
+     running rather than only right after a track change. */
+  animation: flicker 8.6s steps(40, end) infinite;
 }
 /* the wash either side of the light: the same hue taken right down in
    lightness, which is what a lamp actually throws onto the surface around
@@ -323,7 +333,8 @@ body.is-entering .light-surge {
       transparent 0 83.5%, #000 86.5% 90.5%, transparent 94%);
   mask-image: radial-gradient(circle calc(var(--ring-size) / 2) at 50% var(--ring-y),
       transparent 0 83.5%, #000 86.5% 90.5%, transparent 94%);
-  animation: flicker 7.8s linear infinite;
+  /* stepped — see the note on .ring's own flicker above */
+  animation: flicker 7.8s steps(40, end) infinite;
 }
 
 /* Paused until the gate actually opens. Opacity alone is cheap, but every
@@ -979,7 +990,7 @@ body.is-unlocked .leds {
 .controls {
   display: flex; align-items: center; justify-content: center;
   gap: clamp(2px, 0.8cqw, 6px);
-  padding-top: clamp(2px, 0.8cqw, 6px);
+  padding-top: clamp(0px, 0.3cqw, 3px);
 }
 /* Filled white icons, floating free — no plates or containers, no ring or
    border. The base rule (hairline, unfilled) is the fallback for any
@@ -1299,8 +1310,11 @@ body.is-unlocked .leds {
     --ring-size: min(92vh, 168vw);
     /* raised from the shared 60% — centred on the panel, that put the
        band's top edge a whole empty screen-third below the header and
-       its bottom edge well past the transport controls */
-    --ring-y: 54%;
+       its bottom edge well past the transport controls. Nudged up
+       another half a centimetre on top of that — a fixed physical
+       distance via calc() rather than another bare percentage, so it
+       moves the same real amount regardless of the phone's own height. */
+    --ring-y: calc(54% - 0.5cm);
   }
   /* trimmed a little from before (was 88-120px top / the shared 32-64px
      bottom) to give the now-bigger panel the room, rather than pushing the
