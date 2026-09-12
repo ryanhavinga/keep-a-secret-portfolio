@@ -396,7 +396,7 @@
     /* swipe-to-rotate state — see swipeDown/swipeMove/swipeUp below */
     let swipeDragging = false, swipeCaptured = false, swipeMoved = 0,
         swipeStartX = 0, dragExtra = 0, swipePid = null,
-        dragVelocity = 0, lastMoveT = 0;
+        dragVelocity = 0, lastMoveT = 0, swipePointerType = 'touch';
 
     const track = () => tracks[i];
     const duration = () => (fallback || !isFinite(audio.duration) || !audio.duration)
@@ -832,6 +832,24 @@
        feel is worth more here than a number re-derived from the text
        box's own (much larger, full-width) travel. */
     const DRAG_SLOT = 1.9;
+    /* a mouse can drag the cursor far further than a thumb can ever drag
+       a touch point — the artwork itself is a small, fixed target, but a
+       mouse drag is bounded only by the screen, which is many artwork-
+       widths across. Measuring mouse input off that same small reference
+       meant a single ordinary mouse drag could sail straight past
+       LIVE_DRAG_CAP and then just sit there, pinned, while the cursor
+       kept moving — a dead zone that read as the carousel seizing up
+       mid-drag. Mouse gets its own reference distance instead: the
+       viewport itself, scaled up further still, so reaching the cap
+       would take a drag several screens wide. */
+    const DRAG_SLOT_MOUSE = 3;
+    /* how far, in CSS px, one full slot of drag is — touch/pen scale off
+       the artwork's own width, mouse off the viewport's */
+    function slotWidth(pointerType) {
+      return pointerType === 'mouse'
+        ? innerWidth * DRAG_SLOT_MOUSE
+        : (el.covers.offsetWidth || 1) * DRAG_SLOT;
+    }
     /* however far past that a held drag still goes, it's never allowed to
        actually finish the trip on its own — the incoming title can get
        close to centred while the finger is still down, never exactly
@@ -921,8 +939,8 @@
          spring already had it, rather than snapping to 0 first — offset
          swipeStartX so the very next swipeMove reconstructs the current
          dragExtra exactly, and only moves it from there */
-      const w = el.covers.offsetWidth || 1;
-      swipeStartX = e.clientX - dragExtra * w * DRAG_SLOT;
+      swipePointerType = e.pointerType || 'touch';
+      swipeStartX = e.clientX - dragExtra * slotWidth(swipePointerType);
       stopSpring();
       swipeSurface = e.currentTarget;
       swipeDragging = true; swipeCaptured = false; swipeMoved = 0;
@@ -952,8 +970,7 @@
         swipeSurface?.setPointerCapture?.(swipePid);
         el.meta.classList.add('is-sliding');
       }
-      const w = el.covers.offsetWidth || 1;
-      const next = clamp(dx / (w * DRAG_SLOT), -LIVE_DRAG_CAP, LIVE_DRAG_CAP);
+      const next = clamp(dx / slotWidth(swipePointerType), -LIVE_DRAG_CAP, LIVE_DRAG_CAP);
       const now = performance.now(), dt = now - lastMoveT;
       if (dt > 0) {
         /* smoothed rather than taken raw — consecutive pointermove deltas

@@ -694,9 +694,21 @@ body.is-unlocked .leds {
    showed (nothing to hover all the way out at the screen edge). `load()`
    toggles `.is-changing` for exactly as long as the swap below takes, so
    every trigger — big arrows, small buttons, keyboard, clicking a cover
-   directly, a swipe — now produces the identical, single motion. */
-.covers:not(.is-changing) .cover:not(.cover--side):hover {
-  box-shadow: 0 16px 30px -18px rgba(0, 0, 0, .88), inset 0 0 0 1px rgba(255, 255, 255, .12);
+   directly, a swipe — now produces the identical, single motion.
+
+   Both this and the veil-fade below are further gated behind
+   `(hover: hover) and (pointer: fine)` — a real hover-capable pointer
+   (mouse, trackpad), never a touchscreen. Touch has no true hover, but
+   mobile browsers fake one by matching `:hover` to whatever a touch last
+   landed on until something else is tapped — so every swipe was leaving
+   one or both side covers "hovered," brightening then slowly dimming
+   back down on their own a moment later, which read as the artwork
+   itself lighting up and dimming for no reason. */
+@media (hover: hover) and (pointer: fine) {
+  .covers:not(.is-changing) .cover:not(.cover--side):hover {
+    box-shadow: 0 16px 30px -18px rgba(0, 0, 0, .88), inset 0 0 0 1px rgba(255, 255, 255, .12);
+  }
+  .covers:not(.is-changing) .cover--side:hover::after { background: rgba(4, 4, 5, 0); }
 }
 .cover img {
   width: 100%; height: 100%;
@@ -710,7 +722,6 @@ body.is-unlocked .leds {
   background: rgba(4, 4, 5, .38);
   transition: background 1.1s var(--ease);
 }
-.covers:not(.is-changing) .cover--side:hover::after { background: rgba(4, 4, 5, 0); }
 
 /* DEMO placeholder artwork */
 .cover__demo {
