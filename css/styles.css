@@ -1326,10 +1326,10 @@ body.is-unlocked .leds {
     /* raised from the shared 60% — centred on the panel, that put the
        band's top edge a whole empty screen-third below the header and
        its bottom edge well past the transport controls. Nudged up
-       another half a centimetre on top of that — a fixed physical
+       another 1cm on top of that (was 0.5cm) — a fixed physical
        distance via calc() rather than another bare percentage, so it
        moves the same real amount regardless of the phone's own height. */
-    --ring-y: calc(54% - 0.5cm);
+    --ring-y: calc(54% - 1cm);
   }
   /* trimmed a little from before (was 88-120px top / the shared 32-64px
      bottom) to give the now-bigger panel the room, rather than pushing the
