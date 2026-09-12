@@ -1013,7 +1013,14 @@ body.is-unlocked .leds {
   display: grid; place-items: center;
   padding: 32px;
   background: #000;
-  transition: opacity 1.6s var(--ease);
+  /* Everything behind this — topbar, player, artwork — is already on
+     screen at full opacity the instant the gate starts to go (see the
+     note on Gate.init in js/app.js), so this one transition is the whole
+     room's entrance, all of it revealed at the same rate together.
+     Slowed a fraction from 1.6s; the light itself has its own separate,
+     much longer entrance (is-entering/playEntranceLamp) and isn't tied
+     to this number at all. */
+  transition: opacity 2.2s var(--ease);
 }
 /* the gate dissolving and the room coming up are the same move — both are
    black at the crossover, so it reads as one slow fade rather than a swap */
@@ -1026,6 +1033,15 @@ body.is-unlocked .leds {
   font-size: clamp(20px, 2.3vw, 28px);
   letter-spacing: .015em; word-spacing: -.3em;
   text-transform: uppercase;
+}
+/* white and a size down from the mark, same wordmark-sub scale used
+   elsewhere on the site (.wordmark__sub in the topbar) */
+.gate__sub {
+  margin: 8px 0 0;
+  font-family: var(--display); font-weight: 400;
+  font-size: 11px; letter-spacing: .3em; text-indent: .3em;
+  text-transform: uppercase;
+  color: var(--white);
 }
 .gate__eyebrow {
   margin: 14px 0 0;
@@ -1059,14 +1075,15 @@ body.is-unlocked .leds {
 }
 .gate__btn {
   padding: 13px 34px;
-  border: 1px solid var(--hairline);
+  border: 2px solid var(--white);
   border-radius: 999px;
+  font-weight: 700;
   font-size: 10px; letter-spacing: .34em; text-indent: .34em;
   text-transform: uppercase;
-  color: var(--w-72);
-  transition: color .7s var(--ease), border-color .7s var(--ease), background-color .7s var(--ease);
+  color: var(--white);
+  transition: background-color .7s var(--ease);
 }
-.gate__btn:hover { color: var(--white); border-color: var(--w-30); background: rgba(255, 255, 255, .04); }
+.gate__btn:hover { background: rgba(255, 255, 255, .1); }
 
 /* a wrong password is answered with a shake and nothing else — no red, no
    copy, in keeping with a door that isn't explaining itself */

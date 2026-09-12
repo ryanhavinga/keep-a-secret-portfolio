@@ -1406,7 +1406,7 @@
           el.classList.add('is-open');
           document.body.classList.add('is-unlocked');
           if (remembers()) { try { sessionStorage.setItem(KEY, '1'); } catch (_) {} }
-          setTimeout(() => el.remove(), 1800);   // past the fade
+          setTimeout(() => el.remove(), 2400);   // past the fade (.gate's own 2.2s opacity transition)
           unlocked();
           enter();
         });
