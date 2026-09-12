@@ -866,8 +866,8 @@
          touches) still settles on the right total instead of getting
          stuck. Guarded by track index in case another load() already
          moved on by the time this fires. */
-      const n = i;
-      audio.addEventListener('loadedmetadata', () => { if (n === i) paint(); }, { once: true });
+      const switchedTo = i;
+      audio.addEventListener('loadedmetadata', () => { if (switchedTo === i) paint(); }, { once: true });
       if (autoplay) play();
     }
 
