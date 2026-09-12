@@ -955,6 +955,24 @@ body.is-unlocked .leds {
    sound-wave arcs after it are stroke-only (fill: none) and actually
    need it. */
 .vol-toggle__icon path:first-child { stroke: none; }
+/* muted: the two sound-wave arcs swap for a single diagonal stripe
+   through the speaker — a second click directly on the icon while the
+   fader is already open toggles this, rather than closing the flyout
+   (js/app.js, setMuted). */
+.vol-toggle__mute-line {
+  opacity: 0;
+  /* thicker than the arcs it replaces, and overshooting the speaker's
+     own silhouette at both ends — a slash cutting across the whole
+     glyph, not a line traced tightly around it */
+  stroke-width: 2.6;
+  transition: opacity .3s var(--ease);
+}
+.vol-toggle.is-muted .vol-toggle__mute-line { opacity: 1; }
+.vol-toggle.is-muted .vol-toggle__icon path:nth-child(2),
+.vol-toggle.is-muted .vol-toggle__icon path:nth-child(3) {
+  opacity: 0;
+  transition: opacity .3s var(--ease);
+}
 
 .controls {
   display: flex; align-items: center; justify-content: center;

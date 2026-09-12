@@ -1276,7 +1276,7 @@
        A vertical fader in the flyout .volume opens beside the artwork
        (js/app.js Volume wiring in init(), styles in css/styles.css). Reads
        bottom-up, like a physical fader: 0% at the bottom, 100% at the top. */
-    let volDragging = false;
+    let volDragging = false, muted = false, volumeBeforeMute = 1;
     function setVolume(v, { persist = true } = {}) {
       v = clamp(v, 0, 1);
       audio.volume = v;
@@ -1289,6 +1289,22 @@
     function volumeFromEvent(e) {
       const r = el.volTrack.getBoundingClientRect();
       setVolume((r.bottom - e.clientY) / r.height);
+    }
+    /* Drops straight to silent and back, remembering wherever the fader
+       actually was rather than the last *persisted* value — muting isn't
+       "set volume to 0" (that would overwrite the level to return to,
+       the moment persist ran), it's a silent flag laid on top of it. */
+    function setMuted(next) {
+      if (next === muted) return;
+      muted = next;
+      el.volToggle.classList.toggle('is-muted', muted);
+      el.volToggle.setAttribute('aria-label', muted ? 'Unmute' : 'Volume');
+      if (muted) {
+        volumeBeforeMute = audio.volume || volumeBeforeMute;
+        setVolume(0, { persist: false });
+      } else {
+        setVolume(volumeBeforeMute);
+      }
     }
     function openVolume() {
       el.volume.classList.add('is-open');
@@ -1391,9 +1407,13 @@
         } catch (_) {}
         setVolume(savedVolume, { persist: false });
 
+        /* first click opens the fader; a second click landing directly
+           on the icon while it's already open mutes instead of closing
+           it — closing only ever happens from a press elsewhere, below */
         el.volToggle.addEventListener('click', e => {
           e.stopPropagation();
-          if (el.volume.classList.contains('is-open')) closeVolume(); else openVolume();
+          if (!el.volume.classList.contains('is-open')) openVolume();
+          else setMuted(!muted);
         });
         /* closes on any press outside the flyout or its toggle — pointerdown
            rather than click, so it shuts the instant a drag starts
@@ -1404,6 +1424,7 @@
           closeVolume();
         });
         el.volTrack.addEventListener('pointerdown', e => {
+          if (muted) setMuted(false);   // adjusting the fader by hand always means "audible"
           volDragging = true;
           el.volTrack.setPointerCapture?.(e.pointerId);
           volumeFromEvent(e);
@@ -1414,8 +1435,8 @@
           el.volTrack.releasePointerCapture?.(e.pointerId);
         });
         el.volTrack.addEventListener('keydown', e => {
-          if (e.key === 'ArrowUp')   { e.preventDefault(); setVolume(audio.volume + .05); }
-          if (e.key === 'ArrowDown') { e.preventDefault(); setVolume(audio.volume - .05); }
+          if (e.key === 'ArrowUp')   { e.preventDefault(); if (muted) setMuted(false); setVolume(audio.volume + .05); }
+          if (e.key === 'ArrowDown') { e.preventDefault(); if (muted) setMuted(false); setVolume(audio.volume - .05); }
         });
 
         /* the artwork's width is a flex-layout result (driven by available
