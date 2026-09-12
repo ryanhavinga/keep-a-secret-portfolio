@@ -73,9 +73,14 @@
      continuous, that is a repaint on every frame for the whole five
      seconds after a track change, which is precisely the stutter that
      used to follow next/prev and drag the cursor down with it.
-     Twelve updates a second is far below anything the eye resolves in a
-     slow wash of colour, and cuts that repaint work about fivefold. */
-  --tint-steps: steps(60, end);
+     Halved again, from twelve updates a second to six — still far below
+     anything the eye resolves in a slow wash of colour, and WebKit (both
+     Safari and iOS — confirmed laggy on both, where Chromium showed no
+     dropped frames at all in the same test) charges noticeably more than
+     Chromium for repainting a blur/mask this size, so the same step
+     count that was already a 5x cut on one engine is still worth halving
+     again on this one. */
+  --tint-steps: steps(30, end);
 
   /* the track-change light surge: slow rise, even slower release — see
      body.is-surging on .light-surge, further down */
