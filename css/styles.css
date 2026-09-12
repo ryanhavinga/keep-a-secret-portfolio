@@ -443,10 +443,10 @@ body.is-unlocked .leds {
   display: block;
   width: clamp(26px, 2.8vw, 32px);
   opacity: .7;
-  transition: opacity .8s var(--ease), transform .8s var(--ease);
+  transition: opacity .8s var(--ease);
 }
 .social svg { width: 100%; fill: none; stroke: #fff; stroke-width: 1.5; }
-.social:hover { opacity: 1; transform: scale(1.12); }
+.social:hover { opacity: 1; }
 
 /* bottom-right, right-edge flush with .tag (Contact) above it — same
    thin, tracked-out, low-opacity label style .site-credit used to carry */
@@ -644,8 +644,11 @@ body.is-unlocked .leds {
   border-radius: clamp(9px, 1.5vw, 17px);
   overflow: hidden;
   background: #060607;
-  /* the one shadow left in the composition — soft, low, under the cover */
-  box-shadow: 0 26px 50px -28px rgba(0, 0, 0, .85), inset 0 0 0 1px rgba(255, 255, 255, .07);
+  /* the one shadow left in the composition — soft, low, under the cover.
+     Kept short enough (blur/spread close together) that its soft edge
+     stays inside .player__meta's own padding-top gap below, rather than
+     reaching far enough to dim the title sitting just under it. */
+  box-shadow: 0 14px 26px -18px rgba(0, 0, 0, .85), inset 0 0 0 1px rgba(255, 255, 255, .07);
   transform: translate(-50%, -50%);
   scale: 1;
   /* the horizontal carousel slide when switching tracks. box-shadow rides
@@ -686,7 +689,7 @@ body.is-unlocked .leds {
    properties, `box-shadow` here versus `transform` there, both trying to
    describe the same element at once. */
 .covers:not(.is-changing):not(.is-dragging) .cover:not(.cover--side):hover {
-  box-shadow: 0 30px 54px -28px rgba(0, 0, 0, .88), inset 0 0 0 1px rgba(255, 255, 255, .12);
+  box-shadow: 0 16px 30px -18px rgba(0, 0, 0, .88), inset 0 0 0 1px rgba(255, 255, 255, .12);
 }
 .cover img {
   width: 100%; height: 100%;
@@ -771,7 +774,7 @@ body.is-unlocked .leds {
 }
 
 .player__meta {
-  padding-top: clamp(13px, 4cqw, 30px);
+  padding-top: clamp(20px, 4cqw, 30px);
   text-align: center;
   transition: opacity .5s var(--ease);
 }
@@ -811,7 +814,9 @@ body.is-unlocked .leds {
    mixed-case text */
 .player__artist {
   margin: clamp(7px, 2cqw, 15px) 0 0;
-  font-size: clamp(9.5px, 2.4cqw, 14px);
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(11px, 2.8cqw, 16px);
   letter-spacing: .04em;
   color: rgba(255, 255, 255, .82);
   transition: opacity .5s var(--ease);
@@ -956,7 +961,7 @@ body.is-unlocked .leds {
    (stroke-linejoin) and bulk out the pause bars, which are open paths
    and have no fill area of their own to speak of */
 .ctrl--play svg { width: 60%; fill: #fff; stroke: #fff; stroke-width: 1.6; stroke-linejoin: round; }
-.ctrl__icon--pause { stroke-width: 4.6; }
+.ctrl__icon--pause { stroke-width: 6; }
 /* a touch brighter on hover and while actually playing — filter only,
    never transform: no hover movement, by request. The only motion left
    on this button is the punch below, on an actual press. js/app.js adds/
