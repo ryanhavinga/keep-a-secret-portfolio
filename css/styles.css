@@ -850,7 +850,7 @@ body.is-unlocked .leds {
   font-size: clamp(11px, 2.4cqw, 14px);
   letter-spacing: .14em;
   font-variant-numeric: tabular-nums;
-  color: #fff;
+  color: rgba(255, 255, 255, .75);
   white-space: nowrap;
 }
 .timeline__t:first-child { right: calc(100% + clamp(8px, 2cqw, 16px)); }
@@ -860,8 +860,8 @@ body.is-unlocked .leds {
    the artwork above it, same as before this button existed */
 .scrub { position: relative; flex: 1 1 auto; min-width: 0; padding: 8px 0; touch-action: none; }
 .scrub__track {
-  height: 1px;
-  border-radius: 1px;
+  height: 3px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, .68);
   overflow: hidden;
 }
