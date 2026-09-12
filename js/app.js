@@ -380,8 +380,7 @@
   const Player = (() => {
     const audio = $('[data-audio]');
     const el = {
-      covers: $('[data-covers]'), meta: $('.player__meta'),
-      title: $('[data-title]'), artist: $('[data-artist]'),
+      covers: $('[data-covers]'), meta: $('[data-meta]'),
       fill: $('[data-fill]'), head: $('[data-head]'),
       cur: $('[data-current]'), dur: $('[data-duration]'),
       play: $('[data-play]'), prev: $('[data-prev]'), next: $('[data-next]'),
@@ -390,13 +389,13 @@
       volTrack: $('[data-vol-track]'), volFill: $('[data-vol-fill]'), volHead: $('[data-vol-head]')
     };
 
-    let tracks = [], covers = [], i = 0,
+    let tracks = [], covers = [], metaItems = [], i = 0,
         playing = false, fallback = false, fakeTime = 0, lastTick = 0, scrubbing = false,
-        swapTimer = null, changeTimer = null;
+        changeTimer = null;
 
-    /* cover-stack drag state — see coverDown/coverMove/coverUp below */
-    let coverDragging = false, coverCaptured = false, coverMoved = 0,
-        coverStartX = 0, dragExtra = 0, coverPid = null,
+    /* swipe-to-rotate state — see swipeDown/swipeMove/swipeUp below */
+    let swipeDragging = false, swipeCaptured = false, swipeMoved = 0,
+        swipeStartX = 0, dragExtra = 0, swipePid = null,
         dragVelocity = 0, lastMoveT = 0;
 
     const track = () => tracks[i];
@@ -407,7 +406,11 @@
     /* long titles (the DEMO track's, mainly) would otherwise wrap onto a
        second line and push everything below it down — a visible "hop"
        whenever that track becomes active. Force one line and shrink the
-       font just enough to fit it, rather than letting it wrap at all. */
+       font just enough to fit it, rather than letting it wrap at all.
+       Fitted once per title, when its .meta-item is first built — each
+       one belongs permanently to a single track now, rather than one
+       shared element whose text (and required size) changed underneath
+       it on every load(). */
     /* Measure the *text*, not the box it is clipped by. `.player__title` is
        a centred flex container with overflow:hidden, and on those
        scrollWidth only reports the overflow spilling off one side — with
@@ -424,11 +427,11 @@
       return titleRange.getBoundingClientRect().width;
     }
 
-    function fitTitle() {
-      el.title.style.fontSize = '';
-      const max = el.title.clientWidth;
+    function fitTitleEl(titleEl) {
+      titleEl.style.fontSize = '';
+      const max = titleEl.clientWidth;
       if (!max) return;
-      let natural = textWidth(el.title);
+      let natural = textWidth(titleEl);
       if (natural <= max) return;
 
       /* Text width is near enough linear in font size to solve for
@@ -438,14 +441,14 @@
          hinting and letter-spacing round differently at each size — so one
          corrective pass follows, and only if the first solve left it long.
          Two measurements in the normal case, three in the worst. */
-      const base = parseFloat(getComputedStyle(el.title).fontSize);
+      const base = parseFloat(getComputedStyle(titleEl).fontSize);
       let size = Math.max(10, base * (max / natural));
-      el.title.style.fontSize = `${size}px`;
+      titleEl.style.fontSize = `${size}px`;
 
-      natural = textWidth(el.title);
+      natural = textWidth(titleEl);
       if (natural > max) {
         size = Math.max(10, size * (max / natural) * .995);
-        el.title.style.fontSize = `${size}px`;
+        titleEl.style.fontSize = `${size}px`;
       }
     }
 
@@ -595,6 +598,32 @@
       });
     }
 
+    /* build one .meta-item per track, mirroring buildCovers above — each
+       permanently holds one track's title/artist, and app.js only ever
+       moves it around (see placeMeta/paintMeta), never rewrites its
+       text. fitTitleEl runs once here rather than on every load(), for
+       the same reason: the text a given element holds never changes
+       again after this. */
+    function buildMeta() {
+      $$('.meta-item', el.meta).forEach(m => m.remove());
+      lastMetaD = null;   // rebuilt items have no history — re-derive on next placeMeta
+      metaItems = tracks.map(t => {
+        const wrap = document.createElement('div');
+        wrap.className = 'meta-item';
+        const h1 = document.createElement('h1');
+        h1.className = 'player__title';
+        h1.textContent = t.title;
+        const p = document.createElement('p');
+        p.className = 'player__artist';
+        p.textContent = t.artist;
+        wrap.append(h1, p);
+        el.meta.appendChild(wrap);
+        const m = { el: wrap, titleEl: h1 };
+        fitTitleEl(h1);
+        return m;
+      });
+    }
+
     /* Ask the browser to fully decode every cover's artwork now, while the
        gate is still up — rather than leaving it to happen implicitly the
        instant each image is first painted, which used to land right on
@@ -648,8 +677,16 @@
        slot for exactly as long as a drag is in progress. Everything that
        only makes sense at a discrete slot (which side a cover counts as,
        whether it can take the pointer, tab order) still keys off the
-       plain integer `d`; only the paint itself moves continuously. */
-    function placeCovers(extra = 0) {
+       plain integer `d`. */
+    /* The artwork no longer tracks a swipe at all (see the note on .cover
+       in styles.css) — it only ever moves when a track actually changes,
+       so `d` is always exactly -1, 0 or 1 here. Kept as its own function
+       from when it did handle a live drag rather than folded away,
+       since the teleport-jump logic below still earns its keep on every
+       plain track change (next/prev is still one cover swapping sides
+       every single step, circular-3-stack math unchanged) and reads
+       clearest staying close to paintCover. */
+    function placeCovers() {
       const n = tracks.length;
       if (!lastD || lastD.length !== n) {
         lastD = covers.map((_, j) => {
@@ -695,7 +732,7 @@
         const a = Math.abs(d);
         const side = a === 1;
         c.classList.toggle('cover--side', side);
-        paintCover(c, d + extra);
+        paintCover(c, d);
         c.style.zIndex = String(10 - a);
         /* the playing cover takes the pointer too, so it can lift on hover
            like its neighbours — its click handler is a no-op. Only the
@@ -705,38 +742,93 @@
       });
     }
 
-    /* Continuous version of the old fixed-`d` calls' discrete states
-       (centre / side / far) — `d` is the same distance-from-centre used
-       for those, just not rounded, so a cover slides smoothly under a
-       dragging finger instead of snapping at each integer boundary. No
-       scale and no opacity fade: covers used to shrink as they moved off
-       centre, which read as an extra thing happening on top of the slide
-       rather than part of it — dropping it left one property to track
-       instead of two, closer to a solid row sliding than a stack
-       warping. A side cover used to also ease from full opacity toward
-       transparent, which on a 3-track stack (every cover is always
-       either centred or one of the two sides — there's no fourth, fully
-       hidden slot to fade toward) meant the track behind it visibly
-       showed through mid-slide. Covers stay fully solid, same size,
-       throughout; the veil pseudo-element (.cover--side::after, below) is
-       what dims a side cover, a flat overlay rather than a transparency
-       change on the cover itself. */
+    /* Tucked in behind the playing cover, a closer sliver showing each
+       side than before — brought in from 19% toward the middle for a
+       tidier stack now that it's static rather than something a drag
+       used to pull wide open. No scale and no opacity fade: a side cover
+       reading dimmer is the veil pseudo-element below, a flat overlay
+       rather than a transparency change on the cover itself, which on a
+       3-track stack (every cover is always centred or one of the two
+       sides — there's no fourth, fully hidden slot to fade toward) would
+       otherwise show the track behind it through mid-change. */
     function paintCover(c, d) {
-      c.style.transform = `translate(-50%, -50%) translateX(${(d * 19).toFixed(2)}%)`;
+      c.style.transform = `translate(-50%, -50%) translateX(${(d * 13).toFixed(2)}%)`;
     }
 
-    /* ---- drag-to-rotate --------------------------------------
-       Grabbing the cover stack and dragging left or right steps through
-       tracks in whichever direction the drag goes, live-tracking the
-       pointer the whole way rather than only reacting once released —
-       the same shape as Carousel's own drag above, adapted from a block
-       index to the covers' continuous `d` slots. `coverMoved` tells a
-       real drag apart from a tap on a side cover, which still switches
-       tracks the old way (the existing click listener in buildCovers). */
-    /* fraction of the stack's width that counts as one full slot of drag —
-       lower is more sensitive. .9 read as heavy/unresponsive, needing
-       almost the artwork's full width dragged before anything moved;
-       matched closer to Carousel's own .62 instead. */
+    /* ---- title/artist carousel ---------------------------------
+       Where the artwork's old drag-tracking behaviour actually lives now
+       — the title and artist for every track sit stacked in the same
+       box (.player__meta), one .meta-item each, and sliding one all the
+       way off to a side (±100%, a full container-width) is what brings
+       the next or previous one fully in. Same shape as placeCovers/
+       paintCover above (same teleport-jump handling for the one item
+       that has to swap sides every step, same continuous `d`), just with
+       its own history array and its own, much simpler paint — one
+       property, no z-index/pointer-events bookkeeping, since only text
+       ever needs to actually receive input here (the currently-centred
+       item; the rest sit under .player__meta's own overflow:hidden). */
+    let lastMetaD = null;
+
+    function placeMeta(extra = 0) {
+      const n = tracks.length;
+      if (!lastMetaD || lastMetaD.length !== n) {
+        lastMetaD = metaItems.map((_, j) => {
+          const d0 = (j - i + n) % n;
+          return d0 > n / 2 ? d0 - n : d0;
+        });
+      }
+
+      metaItems.forEach((m, j) => {
+        const d0 = (j - i + n) % n;
+        const near = d0 === 0 ? 0 : d0 === 1 ? 1 : d0 === n - 1 ? -1 : null;
+        let d;
+
+        if (near !== null) {
+          if (near !== 0 && lastMetaD[j] !== 0 && Math.sign(lastMetaD[j]) !== Math.sign(near)) {
+            m.el.style.transition = 'none';
+            paintMeta(m, Math.sign(near) * 2);
+            void m.el.offsetWidth;
+            m.el.style.transition = '';
+          }
+          d = near;
+        } else {
+          d = lastMetaD[j] < 0 ? d0 - n : d0;
+        }
+
+        lastMetaD[j] = d;
+        /* keyed off the resting slot alone, not `extra` — the track a
+         screen reader should announce as current doesn't change just
+         because a swipe is live-previewing a neighbour, only once that
+         swipe actually commits (which moves `i`, and so `d`, itself).
+         Also sidesteps needing an exact float match against a spring's
+         last, possibly not-quite-zero frame. */
+        m.el.setAttribute('aria-hidden', d === 0 ? 'false' : 'true');
+        paintMeta(m, d + extra);
+      });
+    }
+
+    function paintMeta(m, d) {
+      m.el.style.transform = `translateX(${(d * 100).toFixed(2)}%)`;
+    }
+
+    /* ---- swipe-to-rotate ---------------------------------------
+       Apple Music-style: dragging left or right across the artwork (or
+       the title/artist itself) spins the title/artist carousel above,
+       live-tracking the pointer the whole way rather than only reacting
+       once released, while the artwork sits still. The stack only
+       actually swaps once a track change lands — see the note on .cover
+       in styles.css. `swipeMoved` tells a real drag apart from a tap on
+       a side cover, which still switches tracks the old way (the
+       existing click listener in buildCovers). */
+    /* fraction of the artwork's width that counts as one full slot of
+       drag — lower is more sensitive. .9 read as heavy/unresponsive,
+       needing almost the artwork's full width dragged before anything
+       moved; matched closer to Carousel's own .62 instead. Still
+       measured off the artwork (el.covers) even though it's the meta
+       carousel moving now — same physical surface either way, and a
+       consistent, familiar feel is worth more here than a number
+       re-derived from the text box's own (much larger, full-width)
+       travel. */
     const DRAG_SLOT = .58;
     const DRAG_COMMIT = .18; // matches Carousel's own commit threshold
     /* a flick can commit well short of DRAG_COMMIT's distance if it's
@@ -751,10 +843,11 @@
        spring (the fastest response with no overshoot/oscillation:
        nothing else on this site bounces, so the settle shouldn't either)
        released from wherever the drag actually left off, at the speed it
-       was actually moving. `.covers.is-dragging` is what keeps .cover's
-       own CSS transition off during this — the same class the drag
-       itself uses — so this reads as the drag continuing under its own
-       momentum after the fingertip lets go, right up until it settles. */
+       was actually moving. `.player__meta.is-sliding` is what keeps
+       .meta-item's own CSS transition off during this — the same class
+       the drag itself uses — so this reads as the drag continuing under
+       its own momentum after the fingertip lets go, right up until it
+       settles. */
     const SPRING_STIFFNESS = 210;
     const SPRING_DAMPING = 2 * Math.sqrt(SPRING_STIFFNESS);
     const SPRING_REST_EPS = .001;
@@ -763,12 +856,12 @@
     function stopSpring() {
       if (springRaf) cancelAnimationFrame(springRaf);
       springRaf = null;
-      el.covers.classList.remove('is-dragging');
+      el.meta.classList.remove('is-sliding');
     }
 
     function springTo(target, initialVelocity) {
       stopSpring();
-      el.covers.classList.add('is-dragging');
+      el.meta.classList.add('is-sliding');
       let velocity = initialVelocity, last = performance.now();
       (function step(now) {
         const dt = Math.min((now - last) / 1000, 1 / 30);   // clamp a stalled tab's catch-up jump
@@ -778,52 +871,59 @@
         dragExtra += velocity * dt;
         if (Math.abs(dragExtra - target) < SPRING_REST_EPS && Math.abs(velocity) < SPRING_REST_EPS) {
           dragExtra = target;
-          placeCovers(dragExtra);
+          placeMeta(dragExtra);
           springRaf = null;
-          el.covers.classList.remove('is-dragging');
+          el.meta.classList.remove('is-sliding');
           return;
         }
-        placeCovers(dragExtra);
+        placeMeta(dragExtra);
         springRaf = requestAnimationFrame(step);
       })(last);
     }
 
-    function coverDown(e) {
+    /* bound to both the artwork and the title/artist itself — see init()
+       below — so either one answers a swipe; e.currentTarget (not
+       e.target) is what receives pointer capture, whichever of the two
+       the gesture actually started on */
+    let swipeSurface = null;
+
+    function swipeDown(e) {
       if (tracks.length <= 1) return;   // nothing to drag to
       if (e.target.closest('.ctrl, a, .scrub')) return;
-      /* grabbing the stack again mid-settle picks up from wherever the
+      /* grabbing the carousel again mid-settle picks up from wherever the
          spring already had it, rather than snapping to 0 first — offset
-         coverStartX so the very next coverMove reconstructs the current
+         swipeStartX so the very next swipeMove reconstructs the current
          dragExtra exactly, and only moves it from there */
       const w = el.covers.offsetWidth || 1;
-      coverStartX = e.clientX - dragExtra * w * DRAG_SLOT;
+      swipeStartX = e.clientX - dragExtra * w * DRAG_SLOT;
       stopSpring();
-      coverDragging = true; coverCaptured = false; coverMoved = 0;
+      swipeSurface = e.currentTarget;
+      swipeDragging = true; swipeCaptured = false; swipeMoved = 0;
       dragVelocity = 0; lastMoveT = performance.now();
-      coverPid = e.pointerId;
+      swipePid = e.pointerId;
     }
     /* Pointermove can fire far faster than the screen redraws — a real
-       mouse or trackpad easily beats 60Hz — and placeCovers() writes
-       transform/opacity/filter on every cover each time it runs. Without
-       this, a fast drag was queuing up several full repaints per frame
-       for paint work the previous one hadn't even reached the screen
-       for yet, which is exactly the kind of self-inflicted lag that also
-       drags the cursor down with it. Only the latest pointer position
-       before each frame ever needs painting, so pending moves collapse
-       into one instead of piling up. Velocity is tracked here instead,
-       off the raw events rather than the throttled paint, since it's
-       what feeds the release spring below and a paint-frame's worth of
-       lag on that would read as the flick not quite matching the finger. */
-    let coverMoveQueued = false;
-    function coverMove(e) {
-      if (!coverDragging) return;
-      const dx = e.clientX - coverStartX;
-      coverMoved = Math.max(coverMoved, Math.abs(dx));
-      if (!coverCaptured) {
-        if (coverMoved < 6) return;
-        coverCaptured = true;
-        el.covers.setPointerCapture?.(coverPid);
-        el.covers.classList.add('is-dragging');
+       mouse or trackpad easily beats 60Hz — and placeMeta() writes a
+       transform on every meta-item each time it runs. Without this, a
+       fast drag was queuing up several full repaints per frame for paint
+       work the previous one hadn't even reached the screen for yet,
+       which is exactly the kind of self-inflicted lag that also drags
+       the cursor down with it. Only the latest pointer position before
+       each frame ever needs painting, so pending moves collapse into one
+       instead of piling up. Velocity is tracked here instead, off the
+       raw events rather than the throttled paint, since it's what feeds
+       the release spring below and a paint-frame's worth of lag on that
+       would read as the flick not quite matching the finger. */
+    let swipeMoveQueued = false;
+    function swipeMove(e) {
+      if (!swipeDragging) return;
+      const dx = e.clientX - swipeStartX;
+      swipeMoved = Math.max(swipeMoved, Math.abs(dx));
+      if (!swipeCaptured) {
+        if (swipeMoved < 6) return;
+        swipeCaptured = true;
+        swipeSurface?.setPointerCapture?.(swipePid);
+        el.meta.classList.add('is-sliding');
       }
       const w = el.covers.offsetWidth || 1;
       const next = clamp(dx / (w * DRAG_SLOT), -1, 1);
@@ -842,33 +942,32 @@
       }
       lastMoveT = now;
       dragExtra = next;
-      if (coverMoveQueued) return;
-      coverMoveQueued = true;
+      if (swipeMoveQueued) return;
+      swipeMoveQueued = true;
       requestAnimationFrame(() => {
-        coverMoveQueued = false;
-        if (coverCaptured) placeCovers(dragExtra);
+        swipeMoveQueued = false;
+        if (swipeCaptured) placeMeta(dragExtra);
       });
     }
-    function coverUp(e) {
-      if (!coverDragging) return;
-      coverDragging = false;
-      if (coverCaptured && coverPid !== null) el.covers.releasePointerCapture?.(coverPid);
-      coverPid = null;
+    function swipeUp(e) {
+      if (!swipeDragging) return;
+      swipeDragging = false;
+      if (swipeCaptured && swipePid !== null) swipeSurface?.releasePointerCapture?.(swipePid);
+      swipePid = null; swipeSurface = null;
 
-      if (coverCaptured) {
+      if (swipeCaptured) {
         const committed = Math.abs(dragExtra) > DRAG_COMMIT || Math.abs(dragVelocity) > FLICK_VELOCITY;
         if (committed) {
           const stepDir = Math.sign(dragExtra) || Math.sign(dragVelocity);
-          load(i - stepDir, playing);
-          /* load() just repainted every cover at rest (extra 0) in the
-             new index's frame — pick the drag back up exactly where it
-             left off, one slot further along, rather than let that
-             flash on screen */
+          load(i - stepDir, playing);      // swaps the artwork itself, instantly — see .cover's own transition
+          /* the carousel continues from here, in the new index's frame,
+             one slot further along rather than restarting from a
+             standing start */
           dragExtra -= stepDir;
-          placeCovers(dragExtra);
+          placeMeta(dragExtra);
         }
         springTo(0, dragVelocity * 1000);   // ms -> seconds, to match the spring's own units
-      } else if (coverMoved < 6) {
+      } else if (swipeMoved < 6) {
         /* a tap rather than a drag — same behaviour as the side covers'
            own click listener, just reached through the pointer sequence
            instead of a separate click event */
@@ -876,7 +975,7 @@
         const n = covers.indexOf(hit);
         if (n > -1 && n !== i) load(n, playing);
       }
-      coverCaptured = false;
+      swipeCaptured = false;
     }
 
     /* A guard against accidental rapid re-fires, not a rate limit on
@@ -902,34 +1001,27 @@
       const t = track();
 
       /* Covers a cover's hover lift/veil-fade for exactly as long as the
-         slide below runs (1s — matches .cover's own transform/opacity/
-         filter transition). Without it, whichever cover the pointer
-         happens to already be resting on when it lands would ALSO start
-         its hover transition mid-slide — the small transport buttons sit
-         right under the artwork, so that's the common case there, and it's
-         what read as an extra hop only on that path. Cleared and reset on
-         every call so a rapid run of clicks keeps it suppressed the whole
-         time rather than flickering back on between them. */
+         swap below runs (.3s — matches .cover's own transform transition).
+         Without it, whichever cover the pointer happens to already be
+         resting on when it lands would ALSO start its hover transition on
+         top of the swap — the small transport buttons sit right under the
+         artwork, so that's the common case there, and it's what read as
+         an extra hop only on that path. Cleared and reset on every call
+         so a rapid run of clicks keeps it suppressed the whole time
+         rather than flickering back on between them. */
       el.covers.classList.add('is-changing');
       clearTimeout(changeTimer);
-      changeTimer = setTimeout(() => el.covers.classList.remove('is-changing'), 1000);
+      changeTimer = setTimeout(() => el.covers.classList.remove('is-changing'), 450);
 
+      /* the artwork swaps straight to its new resting slots — paintCover's
+         own short CSS transition. placeMeta() here is the default entry
+         a button, keyboard or direct tap needs; a swipe's own commit (see
+         swipeUp) overrides this transient call itself, in the same tick,
+         before it ever gets a frame to be seen — .player__meta is still
+         mid-drag (is-sliding, transition off) at this exact point either
+         way, so nothing here flashes regardless of which path called it. */
       placeCovers();
-      el.meta.classList.add('is-swapping');
-      clearTimeout(swapTimer);
-      /* past the .22s fade-out, so the words are actually invisible when
-         they change — and fitTitle's font-size jump lands here too, where
-         nothing can see it. Padded well past the transition's own 220ms
-         (was 240 — only 20ms of slack) since a phone already busy sliding
-         the cover and flashing the light can drop enough frames to still
-         be mid-fade at 240ms, which swaps the text under still-visible old
-         copy and reads as a jump-cut rather than a fade. */
-      swapTimer = setTimeout(() => {
-        el.title.textContent = t.title;
-        el.artist.textContent = t.artist;
-        fitTitle();
-        el.meta.classList.remove('is-swapping');
-      }, 320);
+      placeMeta();
 
       if (t.demo || !t.artwork) {
         applyLight(DEMO_LIGHT);
@@ -1168,6 +1260,7 @@
       init(list) {
         tracks = list;
         buildCovers();
+        buildMeta();
         preloadArt();
         presampleColours();
 
@@ -1176,13 +1269,19 @@
         el.prev.addEventListener('click', prevTrack);
         el.next.addEventListener('click', nextTrack);
 
-        /* drag the cover stack itself to step through tracks, in either
-           direction — see coverDown/coverMove/coverUp above */
-        el.covers.addEventListener('pointerdown', coverDown);
-        el.covers.addEventListener('pointermove', coverMove);
-        el.covers.addEventListener('pointerup', coverUp);
-        el.covers.addEventListener('pointercancel', coverUp);
-        el.covers.addEventListener('dragstart', e => e.preventDefault());
+        /* swipe either the artwork or the title/artist itself to step
+           through tracks, in either direction — see
+           swipeDown/swipeMove/swipeUp above. Bound to both surfaces so
+           either answers the gesture; only the title/artist actually
+           moves (Apple Music-style — see the note on .cover in
+           styles.css), regardless of which one the drag started on. */
+        for (const surface of [el.covers, el.meta]) {
+          surface.addEventListener('pointerdown', swipeDown);
+          surface.addEventListener('pointermove', swipeMove);
+          surface.addEventListener('pointerup', swipeUp);
+          surface.addEventListener('pointercancel', swipeUp);
+          surface.addEventListener('dragstart', e => e.preventDefault());
+        }
 
         /* ←/→ step tracks now that the carousel is a single panel. The
            scrubber stops these reaching here when it has focus, so seeking
@@ -1273,7 +1372,7 @@
           if (w && w !== lastArtW) {
             lastArtW = w;
             player.style.setProperty('--art-w', `${w}px`);
-            fitTitle();
+            metaItems.forEach(m => fitTitleEl(m.titleEl));
           }
         };
         new ResizeObserver(syncArtWidth).observe(el.covers);

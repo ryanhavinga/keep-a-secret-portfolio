@@ -101,11 +101,14 @@ the small transport buttons and the keyboard step through tracks instead.
 
 ## Navigating
 
-The small transport buttons, ←/→, dragging the cover stack, and clicking a cover tucked in
-behind the playing one all step through tracks — there are no sections left to move between.
-The playing cover lights up on hover; nothing moves or lifts. Space plays and pauses. `prev`
-rewinds to the start of the current track first and only steps back if you use it again within
-the first few seconds.
+The small transport buttons, ←/→, swiping, and clicking a cover tucked in behind the playing
+one all step through tracks — there are no sections left to move between. Swiping (over the
+artwork or the title/artist itself) is Apple Music-style: the title/artist carousel tracks the
+drag live, while the artwork sits still and only ever swaps once a track change actually lands
+— see the notes on `.cover` and `.player__meta` in `css/styles.css`, and on `swipeDown` in
+`js/app.js`. The playing cover lights up on hover; nothing moves or lifts. Space plays and
+pauses. `prev` rewinds to the start of the current track first and only steps back if you use
+it again within the first few seconds.
 
 ## Notes
 
@@ -119,10 +122,6 @@ the first few seconds.
 * How far off screen a resting side panel sits is `PEEK` at the top of the `Carousel` module
   in `js/app.js`. It is negative: positive values would bring a panel back into frame. With a
   single panel it has nothing to do, but the whole carousel is still wired up and working.
-* **The cover hover lift** rides on the standalone `translate` property, not `transform` —
-  `placeCovers()` in `js/app.js` owns `transform` and rewrites it on every track change, so
-  the two would fight. Individual transform properties apply outside `transform`, which also
-  lets the lift keep its own quick timing instead of the 1s cover slide.
 * **The background** is a lamp behind a grille, in `css/styles.css`, bottom layer first:
   1. `.ring--glow` / `.ring--bloom` — the wash either side of the light. Both use
      `--ring-deep`: the artwork's hue taken right down in lightness, which is what a lamp

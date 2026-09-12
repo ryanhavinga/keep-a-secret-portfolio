@@ -90,13 +90,16 @@
       <div class="player">
 
         <!-- cover stack: the playing track, with its neighbours tucked behind.
-             Built from CONFIG.tracks by app.js — click a side cover to switch. -->
+             Built from CONFIG.tracks by app.js — click a side cover to switch.
+             Static otherwise — swiping steps tracks by spinning the title/
+             artist carousel below instead, Apple Music-style; the artwork
+             only ever swaps, at the moment a track actually changes. -->
         <div class="covers" data-covers></div>
 
-        <div class="player__meta">
-          <h1 class="player__title" data-title>—</h1>
-          <p class="player__artist" data-artist>Keep A Secret</p>
-        </div>
+        <!-- one .meta-item per track (built by app.js, same as .covers) —
+             a horizontal title/artist carousel that tracks a swipe live,
+             independent of the artwork above it. -->
+        <div class="player__meta" data-meta></div>
 
         <div class="transport">
           <div class="timeline">
