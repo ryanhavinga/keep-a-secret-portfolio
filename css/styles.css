@@ -948,6 +948,13 @@ body.is-unlocked .leds {
   fill: currentColor; stroke: currentColor;
   stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
 }
+/* the speaker body is a single compound path (box + triangle) rather
+   than two separate shapes, so the shared stroke above was tracing its
+   internal seam — the box/triangle join — as a visible line straight
+   through the middle of an otherwise solid silhouette. Only the two
+   sound-wave arcs after it are stroke-only (fill: none) and actually
+   need it. */
+.vol-toggle__icon path:first-child { stroke: none; }
 
 .controls {
   display: flex; align-items: center; justify-content: center;

@@ -832,23 +832,26 @@
        feel is worth more here than a number re-derived from the text
        box's own (much larger, full-width) travel. */
     const DRAG_SLOT = 1.9;
-    /* a mouse can drag the cursor far further than a thumb can ever drag
-       a touch point — the artwork itself is a small, fixed target, but a
-       mouse drag is bounded only by the screen, which is many artwork-
-       widths across. Measuring mouse input off that same small reference
-       meant a single ordinary mouse drag could sail straight past
-       LIVE_DRAG_CAP and then just sit there, pinned, while the cursor
-       kept moving — a dead zone that read as the carousel seizing up
-       mid-drag. Mouse gets its own reference distance instead: the
-       viewport itself, scaled up further still, so reaching the cap
-       would take a drag several screens wide. */
-    const DRAG_SLOT_MOUSE = 3;
+    /* a mouse can drag the cursor further than a thumb can ever drag a
+       touch point — the artwork itself is a small, fixed target, but a
+       mouse isn't limited to it the way a finger practically is.
+       Measuring mouse input off that same small reference meant an
+       ordinary mouse drag could sail straight past LIVE_DRAG_CAP and
+       then just sit there, pinned, while the cursor kept moving — a dead
+       zone that read as the carousel seizing up mid-drag. Tried scaling
+       this off the viewport instead (innerWidth * 3) — wrong in the
+       other direction: on an actual laptop screen that put a full slot
+       several thousand px away, so nothing visibly moved for any drag a
+       hand normally makes. A fixed distance turned out to be the right
+       call either way — mouse drags don't get longer on a bigger screen,
+       people just don't drag a mouse that far — chosen so a normal few-
+       hundred-px drag clearly shows the neighbour, while still wanting a
+       genuinely deliberate pull to reach the cap. */
+    const MOUSE_SLOT_PX = 620;
     /* how far, in CSS px, one full slot of drag is — touch/pen scale off
-       the artwork's own width, mouse off the viewport's */
+       the artwork's own width, mouse is the fixed distance above */
     function slotWidth(pointerType) {
-      return pointerType === 'mouse'
-        ? innerWidth * DRAG_SLOT_MOUSE
-        : (el.covers.offsetWidth || 1) * DRAG_SLOT;
+      return pointerType === 'mouse' ? MOUSE_SLOT_PX : (el.covers.offsetWidth || 1) * DRAG_SLOT;
     }
     /* however far past that a held drag still goes, it's never allowed to
        actually finish the trip on its own — the incoming title can get
@@ -993,7 +996,7 @@
         if (swipeCaptured) placeMeta(dragExtra);
       });
     }
-    function swipeUp(e) {
+    function swipeUp(e = {}) {
       if (!swipeDragging) return;
       swipeDragging = false;
       if (swipeCaptured && swipePid !== null) swipeSurface?.releasePointerCapture?.(swipePid);
@@ -1015,7 +1018,7 @@
         /* a tap rather than a drag — same behaviour as the side covers'
            own click listener, just reached through the pointer sequence
            instead of a separate click event */
-        const hit = e.target.closest('.cover');
+        const hit = e.target?.closest('.cover');
         const n = covers.indexOf(hit);
         if (n > -1 && n !== i) load(n, playing);
       }
@@ -1324,8 +1327,22 @@
           surface.addEventListener('pointermove', swipeMove);
           surface.addEventListener('pointerup', swipeUp);
           surface.addEventListener('pointercancel', swipeUp);
+          /* fires whenever capture is taken away for any reason, not just
+             a pointerup/pointercancel this code itself triggered — the
+             one that actually matters is a mouse: releasing the button
+             while the cursor has drifted outside the browser window
+             entirely isn't guaranteed to deliver pointerup back to the
+             page at all, and without this the drag was left permanently
+             "held", chasing every future mousemove around the screen
+             until the page reloaded. */
+          surface.addEventListener('lostpointercapture', swipeUp);
           surface.addEventListener('dragstart', e => e.preventDefault());
         }
+        /* belt-and-braces alongside lostpointercapture above — losing
+           focus (alt-tab, clicking another app) mid-drag with the mouse
+           button still down won't always fire either capture event, but
+           it always fires this. */
+        addEventListener('blur', () => { if (swipeDragging) swipeUp(); });
 
         /* ←/→ step tracks now that the carousel is a single panel. The
            scrubber stops these reaching here when it has focus, so seeking
