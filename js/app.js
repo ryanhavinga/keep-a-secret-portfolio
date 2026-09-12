@@ -824,13 +824,23 @@
        drag — lower is more sensitive. Raised a good deal from an initial
        .58 (itself close to Carousel's own .62): that read as reacting
        to almost nothing, a small movement already most of the way to
-       committing. Now wants close to the artwork's own full width
-       dragged before it's given up a full slot. Still measured off the
-       artwork (el.covers) even though it's the meta carousel moving now
-       — same physical surface either way, and a consistent, familiar
+       committing. Raised again, further still, after that still let a
+       single long-held drag (an ordinary swipe travels well past the
+       artwork's own width) reach LIVE_DRAG_CAP below. Still measured off
+       the artwork (el.covers) even though it's the meta carousel moving
+       now — same physical surface either way, and a consistent, familiar
        feel is worth more here than a number re-derived from the text
        box's own (much larger, full-width) travel. */
-    const DRAG_SLOT = 1.05;
+    const DRAG_SLOT = 1.9;
+    /* however far past that a held drag still goes, it's never allowed to
+       actually finish the trip on its own — the incoming title can get
+       close to centred while the finger is still down, never exactly
+       there. Reaching 0 is what a *release* means (a commit's spring
+       settle, or the settle-back snapping there instantly); reaching it
+       just by holding and dragging far enough collapsed that distinction
+       entirely, and read as the carousel finishing the swap on its own
+       before the gesture had actually ended. */
+    const LIVE_DRAG_CAP = .78;
     const DRAG_COMMIT = .18; // matches Carousel's own commit threshold
     /* a flick can commit well short of DRAG_COMMIT's distance if it's
        fast enough — units are DRAG_SLOT-normalised extra per ms, so this
@@ -943,7 +953,7 @@
         el.meta.classList.add('is-sliding');
       }
       const w = el.covers.offsetWidth || 1;
-      const next = clamp(dx / (w * DRAG_SLOT), -1, 1);
+      const next = clamp(dx / (w * DRAG_SLOT), -LIVE_DRAG_CAP, LIVE_DRAG_CAP);
       const now = performance.now(), dt = now - lastMoveT;
       if (dt > 0) {
         /* smoothed rather than taken raw — consecutive pointermove deltas
