@@ -76,11 +76,11 @@ Set `logoImage: 'img/logo.svg'` to swap the whole wordmark for an image.
 > (macOS's `afconvert` can *read* MP3 but has no MP3 *encoder* — AAC is what it actually
 > produces. For true `.mp3` output, encode with `ffmpeg` or a DAW's export instead.)
 
-### Copyright line
-"© Keep A Secret. All Rights Reserved" sits fixed bottom-right, flush with "Contact" above
-it — set directly in `index.html` (`.copyright`), not in `js/config.js`. Site-wide rather than
-per-track, so there's nothing to edit per song; change the text in the markup itself if it
-ever needs to say something else.
+### Footer credit
+"© Keep A Secret. All Rights Reserved" and "Written & produced by Keep A Secret" sit fixed,
+centred at the very bottom of the page — set directly in `index.html` (`.footer-credit`), not
+in `js/config.js`. Site-wide rather than per-track, so there's nothing to edit per song; change
+the text in the markup itself if it ever needs to say something else.
 
 ### TikTok and Bio — removed from the page
 Both panels were taken out of `index.html`. Their settings are still in `js/config.js`

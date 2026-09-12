@@ -448,28 +448,32 @@ body.is-unlocked .leds {
 .social svg { width: 100%; fill: none; stroke: #fff; stroke-width: 1.5; }
 .social:hover { opacity: 1; }
 
-/* bottom-right, right-edge flush with .tag (Contact) above it — same
-   thin, tracked-out, low-opacity label style .site-credit used to carry */
-.copyright {
+/* centred at the very bottom of the page, both lines the same size and
+   colour — the copyright line sits above the production credit, same
+   layout as the reference site's own footer */
+.footer-credit {
   position: fixed; z-index: 40;
-  right: clamp(20px, 3.4vw, 48px);
-  bottom: clamp(18px, 3vh, 34px);
-  margin: 0;
+  left: 50%; bottom: clamp(14px, 2.6vh, 28px);
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  text-align: center;
   white-space: nowrap;
-  text-align: right;
+}
+.footer-credit p {
+  margin: 0;
   font-size: 9.5px;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, .62);
+  letter-spacing: .1em;
+  color: #cecece;
 }
 @media (max-width: 620px) {
-  /* too long to sit on one line at this width without colliding with the
-     instagram glyph or running off the edge — let it wrap and drop the
-     tracking back a touch so two lines still read as one thought */
-  .copyright {
-    width: min(58vw, 240px);
+  /* too long to sit on one line at this width without running off the
+     edge — let it wrap and drop the tracking back a touch */
+  .footer-credit {
+    width: min(84vw, 320px);
+  }
+  .footer-credit p {
     white-space: normal;
-    letter-spacing: .12em;
+    letter-spacing: .06em;
   }
 }
 .wordmark {
@@ -788,19 +792,19 @@ body.is-unlocked .leds {
      width, which changed --art-w, which changed the timeline's width
      under it. The box is now constant no matter which track is showing;
      only the text inside it shrinks. */
-  height: calc(clamp(15px, 5.4cqw, 30px) * 1.1);
+  height: calc(clamp(14px, 4.8cqw, 26px) * 1.1);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   /* Monument Extended (the site's display face, used on the gate/wordmark)
      read as too futuristic here — the title and artist use the plain
-     sans stack instead, a step tighter and quieter. */
+     sans stack instead, a step tighter and quieter. Cased as typed in
+     js/config.js rather than forced to caps, same as the artist name. */
   font-family: var(--sans);
   font-weight: 700;
-  font-size: clamp(15px, 5.4cqw, 30px);
+  font-size: clamp(14px, 4.8cqw, 26px);
   letter-spacing: .01em;
-  text-transform: uppercase;
   line-height: 1.1;
   white-space: nowrap;
   transition: opacity .5s var(--ease);
@@ -810,7 +814,7 @@ body.is-unlocked .leds {
    letter-spacing is built for all-caps and reads as oddly stretched on
    mixed-case text */
 .player__artist {
-  margin: clamp(7px, 2cqw, 15px) 0 0;
+  margin: clamp(4px, 1.2cqw, 8px) 0 0;
   font-family: var(--sans);
   font-weight: 500;
   font-size: clamp(11px, 2.8cqw, 16px);
@@ -883,10 +887,14 @@ body.is-unlocked .leds {
   transition: left .18s linear;
 }
 .scrub:hover .scrub__head, .scrub.is-scrubbing .scrub__head { transform: translateY(-50%) scale(1); }
-/* while dragging, the bar should sit under the finger rather than easing
-   toward it — the .18s smoothing is there for playback, where it fills in
-   between updates, and reads as lag the moment you take hold of it */
-.scrub.is-scrubbing .scrub__fill { transition: none; }
+/* while dragging (or landing a plain click), both the fill and the dot
+   should sit under the finger rather than easing toward it — the .18s
+   smoothing is there for playback, where it fills in between updates, and
+   reads as lag the moment you take hold of it. Missing this on the head
+   before meant a click snapped the fill instantly but left the dot
+   visibly trailing after it on its own .18s glide. */
+.scrub.is-scrubbing .scrub__fill,
+.scrub.is-scrubbing .scrub__head { transition: none; }
 
 /* ---------- volume ------------------------------------------
    The toggle sits inline in the timeline row, sized off the same scale as
@@ -958,7 +966,14 @@ body.is-unlocked .leds {
    (stroke-linejoin) and bulk out the pause bars, which are open paths
    and have no fill area of their own to speak of */
 .ctrl--play svg { width: 60%; fill: #fff; stroke: #fff; stroke-width: 1.6; stroke-linejoin: round; }
-.ctrl__icon--pause { stroke-width: 7; }
+/* Two solid rects rather than a thick stroked line — a stroke's round cap
+   is a full semicircle (as wide as the bar itself), which reads as a pill,
+   not "subtly rounded". `rx` gives an actual, small corner radius instead.
+   `.ctrl--play svg` above (class+type, specificity 0,1,1) was quietly
+   beating a plain `.ctrl__icon--pause` selector (0,1,0) — every earlier
+   attempt to style these bars was overridden and never actually rendered.
+   Scoped through the parent class here so it actually wins. */
+.ctrl--play .ctrl__icon--pause { stroke: none; }
 /* a touch brighter on hover and while actually playing — filter only,
    never transform: no hover movement, by request. The only motion left
    on this button is the punch below, on an actual press. js/app.js adds/
