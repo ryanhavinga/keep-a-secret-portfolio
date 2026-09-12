@@ -663,16 +663,18 @@ body.is-unlocked .leds {
      reaching far enough to dim the title sitting just under it. */
   box-shadow: 0 14px 26px -18px rgba(0, 0, 0, .85), inset 0 0 0 1px rgba(255, 255, 255, .07);
   transform: translate(-50%, -50%);
-  scale: 1;
-  /* the horizontal carousel slide when switching tracks. box-shadow rides
-     its own slower timing — the hover glow below should ease up and back
-     down gently rather than snap with the slide. No filter/blur and no
-     opacity here on purpose — a cover shrinks under a drag or a track
-     change, but stays fully solid the whole time; a side cover reading as
-     dimmer is the veil pseudo-element below, a flat overlay rather than
-     the cover itself going translucent (which let whatever sat behind it
-     show through mid-slide). */
-  transition: transform 1s var(--ease), box-shadow 1.1s var(--ease);
+  /* the horizontal carousel slide when switching tracks — shortened from
+     1s/1.1s so back-to-back swipes settle before the next one lands
+     instead of each re-triggering the same long tail. box-shadow still
+     rides a touch slower than the slide itself — the hover glow below
+     should ease up and back down gently rather than snap with it. No
+     scale, filter/blur or opacity here on purpose — a cover stays fully
+     solid and the same size the whole time it moves, one property
+     (translateX) doing the work instead of several at once; a side cover
+     reading as dimmer is the veil pseudo-element below, a flat overlay
+     rather than the cover itself going translucent (which let whatever
+     sat behind it show through mid-slide). */
+  transition: transform .65s var(--ease), box-shadow .75s var(--ease);
   will-change: transform;
   -webkit-tap-highlight-color: transparent;
 }

@@ -9,7 +9,6 @@
   const $  = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-  const lerp  = (a, b, t) => a + (b - a) * t;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const SOUND_ENABLED = true;   // the gate woosh — set false to mute it again
 
@@ -706,21 +705,23 @@
     }
 
     /* Continuous version of the old fixed-`d` calls' discrete states
-       (centre / side / far) — `a` is the same distance-from-centre used
-       for those, just not rounded, so a cover shrinks smoothly under a
+       (centre / side / far) — `d` is the same distance-from-centre used
+       for those, just not rounded, so a cover slides smoothly under a
        dragging finger instead of snapping at each integer boundary. No
-       opacity fade: a side cover used to ease from full opacity toward
+       scale and no opacity fade: covers used to shrink as they moved off
+       centre, which read as an extra thing happening on top of the slide
+       rather than part of it — dropping it left one property to track
+       instead of two, closer to a solid row sliding than a stack
+       warping. A side cover used to also ease from full opacity toward
        transparent, which on a 3-track stack (every cover is always
        either centred or one of the two sides — there's no fourth, fully
        hidden slot to fade toward) meant the track behind it visibly
-       showed through mid-slide. Covers stay fully solid; the veil
-       pseudo-element (.cover--side::after, below) is what dims a side
-       cover, and that's a flat overlay, not a transparency change on the
-       cover itself. */
+       showed through mid-slide. Covers stay fully solid, same size,
+       throughout; the veil pseudo-element (.cover--side::after, below) is
+       what dims a side cover, a flat overlay rather than a transparency
+       change on the cover itself. */
     function paintCover(c, d) {
-      const a = clamp(Math.abs(d), 0, 2);
-      const scale = lerp(1, .86, clamp(a, 0, 1));
-      c.style.transform = `translate(-50%, -50%) translateX(${(d * 19).toFixed(2)}%) scale(${scale.toFixed(3)})`;
+      c.style.transform = `translate(-50%, -50%) translateX(${(d * 19).toFixed(2)}%)`;
     }
 
     /* ---- drag-to-rotate --------------------------------------
