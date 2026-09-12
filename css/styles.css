@@ -245,6 +245,13 @@ body.is-entering .light-surge {
      large, continuous cut to the one animation cost that's always
      running rather than only right after a track change. */
   animation: flicker 8.6s steps(40, end) infinite;
+  /* promotes each ring layer to its own compositor layer up front,
+     same idea as .light-surge's will-change:filter above — without it
+     the browser has to decide whether this is worth promoting the first
+     time the animation actually ticks, which on a layer this size (and
+     already carrying a blur + a blend mode) is exactly the kind of
+     first-frame hitch that reads as a stutter. */
+  will-change: opacity;
 }
 /* the wash either side of the light: the same hue taken right down in
    lightness, which is what a lamp actually throws onto the surface around
@@ -259,7 +266,11 @@ body.is-entering .light-surge {
       rgb(var(--ring-deep) / .6) 93%,
       rgb(var(--ring-deep) / .24) 98%,
       transparent 100%);
-  filter: blur(34px);
+  /* trimmed from 34px — blur cost scales with radius, and this is one of
+     three blurred layers staying on screen, and on, the entire time the
+     page is open, not just for an animation's duration. Softness loss is
+     marginal at this size; the cost saving isn't. */
+  filter: blur(28px);
   animation-duration: 9.4s;
 }
 /* a thin sympathetic bloom sitting exactly on the band — pure hue at low
@@ -285,7 +296,9 @@ body.is-entering .light-surge {
       rgb(var(--ring-deep) / .85) 80%,
       rgb(var(--ring-deep) / .32) 88%,
       transparent 94%);
-  filter: blur(54px);
+  /* trimmed from 54px — the widest, most expensive blur of the three,
+     same reasoning as .ring--glow above */
+  filter: blur(44px);
   animation-duration: 12s;
 }
 
@@ -335,6 +348,7 @@ body.is-entering .light-surge {
       transparent 0 83.5%, #000 86.5% 90.5%, transparent 94%);
   /* stepped — see the note on .ring's own flicker above */
   animation: flicker 7.8s steps(40, end) infinite;
+  will-change: opacity;   /* see the note on .ring's own will-change above */
 }
 
 /* Paused until the gate actually opens. Opacity alone is cheap, but every
@@ -990,7 +1004,7 @@ body.is-unlocked .leds {
 .controls {
   display: flex; align-items: center; justify-content: center;
   gap: clamp(2px, 0.8cqw, 6px);
-  padding-top: clamp(0px, 0.3cqw, 3px);
+  padding-top: 0;
 }
 /* Filled white icons, floating free — no plates or containers, no ring or
    border. The base rule (hairline, unfilled) is the fallback for any
@@ -1298,10 +1312,11 @@ body.is-unlocked .leds {
    ============================================================ */
 @media (max-width: 760px) {
   :root {
-    /* a step bigger than before (was 300/74vh/90vw/620) — the player and
-       its artwork read as the main event on a phone, so it's worth more
-       of the screen than the desktop ratio gives it */
-    --panel: clamp(320px, min(78vh, 95vw), 640px);
+    /* a step bigger again (was 320/78vh/95vw/640, before that
+       300/74vh/90vw/620) — the player and its artwork read as the main
+       event on a phone, so it's worth more of the screen than the
+       desktop ratio gives it */
+    --panel: clamp(335px, min(80vh, 98vw), 660px);
     /* considerably smaller relative to the viewport than the desktop
        ratio (was min(136vh,245vw) — over 2x the viewport width, so only
        its near-vertical side edges ever showed): sized instead to sit
