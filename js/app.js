@@ -391,7 +391,7 @@
 
     let tracks = [], covers = [], metaItems = [], i = 0,
         playing = false, fallback = false, fakeTime = 0, lastTick = 0, scrubbing = false,
-        changeTimer = null;
+        changeTimer = null, lightTimer = null;
 
     /* swipe-to-rotate state — see swipeDown/swipeMove/swipeUp below */
     let swipeDragging = false, swipeCaptured = false, swipeMoved = 0,
@@ -1070,13 +1070,30 @@
       placeCovers();
       placeMeta();
 
-      if (t.demo || !t.artwork) {
-        applyLight(DEMO_LIGHT);
-      } else {
-        applyColour(Colour.toRgb(t.color || '#141418'));
-        sampleColour();
-      }
-      flashLight();
+      /* Held back rather than fired in the same tick as the slide above —
+         starting the light's own repaint work (applyColour's --tint
+         crossfade, flashLight's surge) at the exact moment the cover and
+         meta-item transitions also start had them fighting over the same
+         handful of frames, doubling up exactly where things were already
+         tightest. .meta-item's .4s transform transition is the longer of
+         the two slides (.cover's own is .3s), so this waits for that one
+         to actually finish before asking for anything else. Guarded by
+         index the same way sampleColour() below already is: if another
+         load() lands before this fires, i has moved on and this one's
+         result is stale, so it's skipped rather than briefly flashing the
+         wrong track's colour in over the new one. */
+      clearTimeout(lightTimer);
+      const lightFor = i;
+      lightTimer = setTimeout(() => {
+        if (lightFor !== i) return;
+        if (t.demo || !t.artwork) {
+          applyLight(DEMO_LIGHT);
+        } else {
+          applyColour(Colour.toRgb(t.color || '#141418'));
+          sampleColour();
+        }
+        flashLight();
+      }, 400);
 
       fallback = false; fakeTime = 0;
       /* a copy already in memory is seekable from the first frame, so use
