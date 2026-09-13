@@ -1821,7 +1821,7 @@
       'font:11px/1.4 ui-monospace,monospace', 'padding:8px 10px',
       'white-space:pre-wrap', 'pointer-events:none'
     ].join(';');
-    hud.textContent = 'build: PERF_BUILD_2026-09-13-1755\nperf HUD armed — drag to see frame spikes';
+    hud.textContent = 'build: PERF_BUILD_2026-09-13-1800\nperf HUD armed — drag to see frame spikes';
     document.body.appendChild(hud);
 
     /* Two things that made a screenshot hard to line up: the log kept
@@ -1847,7 +1847,7 @@
            reliable way to rule out a stale cached copy (Cloudflare's own
            30-60s deploy lag, or Safari holding an old js/app.js), which
            has caused real confusion more than once already this session */
-        `build: PERF_BUILD_2026-09-13-1755\n` +
+        `build: PERF_BUILD_2026-09-13-1800\n` +
         `perf HUD — ${settled ? 'SETTLED, safe to screenshot' : 'RECORDING…'}\n` +
         `frames slower than ${SPIKE_MS}ms since the last track change\n` +
         `(most recent last)\n\n` +

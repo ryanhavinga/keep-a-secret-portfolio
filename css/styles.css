@@ -111,19 +111,16 @@
 }
 
 /* the colour change lives on the root because that is where app.js writes it;
-   everything downstream just inherits the value mid-interpolation. */
-/* EXPERIMENT, re-run: disabled outright again — colour snaps instantly.
-   The first time this ran, the perf HUD showed no improvement, but those
-   screenshots may have been taken before Cloudflare's 30-60s deploy lag
-   cleared, or against a Safari-cached copy of the previous JS/CSS — the
-   same live-vs-stale gap that caused real confusion earlier in this
-   session on the local dev server too. Re-testing this properly (fresh
-   tab or a hard reload well after the push) before trusting the earlier
-   "made no difference" result. Revert by restoring the transition line
-   below if this confirms it really doesn't matter. */
+   everything downstream just inherits the value mid-interpolation.
+   Restored again: with a confirmed-fresh build, disabling this alongside
+   slotWidth() caching and the paint() throttle (js/app.js) came back
+   completely clean on the perf HUD — but that ran all three changes at
+   once, and this one alone costs the smooth colour wash, which is worth
+   keeping if it isn't actually the thing that mattered. Re-enabled to
+   isolate whether the other two are sufficient on their own. */
 html {
-  /* transition: --ring var(--tint) var(--tint-steps), --ring-deep var(--tint) var(--tint-steps),
-              --led-b var(--tint) var(--tint-steps), --led-c var(--tint) var(--tint-steps); */
+  transition: --ring var(--tint) var(--tint-steps), --ring-deep var(--tint) var(--tint-steps),
+              --led-b var(--tint) var(--tint-steps), --led-c var(--tint) var(--tint-steps);
 }
 
 /* ---------- RESET ----------------------------------------- */
