@@ -497,11 +497,12 @@
       body.add('is-surging');
       clearTimeout(flashTimer);
       flashTimer = setTimeout(() => {
-        /* released over roughly the same span the colour cross-fades in, so
-           the lamp settles to its new hue, brightness and saturation
-           together rather than dropping out from under the crossfade */
+        /* released once the rise (css/styles.css's --surge-in) has
+           actually finished, so the class always comes off exactly when
+           there's nothing left for it to interrupt — matches --surge-in
+           and needs updating alongside it if that changes again. */
         body.remove('is-surging');
-      }, 1900);
+      }, 300);
     }
 
     /* The sampled colour of a given piece of artwork never changes, so it

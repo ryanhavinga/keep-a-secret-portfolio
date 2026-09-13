@@ -95,10 +95,19 @@
      stays exactly the same; only the total exposure time changes. */
   --tint-steps: steps(24, end);
 
-  /* the track-change light surge: slow rise, even slower release — see
-     body.is-surging on .light-surge, further down */
-  --surge-in: 1.9s;
-  --surge-out: 5.2s;
+  /* EXPERIMENT: cut way down from 1.9s/5.2s. This is the one thing in the
+     whole track-change sequence none of the --tint changes ever touched —
+     a `filter` transition (brightness+saturate) on .light-surge, which
+     wraps every ring/leds layer, running for up to 1.9+5.2=7.1s on every
+     single track change regardless of what --tint was set to. filter is
+     expensive for Safari to repaint over a large blurred area, and the
+     perf HUD's spikes ran well past where --tint's own 2s window would
+     have ended — this is the other mechanism still running underneath
+     that. js/app.js's flashTimer (flashLight()) is hardcoded to 1900ms
+     to match the old --surge-in and needs updating alongside this if it
+     sticks. See body.is-surging on .light-surge, further down. */
+  --surge-in: .3s;
+  --surge-out: .5s;
 }
 
 /* the colour change lives on the root because that is where app.js writes it;
