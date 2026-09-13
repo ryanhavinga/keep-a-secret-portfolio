@@ -546,13 +546,18 @@
       const body = document.body.classList;
       body.add('is-surging');
       clearTimeout(flashTimer);
+      /* --surge-in is a calc() off --tint now (css/styles.css), not a
+         fixed number, so its actual duration is read straight off a real
+         .light-surge element via transitionDuration rather than
+         re-deriving or duplicating that calc() here — the two can't drift
+         apart this way, whatever --tint ends up set to. */
+      const ms = parseFloat(getComputedStyle($('.light-surge')).transitionDuration) * 1000;
       flashTimer = setTimeout(() => {
-        /* released once the rise (css/styles.css's --surge-in) has
-           actually finished, so the class always comes off exactly when
-           there's nothing left for it to interrupt — matches --surge-in
-           and needs updating alongside it if that changes again. */
+        /* released once the rise has actually finished, so the class
+           always comes off exactly when there's nothing left for it to
+           interrupt */
         body.remove('is-surging');
-      }, 300);
+      }, ms);
     }
 
     /* The sampled colour of a given piece of artwork never changes, so it
