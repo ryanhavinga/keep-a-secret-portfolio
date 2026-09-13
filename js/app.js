@@ -1806,25 +1806,50 @@
     hud.textContent = 'perf HUD armed — drag to see frame spikes';
     document.body.appendChild(hud);
 
+    /* Two things that made a screenshot hard to line up: the log kept
+       growing across several track changes at once, so "+Nms" from an
+       old change and a new one ended up interleaved out of order — and
+       the text rewrote itself the instant a fresh spike landed, so a
+       screenshot taken mid-drag could catch it between renders. Fixed
+       by clearing the log on every new track change (each capture now
+       only ever shows the one change just made), and by only touching
+       the DOM once a full second has passed with nothing new to add —
+       right up top it says RECORDING while spikes are still coming in
+       and SETTLED, safe to screenshot once they've stopped. */
     const SPIKE_MS = 32;
-    const spikes = [];
+    let spikes = [];
     let last = performance.now();
+    let lastRenderedAt = 0;
+    let seenLoadAt = window.__lastLoadAt || null;
+
+    function render(settled) {
+      hud.textContent =
+        `perf HUD — ${settled ? 'SETTLED, safe to screenshot' : 'RECORDING…'}\n` +
+        `frames slower than ${SPIKE_MS}ms since the last track change\n` +
+        `(most recent last)\n\n` +
+        (spikes.length
+          ? spikes.map(s => `+${s.since}ms after track change: ${s.dt}ms frame`).join('\n')
+          : seenLoadAt ? 'no slow frames since the last track change — smooth!' : 'change track, then drag');
+    }
 
     function frame(t) {
+      if (window.__lastLoadAt && window.__lastLoadAt !== seenLoadAt) {
+        seenLoadAt = window.__lastLoadAt;
+        spikes = [];   // fresh log for this track change only
+      }
       const dt = t - last;
       last = t;
-      if (dt > SPIKE_MS) {
-        const since = window.__lastLoadAt ? Math.round(t - window.__lastLoadAt) : null;
-        spikes.push({ dt: Math.round(dt), since });
-        if (spikes.length > 25) spikes.shift();
-        hud.textContent =
-          `perf HUD — frames slower than ${SPIKE_MS}ms (most recent last)\n` +
-          `"+Nms" = time since the last track change, so a spike's position\n` +
-          `shows whether it lands inside the light's crossfade or clear of it.\n\n` +
-          spikes.map(s => s.since == null
-            ? `${s.dt}ms frame (no track change yet)`
-            : `+${s.since}ms after track change: ${s.dt}ms frame`
-          ).join('\n');
+      let dirty = false;
+      if (dt > SPIKE_MS && seenLoadAt) {
+        spikes.push({ dt: Math.round(dt), since: Math.round(t - seenLoadAt) });
+        if (spikes.length > 40) spikes.shift();
+        dirty = true;
+        lastRenderedAt = t;
+      }
+      if (dirty) render(false);
+      else if (lastRenderedAt && t - lastRenderedAt > 1000) {
+        render(true);
+        lastRenderedAt = 0;   // stop re-rendering every frame once settled
       }
       requestAnimationFrame(frame);
     }
