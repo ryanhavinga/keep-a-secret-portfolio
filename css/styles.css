@@ -817,7 +817,21 @@ body.is-unlocked .leds {
   object-fit: cover;
   pointer-events: none;
 }
-.cover--side { cursor: pointer; }
+.cover--side {
+  cursor: pointer;
+  /* trimmed to a shorter band than the main square — top and bottom
+     only, never its width or its translateX offset (js/app.js's
+     paintCover), so the horizontal position and spacing next to the
+     playing cover don't move at all. `top:50%` plus the existing
+     translate(-50%,-50%) centre against whatever height an element
+     actually has, so this alone keeps it centred with no extra offset
+     needed. .cover img below is object-fit:cover, so the image itself
+     crops evenly off its own top and bottom to fill the shorter box —
+     a smaller supporting note rather than a second square competing
+     with the one that's actually playing. */
+  aspect-ratio: auto;
+  height: 74%;
+}
 .cover--side::after {
   content: '';
   position: absolute; inset: 0;
