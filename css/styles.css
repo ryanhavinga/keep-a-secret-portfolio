@@ -604,7 +604,13 @@ body.is-unlocked .leds {
   height: 100dvh;   /* survives the mobile URL bar */
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  padding: clamp(96px, 14vh, 132px) 0 clamp(32px, 6vh, 64px);
+  /* top and bottom padding match on purpose: with `justify-content:
+     center`, equal padding on both sides is what actually lands the
+     carousel on the viewport's exact vertical middle — anything
+     asymmetric (the previous 96-132px top vs. 32-64px bottom) pulls
+     it off-centre by half the difference, regardless of the numbers
+     either side resolves to. */
+  padding: clamp(96px, 14vh, 132px) 0;
 }
 
 .carousel {
