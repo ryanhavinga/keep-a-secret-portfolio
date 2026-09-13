@@ -1046,6 +1046,7 @@
 
       i = ((n % tracks.length) + tracks.length) % tracks.length;
       const t = track();
+      window.__lastLoadAt = now;   // read by the ?perf HUD at the bottom of this file, if it's running
 
       /* Covers a cover's hover lift/veil-fade for exactly as long as the
          swap below runs (.3s — matches .cover's own transform transition).
@@ -1762,4 +1763,57 @@
      showing up already wherever the gate's Enter button was clicked. The
      lamp is the one thing reserved for an actual password entry. */
   Gate.init(playSubIntro, playEntranceLamp);
+
+  /* ==========================================================
+     TEMPORARY — on-screen performance HUD, for chasing the reported
+     iPhone drag lag without a cable to plug into a Mac's Web Inspector.
+     Entirely inert unless the page is loaded with ?perf in the URL —
+     load()'s one `window.__lastLoadAt = now` line above is the only
+     thing that runs unconditionally either way, and that's a single
+     property write, not a measurable cost. Safe to delete this whole
+     block (and that one line) once it's no longer needed.
+
+     Logs every frame slower than 32ms (below ~30fps) along with how
+     long after the last track change it landed, so a screenshot or
+     screen recording of dragging right after a track change shows
+     exactly when the drops happen and whether they land inside the
+     light's crossfade window or well clear of it — the same question
+     the Web Inspector's Timelines tab would answer, just read straight
+     off the phone's own screen instead. */
+  if (new URLSearchParams(location.search).has('perf')) {
+    const hud = document.createElement('div');
+    hud.style.cssText = [
+      'position:fixed', 'inset:auto 0 0 0', 'z-index:99999',
+      'max-height:46vh', 'overflow:auto',
+      'background:rgba(0,0,0,.86)', 'color:#4f4',
+      'font:11px/1.4 ui-monospace,monospace', 'padding:8px 10px',
+      'white-space:pre-wrap', 'pointer-events:none'
+    ].join(';');
+    hud.textContent = 'perf HUD armed — drag to see frame spikes';
+    document.body.appendChild(hud);
+
+    const SPIKE_MS = 32;
+    const spikes = [];
+    let last = performance.now();
+
+    function frame(t) {
+      const dt = t - last;
+      last = t;
+      if (dt > SPIKE_MS) {
+        const since = window.__lastLoadAt ? Math.round(t - window.__lastLoadAt) : null;
+        spikes.push({ dt: Math.round(dt), since });
+        if (spikes.length > 25) spikes.shift();
+        hud.textContent =
+          `perf HUD — frames slower than ${SPIKE_MS}ms (most recent last)\n` +
+          `"+Nms" = time since the last track change, so a spike's position\n` +
+          `shows whether it lands inside the light's crossfade or clear of it.\n\n` +
+          spikes.map(s => s.since == null
+            ? `${s.dt}ms frame (no track change yet)`
+            : `+${s.since}ms after track change: ${s.dt}ms frame`
+          ).join('\n');
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
 })();
