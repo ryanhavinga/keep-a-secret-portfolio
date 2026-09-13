@@ -65,7 +65,18 @@
   /* how long the whole lamp takes to cross-fade to the next track, and the
      curve it takes doing it — barely eased at either end, because a long
      colour fade reads smoothest when it moves at a near-constant rate */
-  --tint: 5s;
+  /* EXPERIMENT: cut from 5s to 2s, --tint-steps' count halved alongside
+     it (see below) to hold the repaint rate steady. The steps themselves
+     were already confirmed cheap enough per-frame (see that note) — what
+     hadn't been tried is just shortening how long the page keeps paying
+     that cost at all. This is the one thing left that lines up with the
+     exact symptom reported: dragging is laggy for a few seconds right
+     after a track change and then goes fully smooth — i.e. bounded by
+     this window, not by anything that runs indefinitely (the flicker
+     loop, the grain jog). If dragging still lags for the same few
+     seconds after this, the tint crossfade isn't the actual bottleneck
+     and this should be reverted. */
+  --tint: 2s;
   --ease-tint: cubic-bezier(.3, .05, .3, .95);
 
   /* The colour fade is stepped rather than continuous, and this is a
@@ -73,14 +84,16 @@
      --led-c feed the radial-gradients on three large blurred ring layers
      and on the two viewport-wide LED lattices — so every distinct value
      they take costs a full repaint of all of it, blurs included. Left
-     continuous, that is a repaint on every frame for the whole five
-     seconds after a track change, which is precisely the stutter that
-     used to follow next/prev and drag the cursor down with it.
+     continuous, that is a repaint on every frame for the whole crossfade
+     after a track change, which is precisely the stutter that used to
+     follow next/prev and drag the cursor down with it.
      Twelve updates a second is far below anything the eye resolves in a
      slow wash of colour, and cuts that repaint work about fivefold.
      (Tried halving again to 6/sec — confirmed on-device not to be the
-     actual bottleneck, reverted back to this.) */
-  --tint-steps: steps(60, end);
+     actual bottleneck, reverted back to this.) Count halved to 24 along
+     with --tint above, so the rate — the part already confirmed fine —
+     stays exactly the same; only the total exposure time changes. */
+  --tint-steps: steps(24, end);
 
   /* the track-change light surge: slow rise, even slower release — see
      body.is-surging on .light-surge, further down */
@@ -690,13 +703,17 @@ body.is-unlocked .leds {
   height: 100%;
   display: flex; flex-direction: column;
   padding: clamp(10px, 1.6vw, 18px);
-  /* A near-opaque dark backing under the usual glass sheen — the mesh's
-     grille dots and the grain layer both have enough contrast to still
-     read, blurred, through a wash this thin at 3-8% white; stacking a
-     solid dark tint underneath knocks the backdrop down so far that
-     neither the mesh nor the grain nor the flicker's brightness pulse
-     survives to the surface, while the top layer still carries the
-     tinted-glass highlight. */
+  /* GLASS PANEL — TEMPORARILY DISABLED FOR AN A/B TEST.
+     The real rules (background/backdrop-filter/border/box-shadow) are
+     kept below, commented out, so this is a one-edit revert once there's
+     a verdict either way — nothing about the width/padding/radius sizing
+     above changed, only whether the card itself is visible. */
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+  /*
   background:
     linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .025)),
     rgba(10, 10, 13, .72);
@@ -705,6 +722,7 @@ body.is-unlocked .leds {
   border: 1px solid rgba(255, 255, 255, .09);
   border-radius: clamp(20px, 3vw, 32px);
   box-shadow: 0 24px 70px -32px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .07);
+  */
 }
 
 /* ---------- cover stack ----------------------------------- */
