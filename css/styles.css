@@ -64,36 +64,13 @@
 
   /* how long the whole lamp takes to cross-fade to the next track, and the
      curve it takes doing it — barely eased at either end, because a long
-     colour fade reads smoothest when it moves at a near-constant rate */
-  /* EXPERIMENT: cut from 5s to 2s, --tint-steps' count halved alongside
-     it (see below) to hold the repaint rate steady. The steps themselves
-     were already confirmed cheap enough per-frame (see that note) — what
-     hadn't been tried is just shortening how long the page keeps paying
-     that cost at all. This is the one thing left that lines up with the
-     exact symptom reported: dragging is laggy for a few seconds right
-     after a track change and then goes fully smooth — i.e. bounded by
-     this window, not by anything that runs indefinitely (the flicker
-     loop, the grain jog). If dragging still lags for the same few
-     seconds after this, the tint crossfade isn't the actual bottleneck
-     and this should be reverted. */
+     colour fade reads smoothest when it moves at a near-constant rate.
+     .light-bank's opacity transition is what reads this now: the two banks
+     cross-fade over this span, rather than any colour interpolating over
+     it. Lengthening it is cheap again — the cost that used to scale with
+     this number is what the banks removed. */
   --tint: 2s;
   --ease-tint: cubic-bezier(.3, .05, .3, .95);
-
-  /* The colour fade is stepped rather than continuous, and this is a
-     performance decision, not a stylistic one. --ring/--ring-deep/--led-b/
-     --led-c feed the radial-gradients on three large blurred ring layers
-     and on the two viewport-wide LED lattices — so every distinct value
-     they take costs a full repaint of all of it, blurs included. Left
-     continuous, that is a repaint on every frame for the whole crossfade
-     after a track change, which is precisely the stutter that used to
-     follow next/prev and drag the cursor down with it.
-     Twelve updates a second is far below anything the eye resolves in a
-     slow wash of colour, and cuts that repaint work about fivefold.
-     (Tried halving again to 6/sec — confirmed on-device not to be the
-     actual bottleneck, reverted back to this.) Count halved to 24 along
-     with --tint above, so the rate — the part already confirmed fine —
-     stays exactly the same; only the total exposure time changes. */
-  --tint-steps: steps(24, end);
 
   /* EXPERIMENT: cut way down from 1.9s/5.2s. This is the one thing in the
      whole track-change sequence none of the --tint changes ever touched —
@@ -110,18 +87,14 @@
   --surge-out: .5s;
 }
 
-/* the colour change lives on the root because that is where app.js writes it;
-   everything downstream just inherits the value mid-interpolation.
-   Restored again: with a confirmed-fresh build, disabling this alongside
-   slotWidth() caching and the paint() throttle (js/app.js) came back
-   completely clean on the perf HUD — but that ran all three changes at
-   once, and this one alone costs the smooth colour wash, which is worth
-   keeping if it isn't actually the thing that mattered. Re-enabled to
-   isolate whether the other two are sufficient on their own. */
-html {
-  transition: --ring var(--tint) var(--tint-steps), --ring-deep var(--tint) var(--tint-steps),
-              --led-b var(--tint) var(--tint-steps), --led-c var(--tint) var(--tint-steps);
-}
+/* The colour properties are no longer interpolated here — that is what
+   the two .light-bank stacks above replaced, and why. app.js still writes
+   --dominant to the root (nothing animates it), but --ring/--ring-deep/
+   --led-b/--led-c are now written per-bank instead, so there is nothing
+   left on <html> to transition. --tint still sets the pace; it is read by
+   .light-bank's opacity transition now rather than by this rule. The
+   stepping that used to go with it is gone too — steps existed only to
+   ration repaints that no longer happen. */
 
 /* ---------- RESET ----------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; }
@@ -222,6 +195,43 @@ body.is-surging .light-surge {
   filter: brightness(1.3) saturate(1.32);
 }
 
+/* ---------- THE TWO LIGHT BANKS ------------------------------
+   Two identical stacks of ring/leds layers, one lit at a time.
+
+   --ring / --ring-deep / --led-b / --led-c used to be interpolated
+   directly on <html>, which meant every step of a track change's colour
+   fade repainted all five gradient layers that read them — three of those
+   blurred, two of them viewport-wide lattices. Measured on an iPhone with
+   the ?perf HUD, that was the drag lag after a track change, all of it:
+   clean with the interpolation disabled, straight back the moment it was
+   re-enabled, on confirmed-fresh builds both times.
+
+   So no colour interpolates any more. js/app.js's applyLight writes the
+   new colours straight onto whichever bank is currently dark — one
+   repaint, of something nobody can see — and then swaps `is-lit`. What
+   animates is only the opacity cross-fade between two stacks that are
+   already painted, which the compositor runs on the GPU without
+   repainting either of them.
+
+   screen rather than the default source-over, so the two banks add
+   together mid-fade the way the layers inside them already do. Source-over
+   would dip: the outgoing bank at 1-t sitting under the incoming at t
+   gives A(1-t)² + Bt rather than A(1-t) + Bt, which reads as the whole
+   room briefly dimming halfway through every single track change. */
+.light-bank {
+  position: absolute; inset: 0;
+  opacity: 0;
+  mix-blend-mode: screen;
+  transition: opacity var(--tint) var(--ease-tint);
+}
+.light-bank.is-lit { opacity: 1; }
+/* A dark bank's flicker has nothing to show, so stopping it keeps two
+   banks costing what one used to. This beats `body.is-unlocked .ring` /
+   `.leds` further down on specificity (0,3,0 against 0,2,1), so a dark
+   bank stays paused even once the gate is open. */
+.light-bank:not(.is-lit) .ring,
+.light-bank:not(.is-lit) .leds { animation-play-state: paused; }
+
 /* ---------- THE ENTRANCE LAMP ---------------------------------
    A studio spotlight powering on, once, at the moment the password is
    accepted — and only then. js/app.js's playEntranceLamp() is called from
@@ -265,7 +275,7 @@ body.is-entering .light-surge {
   border-radius: 50%;
   opacity: var(--o);
   mix-blend-mode: screen;
-  /* stepped for the same reason as --tint-steps elsewhere: this is a
+  /* stepped rather than continuous, for cost rather than style: this is a
      blended layer (mix-blend-mode above), so every opacity tick forces a
      recomposite against everything underneath it rather than the free
      ride plain opacity usually gets — and unlike the tint fade, this one

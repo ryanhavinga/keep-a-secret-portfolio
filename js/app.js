@@ -453,14 +453,63 @@
       }
     }
 
+    /* Which of the two .light-bank stacks (index.html) is lit right now.
+       The other one is dark, and is where the next track's colours go. */
+    let litBank = 'a';
+
+    /* load() reaches applyLight twice for one track change — once with the
+       track's configured fallback colour, then again the moment
+       sampleColour() has the real colour out of the artwork, usually in
+       the same tick because the decoded bitmap is already warm. Flipping
+       banks on each of those would hand the second call the bank the
+       first had just lit, which destroys the outgoing colour: the old
+       light vanishes instantly and the new one fades up out of black
+       instead of the two crossing over. So the colours are only recorded
+       here, and the flip itself is deferred to the next frame — however
+       many times this is called in one tick, the last colours win and the
+       banks swap exactly once. */
+    let pendingLight = null, lightRaf = 0;
+
     function applyLight({ panel, ring, deep, b, c }) {
-      const root = document.documentElement.style;
-      const set = (name, [r, g, bl]) => root.setProperty(name, `${r} ${g} ${bl}`);
-      set('--dominant', panel);
-      set('--ring', ring);
-      set('--ring-deep', deep);
-      set('--led-b', b);
-      set('--led-c', c);
+      const rgb = ([r, g, bl]) => `${r} ${g} ${bl}`;
+      /* --dominant is the player panel's own tint, not part of the light
+         rig, and nothing animates it — it stays on the root. */
+      document.documentElement.style.setProperty('--dominant', rgb(panel));
+      pendingLight = { ring: rgb(ring), deep: rgb(deep), b: rgb(b), c: rgb(c) };
+      if (lightRaf) return;
+      lightRaf = requestAnimationFrame(() => { lightRaf = 0; commitLight(pendingLight); });
+    }
+
+    /* The colours themselves never interpolate any more: they are written
+       onto the dark bank in one go, and the *cross-fade* between the two
+       banks is what animates. See the long note on .light-bank in
+       css/styles.css for why — interpolating these on <html> repainted
+       five gradient layers per step, and that was the whole of the drag
+       lag after a track change. */
+    function commitLight({ ring, deep, b, c }) {
+      const next = litBank === 'a' ? 'b' : 'a';
+      const incoming = document.querySelectorAll(`.light-bank--${next}`);
+      const outgoing = document.querySelectorAll(`.light-bank--${litBank}`);
+
+      incoming.forEach(el => {
+        /* A second track change can land while the previous fade is still
+           running, which leaves this bank part-way up rather than dark.
+           Recolouring it as it stands would snap the new hue in at
+           whatever opacity it had already reached, so drop it to dark
+           with the transition off first and let it climb from there. */
+        el.style.transition = 'none';
+        el.classList.remove('is-lit');
+        void el.offsetWidth;              // land the jump before the transition comes back
+        el.style.transition = '';
+        el.style.setProperty('--ring', ring);
+        el.style.setProperty('--ring-deep', deep);
+        el.style.setProperty('--led-b', b);
+        el.style.setProperty('--led-c', c);
+      });
+
+      outgoing.forEach(el => el.classList.remove('is-lit'));
+      incoming.forEach(el => el.classList.add('is-lit'));
+      litBank = next;
     }
 
     function applyColour(rgb) {
@@ -1821,7 +1870,7 @@
       'font:11px/1.4 ui-monospace,monospace', 'padding:8px 10px',
       'white-space:pre-wrap', 'pointer-events:none'
     ].join(';');
-    hud.textContent = 'build: PERF_BUILD_2026-09-13-1800\nperf HUD armed — drag to see frame spikes';
+    hud.textContent = 'build: PERF_BUILD_2026-09-13-crossfade\nperf HUD armed — drag to see frame spikes';
     document.body.appendChild(hud);
 
     /* Two things that made a screenshot hard to line up: the log kept
@@ -1847,7 +1896,7 @@
            reliable way to rule out a stale cached copy (Cloudflare's own
            30-60s deploy lag, or Safari holding an old js/app.js), which
            has caused real confusion more than once already this session */
-        `build: PERF_BUILD_2026-09-13-1800\n` +
+        `build: PERF_BUILD_2026-09-13-crossfade\n` +
         `perf HUD — ${settled ? 'SETTLED, safe to screenshot' : 'RECORDING…'}\n` +
         `frames slower than ${SPIKE_MS}ms since the last track change\n` +
         `(most recent last)\n\n` +

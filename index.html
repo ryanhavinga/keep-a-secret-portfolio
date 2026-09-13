@@ -39,25 +39,44 @@
        Split in two because .env__mesh has to sit between the main light
        and the bloom in front of it. -->
   <div class="light-surge">
-    <!-- the light: a bright band, big enough to run off the bottom of the screen -->
-    <div class="ring ring--glow"></div>
-    <div class="ring ring--core"></div>
-    <!-- the lamp itself: one lit point per hole in the grille, band-masked,
-         then broken up by low-frequency noise so it never reads as a flat
-         glow. __accents paints over __dots, scattering cells of a
-         contrasting hue through the field. -->
-    <div class="leds">
-      <div class="leds__noise">
-        <div class="leds__dots"></div>
-        <div class="leds__accents"></div>
+    <!-- Two identical banks of light layers, only one lit at a time. A
+         track change writes the new colours into whichever bank is
+         currently dark and then cross-fades their opacity, so the colour
+         change never repaints anything that's on screen — see .light-bank
+         in css/styles.css and applyLight in js/app.js. -->
+    <div class="light-bank light-bank--a is-lit">
+      <!-- the light: a bright band, big enough to run off the bottom of the screen -->
+      <div class="ring ring--glow"></div>
+      <div class="ring ring--core"></div>
+      <!-- the lamp itself: one lit point per hole in the grille, band-masked,
+           then broken up by low-frequency noise so it never reads as a flat
+           glow. __accents paints over __dots, scattering cells of a
+           contrasting hue through the field. -->
+      <div class="leds">
+        <div class="leds__noise">
+          <div class="leds__dots"></div>
+          <div class="leds__accents"></div>
+        </div>
+      </div>
+    </div>
+    <div class="light-bank light-bank--b">
+      <div class="ring ring--glow"></div>
+      <div class="ring ring--core"></div>
+      <div class="leds">
+        <div class="leds__noise">
+          <div class="leds__dots"></div>
+          <div class="leds__accents"></div>
+        </div>
       </div>
     </div>
   </div>
   <!-- the perforated black grille sits on top, one hole per lit point -->
   <div class="env__mesh"></div>
-  <!-- bloom in front of the grille -->
+  <!-- bloom in front of the grille — its own pair of banks, since it has to
+       sit above the grille while everything else sits below it -->
   <div class="light-surge">
-    <div class="ring ring--bloom"></div>
+    <div class="light-bank light-bank--a is-lit"><div class="ring ring--bloom"></div></div>
+    <div class="light-bank light-bank--b"><div class="ring ring--bloom"></div></div>
   </div>
   <canvas class="env__grain" data-grain></canvas>
   <div class="env__vignette"></div>
