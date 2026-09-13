@@ -460,15 +460,24 @@
     /* load() reaches applyLight twice for one track change — once with the
        track's configured fallback colour, then again the moment
        sampleColour() has the real colour out of the artwork, usually in
-       the same tick because the decoded bitmap is already warm. Flipping
-       banks on each of those would hand the second call the bank the
-       first had just lit, which destroys the outgoing colour: the old
-       light vanishes instantly and the new one fades up out of black
-       instead of the two crossing over. So the colours are only recorded
-       here, and the flip itself is deferred to the next frame — however
-       many times this is called in one tick, the last colours win and the
-       banks swap exactly once. */
-    let pendingLight = null, lightRaf = 0;
+       the same tick because the decoded bitmap is already warm. Recording
+       the colours here and committing separately (below) coalesces any
+       same-tick calls into one, so however many times this runs in a row
+       the last colours win and the banks swap exactly once for them.
+
+       The other reason a commit is never immediate: pressing next/prev
+       fast, or a quick run of swipes, calls this again well before the
+       previous crossfade's --tint span is over. Committing on top of an
+       in-flight one used to mean recolouring whichever bank was still
+       mid-fade rather than genuinely dark — forcing it to black first to
+       avoid a hue snapping in at whatever opacity it had reached, which
+       just moved the snap from the hue to the opacity itself, and read as
+       a flash on every fast change. scheduleCommit() below is what
+       actually fixes that: a commit due while one is still running waits
+       for it to finish rather than interrupting it, so a flurry of rapid
+       changes never starts more than one crossfade at a time — the light
+       just settles, once, calmly, on wherever the user finally lands. */
+    let pendingLight = null, lightRaf = 0, lightBusyUntil = 0, lightWaitTimer = null;
 
     function applyLight({ panel, ring, deep, b, c }) {
       const rgb = ([r, g, bl]) => `${r} ${g} ${bl}`;
@@ -476,7 +485,17 @@
          rig, and nothing animates it — it stays on the root. */
       document.documentElement.style.setProperty('--dominant', rgb(panel));
       pendingLight = { ring: rgb(ring), deep: rgb(deep), b: rgb(b), c: rgb(c) };
-      if (lightRaf) return;
+      scheduleCommit();
+    }
+
+    function scheduleCommit() {
+      const now = performance.now();
+      if (now < lightBusyUntil) {
+        clearTimeout(lightWaitTimer);
+        lightWaitTimer = setTimeout(scheduleCommit, lightBusyUntil - now);
+        return;
+      }
+      if (lightRaf) return;   // same-tick coalescing, see the note above
       lightRaf = requestAnimationFrame(() => { lightRaf = 0; commitLight(pendingLight); });
     }
 
@@ -492,11 +511,12 @@
       const outgoing = document.querySelectorAll(`.light-bank--${litBank}`);
 
       incoming.forEach(el => {
-        /* A second track change can land while the previous fade is still
-           running, which leaves this bank part-way up rather than dark.
-           Recolouring it as it stands would snap the new hue in at
-           whatever opacity it had already reached, so drop it to dark
-           with the transition off first and let it climb from there. */
+        /* scheduleCommit() above guarantees this bank has already finished
+           fading out to genuinely dark by the time a commit is allowed to
+           land — this reset is a defensive no-op for that ordinary case
+           (snapping 0 to 0 is invisible) and only actually does something
+           on the very first commit of the page, before either bank has
+           run a transition at all. */
         el.style.transition = 'none';
         el.classList.remove('is-lit');
         void el.offsetWidth;              // land the jump before the transition comes back
@@ -510,6 +530,19 @@
       outgoing.forEach(el => el.classList.remove('is-lit'));
       incoming.forEach(el => el.classList.add('is-lit'));
       litBank = next;
+
+      /* Blocks the next commit until this crossfade has actually finished
+         — read off the bank's own resolved transition-duration rather than
+         re-deriving --tint here, so the two can't drift apart. */
+      lightBusyUntil = performance.now() + parseFloat(getComputedStyle(incoming[0]).transitionDuration) * 1000;
+
+      /* The brightness/saturation surge used to fire from load() on every
+         raw press, independently of whether a crossfade was actually
+         starting — rapid presses pumped it up and down out of step with
+         the (now properly queued) hue changes, its own flash on top of
+         theirs. Tied to the same real commit instead, so the two only
+         ever move together. */
+      flashLight();
     }
 
     function applyColour(rgb) {
@@ -1141,16 +1174,24 @@
 
       /* Held back rather than fired in the same tick as the slide above —
          starting the light's own repaint work (applyColour's --tint
-         crossfade, flashLight's surge) at the exact moment the cover and
-         meta-item transitions also start had them fighting over the same
-         handful of frames, doubling up exactly where things were already
-         tightest. .meta-item's .4s transform transition is the longer of
-         the two slides (.cover's own is .3s), so this waits for that one
-         to actually finish before asking for anything else. Guarded by
-         index the same way sampleColour() below already is: if another
-         load() lands before this fires, i has moved on and this one's
-         result is stale, so it's skipped rather than briefly flashing the
-         wrong track's colour in over the new one. */
+         crossfade) at the exact moment the cover and meta-item transitions
+         also start had them fighting over the same handful of frames,
+         doubling up exactly where things were already tightest.
+         .meta-item's .4s transform transition is the longer of the two
+         slides (.cover's own is .3s), so this waits for that one to
+         actually finish before asking for anything else. Guarded by index
+         the same way sampleColour() below already is: if another load()
+         lands before this fires, i has moved on and this one's result is
+         stale, so it's skipped rather than briefly flashing the wrong
+         track's colour in over the new one.
+
+         flashLight() used to be called from here too, on every press —
+         now it only ever runs from inside commitLight() (above), which
+         itself won't actually commit until any crossfade already running
+         has finished. A fast run of next/prev used to start a new surge
+         on each press regardless of whether the hue crossfade underneath
+         it was even ready to move, which is what read as instant flashing
+         rather than one settled change. */
       clearTimeout(lightTimer);
       const lightFor = i;
       lightTimer = setTimeout(() => {
@@ -1161,7 +1202,6 @@
           applyColour(Colour.toRgb(t.color || '#141418'));
           sampleColour();
         }
-        flashLight();
       }, 400);
 
       fallback = false; fakeTime = 0;
