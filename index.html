@@ -7,6 +7,34 @@
 <meta name="description" content="A private listening room. By invitation only.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#08080a">
+
+<!-- Link-preview cards only — the page above is noindex, so none of this
+     is for search, only for how the bare link looks pasted into an email,
+     Slack DM, or iMessage sent to an A&R. Points at keepasecret.nl rather
+     than demo-portal.keepasecret.nl (CLAUDE.md's actual primary URL to
+     hand out) because that domain isn't resolving in DNS as of this
+     writing — an absolute og:image URL on a domain that's down fetches
+     nothing, which reads worse in a chat preview than no card at all.
+     Swap og:url, og:image and twitter:image over to demo-portal once its
+     Custom Domain/DNS is sorted in the Cloudflare dashboard.
+     og:image is img/track-1.png for now, the same 2MB PNG flagged
+     elsewhere as worth compressing — that fetch only ever happens once
+     per platform's own link-crawler, cached after, so it doesn't cost
+     real visitors anything, but a compressed version would still be
+     the better file to point this at once it exists. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Keep A Secret">
+<meta property="og:title" content="Keep A Secret — Demo Portal">
+<meta property="og:description" content="A private listening room. By invitation only.">
+<meta property="og:url" content="https://keepasecret.nl/">
+<meta property="og:image" content="https://keepasecret.nl/img/track-1.png">
+<meta property="og:image:width" content="1086">
+<meta property="og:image:height" content="1086">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Keep A Secret — Demo Portal">
+<meta name="twitter:description" content="A private listening room. By invitation only.">
+<meta name="twitter:image" content="https://keepasecret.nl/img/track-1.png">
+
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
