@@ -37,9 +37,10 @@
   --hairline: rgba(255, 255, 255, .12);
 
   /* the square block size — the centre panel. Floor/ceiling bumped a
-     little (was 272/700) to give the new glass card's own padding
-     somewhere to come from, rather than eating into the artwork itself */
-  --panel: clamp(300px, min(70vh, 88vw), 740px);
+     touch (was 272/700 before the glass card, briefly 300/740 with its
+     first, wider padding) to give the card's own padding somewhere to
+     come from, rather than eating into the artwork itself */
+  --panel: clamp(288px, min(70vh, 88vw), 720px);
   --radius: clamp(28px, 4.6vw, 56px);
 
   /* carousel geometry */
@@ -644,22 +645,32 @@ body.is-unlocked .leds {
    background and the only shadow in the composition is under the cover. */
 /* A glass card behind the whole player — artwork, title, timeline,
    transport, all of it — rather than the artwork's own raw square edges
-   sitting directly on the mesh behind it. Deliberately not a real
-   backdrop-filter blur: the ring/LED layers behind this are already
-   animating (see the note on .ring's flicker), and a live frosted-glass
-   blur here would mean recomputing that blur every time anything behind
-   it changes — exactly the kind of cost the rest of this file has been
-   trying to cut. A translucent fill, a hairline border and a soft drop
-   shadow read as "glass" well enough without paying for a real one. */
+   sitting directly on the mesh behind it. A real backdrop-filter blur
+   this time (a translucent-only first pass still let the mesh's fine
+   dot pattern show straight through it) — real cost, accepted
+   knowingly given everything else in this file working to cut exactly
+   this kind of cost elsewhere; a strong enough radius to actually smear
+   the mesh into a soft wash rather than shrink it and call it hidden.
+   Narrower padding than that first pass too, so the card hugs the
+   content rather than reading as its own wide slab. */
 .player {
   container-type: inline-size;
   position: relative;
+  /* narrower than the square carousel block it sits in — up to 1cm
+     (~38px) off each side on a full-size panel, scaling down on a
+     small mobile --panel so it can't eat the block alive — while
+     height stays tied to the block itself, so this only pulls the
+     left/right edges in, never the top/bottom. */
+  width: calc(100% - 2 * clamp(14px, 5vw, 38px));
+  margin: 0 auto;
   height: 100%;
   display: flex; flex-direction: column;
-  padding: clamp(14px, 2.4vw, 24px);
-  background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .025));
+  padding: clamp(10px, 1.6vw, 18px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .03));
+  backdrop-filter: blur(36px) saturate(1.15);
+  -webkit-backdrop-filter: blur(36px) saturate(1.15);
   border: 1px solid rgba(255, 255, 255, .09);
-  border-radius: clamp(22px, 3.4vw, 36px);
+  border-radius: clamp(20px, 3vw, 32px);
   box-shadow: 0 24px 70px -32px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .07);
 }
 
@@ -946,11 +957,31 @@ body.is-unlocked .leds {
    the artwork above it, same as before this button existed */
 .scrub { position: relative; flex: 1 1 auto; min-width: 0; padding: 8px 0; touch-action: none; }
 .scrub__track {
-  height: 3px;
-  border-radius: 2px;
+  /* absolute + centred, same as .scrub__head below, rather than sitting
+     in normal flow: .scrub's own box (padding aside) no longer depends
+     on this element's height at all, so doubling it on hold can't push
+     the timeline row — or anything below it — around. */
+  position: absolute; top: 50%; left: 0; right: 0;
+  transform: translateY(-50%);
+  height: 4px;
+  /* a large, clamped radius rather than a fixed 2px one — a fixed value
+     reads as proportionally squarer the thicker the bar gets; this stays
+     a full pill at 4px or 8px alike */
+  border-radius: 999px;
   background: #3a3a3d;
   overflow: hidden;
+  /* doubles while actually held (below) and eases back down on release —
+     .scrub__fill sits at height:100% of this, so it grows and shrinks
+     right along with it with no transition of its own needed: a
+     percentage height just recalculates every frame of this one
+     animating. */
+  transition: height .45s var(--ease);
 }
+/* .is-held, not .is-scrubbing — held is true from the moment the pointer
+   goes down, whether or not it ever actually moves; .is-scrubbing only
+   lands once real dragging starts (see the note below), which would
+   leave a plain, unmoving tap never seeing this at all. */
+.scrub.is-held .scrub__track { height: 8px; }
 .scrub__fill {
   height: 100%; width: 0;
   background: #fff;

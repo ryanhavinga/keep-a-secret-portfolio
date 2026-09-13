@@ -1383,6 +1383,7 @@
         /* scrubbing */
         el.scrub.addEventListener('pointerdown', e => {
           scrubbing = true;
+          el.scrub.classList.add('is-held');   // the track's own thickness — see styles.css
           el.scrub.setPointerCapture(e.pointerId);
           seekFromEvent(e);   // a plain tap lands here and nowhere else — the
                                // full .18s ease plays out, untouched by is-scrubbing
@@ -1400,12 +1401,14 @@
           el.scrub.classList.add('is-scrubbing');
           seekFromEvent(e);
         });
-        el.scrub.addEventListener('pointerup', e => {
+        const scrubRelease = e => {
           if (!scrubbing) return;
           scrubbing = false;
-          el.scrub.classList.remove('is-scrubbing');
+          el.scrub.classList.remove('is-scrubbing', 'is-held');
           el.scrub.releasePointerCapture(e.pointerId);
-        });
+        };
+        el.scrub.addEventListener('pointerup', scrubRelease);
+        el.scrub.addEventListener('pointercancel', scrubRelease);
         el.scrub.addEventListener('keydown', e => {
           const d = duration();
           if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
