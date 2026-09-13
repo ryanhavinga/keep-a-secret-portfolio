@@ -469,13 +469,27 @@ body.is-unlocked .leds {
 .social {
   position: fixed; z-index: 40;
   left: clamp(20px, 3.4vw, 48px);
-  bottom: clamp(16px, 2.6vh, 30px);
+  /* shares its bottom offset with .footer-credit below on purpose — see
+     the note there. */
+  bottom: clamp(14px, 2.6vh, 28px);
   display: block;
-  width: clamp(34px, 3.6vw, 43px);
+  /* sized to the footer text's own two-line block (2 × line-height +
+     the 1px gap between them — .footer-credit p below), not to its own
+     scale, so with a shared bottom this square icon's top edge lands
+     exactly on the first line's top and its bottom edge on the second
+     line's bottom, instead of towering over both. */
+  width: calc(2 * 9.5px * 1.16 + 1px);
   opacity: .7;
   transition: opacity .8s var(--ease);
 }
-.social svg { width: 100%; fill: none; stroke: #fff; stroke-width: 1.5; }
+.social svg {
+  /* block, not the default inline — an inline replaced element leaves a
+     few px of baseline gap below itself that a solid width:height 1:1
+     square can't account for, which is exactly what was throwing off
+     the top-edge match with .footer-credit's text above */
+  display: block;
+  width: 100%; fill: none; stroke: #fff; stroke-width: 1.5;
+}
 .social:hover { opacity: 1; }
 
 /* centred at the very bottom of the page, both lines the same size and
@@ -493,6 +507,10 @@ body.is-unlocked .leds {
   margin: 0;
   font-family: Helvetica, 'Helvetica Neue', Arial, sans-serif;
   font-size: 9.5px;
+  /* pinned rather than left at the browser default "normal" — .social's
+     width above measures itself against this exact number, so it has to
+     stay fixed for the two to actually line up */
+  line-height: 1.16;
   letter-spacing: .1em;
   color: #cecece;
 }
@@ -1409,14 +1427,24 @@ body.is-unlocked .leds {
        moves the same real amount regardless of the phone's own height. */
     --ring-y: calc(54% - 0.5cm);
   }
-  /* trimmed a little from before (was 88-120px top / the shared 32-64px
-     bottom) to give the now-bigger panel the room, rather than pushing the
-     page's total height past what a phone's actual visible viewport (the
-     address bar is up more often than not) has to give — see the note on
-     .stage's `100dvh` above, and on .gate__input's font-size, for the two
-     other things that were fighting this same fit-without-scrolling goal */
-  .stage { padding: clamp(78px, 12.5vh, 108px) 0 clamp(20px, 4vh, 40px); }
-  .player { padding: 12px 14px 14px; }
+  /* trimmed a little from the shared desktop value (was 88-120px) to give
+     the now-bigger panel the room, rather than pushing the page's total
+     height past what a phone's actual visible viewport (the address bar
+     is up more often than not) has to give — see the note on .stage's
+     `100dvh` above, and on .gate__input's font-size, for the two other
+     things that were fighting this same fit-without-scrolling goal.
+     Matched top and bottom, same reasoning as the shared desktop rule
+     above: equal padding is what actually centres the panel, and the
+     panel's own vw/vh caps keep it well clear of overflowing even with
+     the bottom now as roomy as the top. */
+  .stage { padding: clamp(78px, 12.5vh, 108px) 0; }
+  /* a little narrower than the shared desktop inset — a phone's own
+     screen is already snug, so the glass card reads better with a bit
+     more of it visible around the artwork */
+  .player {
+    width: calc(100% - 2 * clamp(20px, 8vw, 46px));
+    padding: 12px 14px 14px;
+  }
 
   /* The desktop clamp (23-40px) floors at 23px regardless of how narrow
      the phone actually is — wide enough to force "Keep A Secret" onto two
