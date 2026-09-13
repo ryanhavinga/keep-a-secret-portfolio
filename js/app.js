@@ -1273,6 +1273,21 @@
     }
     const toggle = () => { punchPlay(); playing ? pause() : play(); };
 
+    /* EXPERIMENT: caps how often tick() below can call paint() while
+       playing — a different code path from everything tried on the perf
+       HUD so far (all CSS/light-side). audio.currentTime tends to read
+       erratically for the first second or so right after audio.src is
+       reassigned and .load() is called (js/app.js's load()), while the
+       new source is still buffering — and paint() runs unthrottled on
+       every rAF tick while playing, so an erratic position() during
+       exactly that window could mean far more frequent DOM writes to
+       .scrub__fill/.scrub__head than the steady ~1-in-12-frames a stable
+       position needs. The perf HUD's spikes ran ~70-100ms apart, which
+       is suspiciously regular for "occasional" — this caps paint() to
+       roughly that same cadence deliberately, so if this is the actual
+       cause the spikes should thin out noticeably, not just shift. */
+    const PAINT_INTERVAL = 66;   // ~15/sec — the .18s fill/head transition covers the rest
+    let lastPaintAt = 0;
     function tick(now) {
       if (playing && fallback && !scrubbing) {
         fakeTime += (now - lastTick) / 1000;
@@ -1284,7 +1299,10 @@
          and re-deriving the bar position sixty times a second for a
          playhead that was standing still. Every other thing that moves the
          playhead — load(), a seek, metadata arriving — paints for itself. */
-      if (playing && !scrubbing) paint();
+      if (playing && !scrubbing && now - lastPaintAt > PAINT_INTERVAL) {
+        lastPaintAt = now;
+        paint();
+      }
       requestAnimationFrame(tick);
     }
 
@@ -1803,7 +1821,7 @@
       'font:11px/1.4 ui-monospace,monospace', 'padding:8px 10px',
       'white-space:pre-wrap', 'pointer-events:none'
     ].join(';');
-    hud.textContent = 'perf HUD armed — drag to see frame spikes';
+    hud.textContent = 'build: PERF_BUILD_2026-09-13-1755\nperf HUD armed — drag to see frame spikes';
     document.body.appendChild(hud);
 
     /* Two things that made a screenshot hard to line up: the log kept
@@ -1824,6 +1842,12 @@
 
     function render(settled) {
       hud.textContent =
+        /* a literal marker, bumped by hand on every edit to this file —
+           checking it against what you were told to expect is the only
+           reliable way to rule out a stale cached copy (Cloudflare's own
+           30-60s deploy lag, or Safari holding an old js/app.js), which
+           has caused real confusion more than once already this session */
+        `build: PERF_BUILD_2026-09-13-1755\n` +
         `perf HUD — ${settled ? 'SETTLED, safe to screenshot' : 'RECORDING…'}\n` +
         `frames slower than ${SPIKE_MS}ms since the last track change\n` +
         `(most recent last)\n\n` +
