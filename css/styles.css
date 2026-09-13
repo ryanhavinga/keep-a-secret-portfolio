@@ -64,19 +64,14 @@
 
   /* how long the whole lamp takes to cross-fade to the next track, and the
      curve it takes doing it — barely eased at either end, because a long
-     colour fade reads smoothest when it moves at a near-constant rate */
-  /* EXPERIMENT: cut from 5s to 2s, --tint-steps' count halved alongside
-     it (see below) to hold the repaint rate steady. The steps themselves
-     were already confirmed cheap enough per-frame (see that note) — what
-     hadn't been tried is just shortening how long the page keeps paying
-     that cost at all. This is the one thing left that lines up with the
-     exact symptom reported: dragging is laggy for a few seconds right
-     after a track change and then goes fully smooth — i.e. bounded by
-     this window, not by anything that runs indefinitely (the flicker
-     loop, the grain jog). If dragging still lags for the same few
-     seconds after this, the tint crossfade isn't the actual bottleneck
-     and this should be reverted. */
-  --tint: 2s;
+     colour fade reads smoothest when it moves at a near-constant rate.
+     Back to the original 5s (was briefly cut to 2s to shrink a repaint
+     window competing with the slide — moot now that js/app.js's load()
+     holds the light back until the slide is actually finished, per
+     lightTimer there) and, on top of that, deliberately slow: the slide
+     is quick and the light is unhurried on purpose, so the two read as
+     two distinct events rather than one blurred-together motion. */
+  --tint: 5s;
   --ease-tint: cubic-bezier(.3, .05, .3, .95);
 
   /* The colour fade is stepped rather than continuous, and this is a
@@ -90,10 +85,10 @@
      Twelve updates a second is far below anything the eye resolves in a
      slow wash of colour, and cuts that repaint work about fivefold.
      (Tried halving again to 6/sec — confirmed on-device not to be the
-     actual bottleneck, reverted back to this.) Count halved to 24 along
-     with --tint above, so the rate — the part already confirmed fine —
-     stays exactly the same; only the total exposure time changes. */
-  --tint-steps: steps(24, end);
+     actual bottleneck, reverted back to this.) Count back to 60 along
+     with --tint above, holding the same confirmed-fine rate over the
+     now-longer span. */
+  --tint-steps: steps(60, end);
 
   /* the track-change light surge: slow rise, even slower release — see
      body.is-surging on .light-surge, further down */

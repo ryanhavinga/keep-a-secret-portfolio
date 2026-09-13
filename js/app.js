@@ -1076,12 +1076,15 @@
          meta-item transitions also start had them fighting over the same
          handful of frames, doubling up exactly where things were already
          tightest. .meta-item's .4s transform transition is the longer of
-         the two slides (.cover's own is .3s), so this waits for that one
-         to actually finish before asking for anything else. Guarded by
-         index the same way sampleColour() below already is: if another
-         load() lands before this fires, i has moved on and this one's
-         result is stale, so it's skipped rather than briefly flashing the
-         wrong track's colour in over the new one. */
+         the two slides (.cover's own is .3s), so 400ms alone already
+         clears it — the rest of this delay (750ms total) is a deliberate
+         beat of plain stillness on top of that, so the light doesn't just
+         avoid overlapping the slide but reads as a distinctly separate
+         thing happening after it, not a continuation of the same motion.
+         Guarded by index the same way sampleColour() below already is: if
+         another load() lands before this fires, i has moved on and this
+         one's result is stale, so it's skipped rather than briefly
+         flashing the wrong track's colour in over the new one. */
       clearTimeout(lightTimer);
       const lightFor = i;
       lightTimer = setTimeout(() => {
@@ -1093,7 +1096,7 @@
           sampleColour();
         }
         flashLight();
-      }, 400);
+      }, 750);
 
       fallback = false; fakeTime = 0;
       /* a copy already in memory is seekable from the first frame, so use
