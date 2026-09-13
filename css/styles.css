@@ -112,9 +112,21 @@
 
 /* the colour change lives on the root because that is where app.js writes it;
    everything downstream just inherits the value mid-interpolation */
+/* EXPERIMENT: transition disabled outright — colour now snaps instantly
+   (one repaint of the ring/leds gradients instead of --tint-steps' 24
+   spread over --tint's 2s). Cutting --surge's own filter transition from
+   7.1s to 0.8s just now didn't shorten the perf HUD's lag window at all —
+   both captures kept logging 34-49ms frames continuously right up to
+   ~2.4s, matching --tint's own span almost exactly regardless of the
+   surge — so this isolates whether the repeated gradient repaint itself
+   (not the surge) is the actual cause. If dragging is clean with this in
+   place, that's confirmed and the real fix is rendering the crossfade
+   differently (two static layers blended by opacity instead of recomputed
+   gradients), not just retuning durations again. Revert by restoring the
+   transition line below. */
 html {
-  transition: --ring var(--tint) var(--tint-steps), --ring-deep var(--tint) var(--tint-steps),
-              --led-b var(--tint) var(--tint-steps), --led-c var(--tint) var(--tint-steps);
+  /* transition: --ring var(--tint) var(--tint-steps), --ring-deep var(--tint) var(--tint-steps),
+              --led-b var(--tint) var(--tint-steps), --led-c var(--tint) var(--tint-steps); */
 }
 
 /* ---------- RESET ----------------------------------------- */
