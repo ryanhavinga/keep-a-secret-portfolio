@@ -396,7 +396,8 @@
     /* swipe-to-rotate state — see swipeDown/swipeMove/swipeUp below */
     let swipeDragging = false, swipeCaptured = false, swipeMoved = 0,
         swipeStartX = 0, dragExtra = 0, swipePid = null,
-        dragVelocity = 0, lastMoveT = 0, swipePointerType = 'touch';
+        dragVelocity = 0, lastMoveT = 0, swipePointerType = 'touch',
+        dragSlotPx = 0;   // slotWidth(), measured once per gesture — see swipeDown
 
     const track = () => tracks[i];
     const duration = () => (fallback || !isFinite(audio.duration) || !audio.duration)
@@ -944,7 +945,19 @@
          swipeStartX so the very next swipeMove reconstructs the current
          dragExtra exactly, and only moves it from there */
       swipePointerType = e.pointerType || 'touch';
-      swipeStartX = e.clientX - dragExtra * slotWidth(swipePointerType);
+      /* measured once here rather than inside swipeMove below, which used
+         to call slotWidth() — and for touch, its el.covers.offsetWidth
+         read — on every single raw pointermove. That forces a synchronous
+         layout flush, and while that's normally near-free, the perf HUD
+         (?perf=1) showed a run of dropped frames starting right at track
+         change and lasting ~2s that persisted even with the light's own
+         crossfade and surge transitions independently ruled out — i.e.
+         something else was still settling for the browser to flush on
+         every one of those forced reads. The artwork's width can't
+         change mid-drag, so there's nothing this loses by only reading
+         it once per gesture instead of dozens of times a second. */
+      dragSlotPx = slotWidth(swipePointerType);
+      swipeStartX = e.clientX - dragExtra * dragSlotPx;
       stopSpring();
       swipeSurface = e.currentTarget;
       swipeDragging = true; swipeCaptured = false; swipeMoved = 0;
@@ -974,7 +987,7 @@
         swipeSurface?.setPointerCapture?.(swipePid);
         el.meta.classList.add('is-sliding');
       }
-      const next = clamp(dx / slotWidth(swipePointerType), -LIVE_DRAG_CAP, LIVE_DRAG_CAP);
+      const next = clamp(dx / dragSlotPx, -LIVE_DRAG_CAP, LIVE_DRAG_CAP);
       const now = performance.now(), dt = now - lastMoveT;
       if (dt > 0) {
         /* smoothed rather than taken raw — consecutive pointermove deltas
