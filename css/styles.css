@@ -40,7 +40,7 @@
      touch (was 272/700 before the glass card, briefly 300/740 with its
      first, wider padding) to give the card's own padding somewhere to
      come from, rather than eating into the artwork itself */
-  --panel: clamp(288px, min(70vh, 88vw), 720px);
+  --panel: clamp(304px, min(75vh, 92vw), 764px);
   --radius: clamp(28px, 4.6vw, 56px);
 
   /* carousel geometry */
@@ -49,8 +49,11 @@
      it, rather than approaching it directly. Used on .cover's own
      transform below for the playful elastic landing on a track change:
      every cover swings slightly past its resting slot first (the
-     centred one included), then settles, instead of just arriving. */
-  --ease-elastic: cubic-bezier(.34, 1.56, .64, 1);
+     centred one included), then settles, instead of just arriving.
+     Peak raised from 1.56 to 1.9 — the overshoot itself reads more
+     clearly now, same .36s duration either side of it so it's still a
+     quick snap rather than a lingering wobble. */
+  --ease-elastic: cubic-bezier(.34, 1.9, .64, 1);
   --slow: 2600ms;
   /* the slide's own curve — eased at both ends rather than --ease's hard
      launch, so a panel leaves and arrives at the same unhurried rate */
@@ -675,13 +678,14 @@ body.is-unlocked .leds {
   height: 100dvh;   /* survives the mobile URL bar */
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  /* top and bottom padding match on purpose: with `justify-content:
-     center`, equal padding on both sides is what actually lands the
-     carousel on the viewport's exact vertical middle — anything
-     asymmetric (the previous 96-132px top vs. 32-64px bottom) pulls
-     it off-centre by half the difference, regardless of the numbers
-     either side resolves to. */
-  padding: clamp(96px, 14vh, 132px) 0;
+  /* Deliberately asymmetric now — more top than bottom — to nudge the
+     panel down a bit off dead centre, clear of the topbar logo sitting
+     above it (more of an issue now that a bigger --panel above brings
+     the artwork closer to it). Was a matched clamp() both sides on
+     purpose; any gap between top and bottom shifts the panel down by
+     half that gap, so this is a deliberate ~14-18px push rather than
+     the old exact-centre. */
+  padding: clamp(112px, 15.5vh, 150px) 0 clamp(80px, 11.5vh, 112px);
 }
 
 .carousel {
@@ -1002,11 +1006,15 @@ body.is-unlocked .leds {
    cover, the keyboard); a live swipe instead paints this every frame
    itself and a released one springs it the rest of the way — both turn
    the transition off for exactly as long as they're driving it
-   themselves, same shape as .covers.is-changing below. */
+   themselves, same shape as .covers.is-changing below. Duration matched
+   exactly to .cover's own .36s (was .4s, deliberately the longer of the
+   two) so a button/keyboard/click-triggered change lands the artwork
+   and the title/artist in the centre on the very same frame — see
+   js/app.js's load() for the haptic pulse timed off this same number. */
 .meta-item {
   position: absolute; inset: 0;
   text-align: center;
-  transition: transform .4s var(--ease);
+  transition: transform .36s var(--ease);
 }
 .player__meta.is-sliding .meta-item { transition: none; }
 .player__title {
@@ -1121,6 +1129,16 @@ body.is-unlocked .leds {
    lands once real dragging starts (see the note below), which would
    leave a plain, unmoving tap never seeing this at all. */
 .scrub.is-held .scrub__track { height: 10px; }
+/* Real hover only, same guard as .ctrl:hover below — a touchscreen fakes
+   :hover on whatever was last tapped, which would leave the bar looking
+   permanently thickened after a press. .is-held above already covers
+   touch's own press feedback, so this is purely the desktop-mouse case:
+   the bar now thickens just from hovering over it, not only while
+   actually held, at the exact same .32s pace (.scrub__track's own
+   transition above) as the transport buttons' hover grow. */
+@media (hover: hover) and (pointer: fine) {
+  .scrub:hover .scrub__track { height: 10px; }
+}
 .scrub__fill {
   height: 100%; width: 0;
   background: #fff;
@@ -1590,7 +1608,7 @@ html.is-remembered .gate { display: none; }
        desktop ratio gives it. Floor/ceiling bumped a little further on
        top of that for the glass card's own padding, same as the shared
        default above. */
-    --panel: clamp(350px, min(80vh, 98vw), 680px);
+    --panel: clamp(362px, min(84vh, 100vw), 704px);
     /* considerably smaller relative to the viewport than the desktop
        ratio (was min(136vh,245vw) — over 2x the viewport width, so only
        its near-vertical side edges ever showed): sized instead to sit
@@ -1611,11 +1629,10 @@ html.is-remembered .gate { display: none; }
      is up more often than not) has to give — see the note on .stage's
      `100dvh` above, and on .gate__input's font-size, for the two other
      things that were fighting this same fit-without-scrolling goal.
-     Matched top and bottom, same reasoning as the shared desktop rule
-     above: equal padding is what actually centres the panel, and the
-     panel's own vw/vh caps keep it well clear of overflowing even with
-     the bottom now as roomy as the top. */
-  .stage { padding: clamp(78px, 12.5vh, 108px) 0; }
+     Slightly more top than bottom now (was matched) — the same small
+     downward nudge as the shared desktop rule above, kept modest here
+     since a phone's own vertical budget is already tight. */
+  .stage { padding: clamp(88px, 13.5vh, 118px) 0 clamp(64px, 9.5vh, 86px); }
   /* a little narrower than the shared desktop inset — a phone's own
      screen is already snug, so the glass card reads better with a bit
      more of it visible around the artwork */

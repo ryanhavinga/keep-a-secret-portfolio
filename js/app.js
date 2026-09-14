@@ -982,8 +982,16 @@
        for that one buckle: the speed actually fed to the spring is
        capped well below where that becomes possible, and the position
        is hard-clamped to ±1 every frame regardless — nothing this
-       reads as a track away, however hard the flick, full stop. */
-    const SPRING_STIFFNESS = 210;
+       reads as a track away, however hard the flick, full stop.
+
+       Raised from 210 — a typical release now settles in roughly the
+       same window as .cover's own fixed .36s transition (still
+       critically damped throughout, SPRING_DAMPING is derived from
+       this, not a separate number to keep in sync by hand), so a
+       swiped change reads as noticeably snappier without losing the
+       "continues under its own momentum" feel a plain CSS transition
+       wouldn't have given it. */
+    const SPRING_STIFFNESS = 340;
     const SPRING_DAMPING = 2 * Math.sqrt(SPRING_STIFFNESS);
     const SPRING_REST_EPS = .001;
     const MAX_SPRING_VELOCITY = 3.5;
@@ -995,7 +1003,7 @@
       el.meta.classList.remove('is-sliding');
     }
 
-    function springTo(target, initialVelocity) {
+    function springTo(target, initialVelocity, onSettle) {
       stopSpring();
       el.meta.classList.add('is-sliding');
       let velocity = clamp(initialVelocity, -MAX_SPRING_VELOCITY, MAX_SPRING_VELOCITY);
@@ -1011,6 +1019,7 @@
           placeMeta(dragExtra);
           springRaf = null;
           el.meta.classList.remove('is-sliding');
+          onSettle?.();
           return;
         }
         placeMeta(dragExtra);
@@ -1105,16 +1114,27 @@
 
       if (swipeCaptured) {
         const committed = Math.abs(dragExtra) > DRAG_COMMIT || Math.abs(dragVelocity) > FLICK_VELOCITY;
+        let hapticGenForSwipe = null;
         if (committed) {
           const stepDir = Math.sign(dragExtra) || Math.sign(dragVelocity);
-          load(i - stepDir, playing);      // swaps the artwork itself, instantly — see .cover's own transition
+          // swaps the artwork itself, instantly — see .cover's own transition.
+          // textSpring:true tells hapticStart the title/artist below isn't
+          // on a fixed CSS transition this time — the spring's own settle
+          // (onSettle below) reports its own landing in instead.
+          load(i - stepDir, playing, { textSpring: true });
+          hapticGenForSwipe = hapticGen;
           /* the carousel continues from here, in the new index's frame,
              one slot further along rather than restarting from a
              standing start */
           dragExtra -= stepDir;
           placeMeta(dragExtra);
         }
-        springTo(0, dragVelocity * 1000);   // ms -> seconds, to match the spring's own units
+        // ms -> seconds, to match the spring's own units. Only a committed
+        // change is waiting on a haptic pulse — a released-but-uncommitted
+        // drag just springs back to the same track, nothing to buzz for.
+        springTo(0, dragVelocity * 1000, committed
+          ? () => { hapticTextReady = true; hapticCheck(hapticGenForSwipe); }
+          : undefined);
       } else if (swipeMoved < 6) {
         /* a tap rather than a drag — same behaviour as the side covers'
            own click listener, just reached through the pointer sequence
@@ -1140,7 +1160,45 @@
        at once, since they all funnel through here. */
     let lastLoadAt = -Infinity;   // never blocks the very first call, however early it runs
 
-    function load(n, autoplay) {
+    /* ---- haptic pulse on landing ---------------------------------
+       One short buzz right as the artwork and the title/artist actually
+       land centred together — not on every load() call in isolation,
+       since the two don't always finish at the same time by the same
+       mechanism. On a button/keyboard/click-triggered change both are
+       plain, fixed .36s CSS transitions (matched exactly — see
+       .cover/.meta-item in css/styles.css), so a single timer covers
+       both. A swipe's own release instead settles .meta-item through
+       the spring above (springTo), whose duration depends on how fast
+       the flick was — there's no fixed number to time a second call
+       against, so that path is told to wait (textSpring below) and the
+       spring's own settle (springTo's onSettle callback) reports in
+       for real once it actually happens. Two independent "ready" flags,
+       gated by generation so a second change landing before the first
+       finishes cancels its pending pulse rather than firing two. */
+    let hapticGen = 0, hapticCoverReady = false, hapticTextReady = false;
+    function hapticPulse() {
+      /* iOS Safari has never implemented the Vibration API at all — not
+         for an ordinary page, not for a homescreen-installed one — so
+         navigator.vibrate is simply undefined there and this quietly
+         does nothing on iPhone, regardless of how well the two
+         animations above are synced. Android Chrome and other
+         Vibration-API browsers get one short, single tick. */
+      try { navigator.vibrate?.(15); } catch (_) {}
+    }
+    function hapticCheck(gen) {
+      if (gen === hapticGen && hapticCoverReady && hapticTextReady) hapticPulse();
+    }
+    function hapticStart({ textSpring = false } = {}) {
+      hapticGen++;
+      const gen = hapticGen;
+      hapticCoverReady = false;
+      hapticTextReady = false;
+      setTimeout(() => { hapticCoverReady = true; hapticCheck(gen); }, 360);
+      if (!textSpring) setTimeout(() => { hapticTextReady = true; hapticCheck(gen); }, 360);
+      return gen;
+    }
+
+    function load(n, autoplay, { haptic = true, textSpring = false } = {}) {
       const now = performance.now();
       if (now - lastLoadAt < 220) return;
       lastLoadAt = now;
@@ -1170,15 +1228,16 @@
          way, so nothing here flashes regardless of which path called it. */
       placeCovers();
       placeMeta();
+      if (haptic) hapticStart({ textSpring });
 
       /* Held back rather than fired in the same tick as the slide above —
          starting the light's own repaint work (applyColour's --tint
          crossfade) at the exact moment the cover and meta-item transitions
          also start had them fighting over the same handful of frames,
          doubling up exactly where things were already tightest.
-         .meta-item's .4s transform transition is the longer of the two
-         slides (.cover's own is .3s), so this waits for that one to
-         actually finish before asking for anything else. Guarded by index
+         .meta-item's transform transition matches .cover's own exactly now
+         (.36s each — see css/styles.css), so this just waits that long
+         before asking for anything else. Guarded by index
          the same way sampleColour() below already is: if another load()
          lands before this fires, i has moved on and this one's result is
          stale, so it's skipped rather than briefly flashing the wrong
@@ -1434,7 +1493,7 @@
        A vertical fader in the flyout .volume opens beside the artwork
        (js/app.js Volume wiring in init(), styles in css/styles.css). Reads
        bottom-up, like a physical fader: 0% at the bottom, 100% at the top. */
-    let volDragging = false, muted = false, volumeBeforeMute = 1;
+    let volDragging = false, muted = false;
     function setVolume(v, { persist = true } = {}) {
       v = clamp(v, 0, 1);
       audio.volume = v;
@@ -1448,21 +1507,22 @@
       const r = el.volTrack.getBoundingClientRect();
       setVolume((r.bottom - e.clientY) / r.height);
     }
-    /* Drops straight to silent and back, remembering wherever the fader
-       actually was rather than the last *persisted* value — muting isn't
-       "set volume to 0" (that would overwrite the level to return to,
-       the moment persist ran), it's a silent flag laid on top of it. */
+    /* The native mute flag, not "drop the fader to 0 and remember where
+       to restore it to" (the previous approach here) — that relied on
+       setVolume(0), which writes to audio.volume, and audio.volume is
+       read-only in practice on iOS (Apple reserves volume for the
+       hardware buttons only, since iOS 5 — assigning to it silently
+       no-ops). That's exactly why mute did nothing at all on iPhone:
+       every setMuted() call was a no-op write under the hood there.
+       audio.muted carries none of that restriction and works identically
+       everywhere, and it leaves the fader's own level untouched while
+       muted instead of this having to save and restore it by hand. */
     function setMuted(next) {
       if (next === muted) return;
       muted = next;
+      audio.muted = muted;
       el.volToggle.classList.toggle('is-muted', muted);
       el.volToggle.setAttribute('aria-label', muted ? 'Unmute' : 'Volume');
-      if (muted) {
-        volumeBeforeMute = audio.volume || volumeBeforeMute;
-        setVolume(0, { persist: false });
-      } else {
-        setVolume(volumeBeforeMute);
-      }
     }
     function openVolume() {
       el.volume.classList.add('is-open');
@@ -1709,7 +1769,7 @@
            once up front here instead. */
         const firstPaintEls = [...covers, ...metaItems.map(m => m.el)];
         firstPaintEls.forEach(node => { node.style.transition = 'none'; });
-        load(0, false);
+        load(0, false, { haptic: false });   // a teleport into place, not a change — nothing to buzz for
         void el.covers.offsetWidth;
         firstPaintEls.forEach(node => { node.style.transition = ''; });
         requestAnimationFrame(tick);
