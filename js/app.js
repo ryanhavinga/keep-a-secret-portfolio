@@ -1606,11 +1606,26 @@
         } catch (_) {}
         setVolume(savedVolume, { persist: false });
 
+        /* iOS Safari makes audio.volume read-only in practice — assigning
+           to it silently does nothing, by design (Apple reserves volume
+           for the hardware buttons alone). Detected once, here: an actual
+           assignment either sticks or it doesn't. If it doesn't, the
+           whole draggable fader has nothing real to control, so it's
+           skipped entirely below in favour of what still does work on
+           iOS — audio.muted — wired as a direct tap-to-mute instead of
+           the open-a-fader dance. */
+        audio.volume = .0001;
+        const volumeControllable = audio.volume !== 1;
+        setVolume(savedVolume, { persist: false });   // whichever of the two actually applies
+
         /* first click opens the fader; a second click landing directly
            on the icon while it's already open mutes instead of closing
-           it — closing only ever happens from a press elsewhere, below */
+           it — closing only ever happens from a press elsewhere, below.
+           Skipped when volume isn't controllable: a single tap just
+           toggles mute directly, since there is no fader worth opening. */
         el.volToggle.addEventListener('click', e => {
           e.stopPropagation();
+          if (!volumeControllable) { setMuted(!muted); return; }
           if (!el.volume.classList.contains('is-open')) openVolume();
           else setMuted(!muted);
         });

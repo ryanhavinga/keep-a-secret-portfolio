@@ -1233,6 +1233,12 @@ body.is-unlocked .leds {
 @media (hover: hover) and (pointer: fine) {
   .ctrl:hover { color: #fff; transform: scale(1.08); }
 }
+/* touch's own equivalent, since it has no real hover to fall back on —
+   without this a button here just sits at its resting grey forever,
+   with no brighten/grow feedback at all. :active covers mouse too
+   (briefly, on an actual click), which is harmless alongside the
+   hover rule above. */
+.ctrl:active { color: #fff; transform: scale(1.08); }
 
 .ctrl--side {
   /* a noticeably bigger jump than before (was clamp(30px,7.6cqw,41px))
