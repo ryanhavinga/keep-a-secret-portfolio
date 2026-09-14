@@ -834,6 +834,26 @@
        the first. */
     let lastD = null;
 
+    /* Read once, off a real .cover's own resolved transition-duration,
+       rather than a second number kept in sync with css/styles.css's
+       --cover-swap by hand — same reasoning, and the same technique, as
+       flashLight()/commitLight() reading --tint off .light-surge further
+       down. transitionDuration lists one value per transition-property,
+       in that property's own order — .cover's is `transform, box-shadow`
+       (see css/styles.css), so the transform duration is always the
+       first of the two. Cached after the first real read; every call
+       after that is free. */
+    let coverSwapMs = null;
+    function getCoverSwapMs() {
+      if (coverSwapMs === null) {
+        const probe = covers[0];
+        const first = probe ? getComputedStyle(probe).transitionDuration.split(',')[0] : '';
+        coverSwapMs = (parseFloat(first) || .52) * 1000;
+      }
+      return coverSwapMs;
+    }
+    let coverSwapTimer = null;
+
     /* `extra` is the live drag offset (see the drag block below) — a
        fraction of a slot, added on top of every cover's resting integer
        slot for exactly as long as a drag is in progress. Everything that
@@ -847,7 +867,23 @@
        since the teleport-jump logic below still earns its keep on every
        plain track change (next/prev is still one cover swapping sides
        every single step, circular-3-stack math unchanged) and reads
-       clearest staying close to paintCover. */
+       clearest staying close to paintCover.
+
+       Split into two passes now rather than one: the x-axis move (via
+       paintCover) starts immediately for every cover below, on --ease-
+       expo's fixed span — but which cover counts as "front" (z-index,
+       the .cover--side class that drives the darkening veil, tab order,
+       pointer-events) only actually changes in a second pass, deferred
+       to land at exactly half that span, applied to every cover in the
+       same tick. That's deliberate, not incidental: --ease-expo packs
+       almost all of its travel into the middle of the move, so the
+       instant the stacking order actually flips is also the single
+       blurriest, fastest-moving instant of the whole animation — the
+       swap reads as invisible rather than as a visible pop. Doing this
+       per-cover as each one was painted (the old, single-pass shape)
+       had covers flip at the moment THEY were painted, not at a shared
+       instant — fine when they all move on the same curve regardless,
+       but fragile the moment that ever isn't true again. */
     function placeCovers() {
       const n = tracks.length;
       if (!lastD || lastD.length !== n) {
@@ -856,6 +892,8 @@
           return d0 > n / 2 ? d0 - n : d0;
         });
       }
+
+      const swaps = [];
 
       covers.forEach((c, j) => {
         const d0 = (j - i + n) % n;
@@ -891,17 +929,30 @@
         }
 
         lastD[j] = d;
+        paintCover(c, d);   // the x-axis move starts now
+
         const a = Math.abs(d);
-        const side = a === 1;
-        c.classList.toggle('cover--side', side);
-        paintCover(c, d);
-        c.style.zIndex = String(10 - a);
-        /* the playing cover takes the pointer too, so it can lift on hover
-           like its neighbours — its click handler is a no-op. Only the
-           fully hidden ones stay out of the way. */
-        c.style.pointerEvents = a <= 1 ? 'auto' : 'none';
-        c.tabIndex = side ? 0 : -1;
+        swaps.push({
+          c,
+          side: a === 1,
+          zIndex: String(10 - a),
+          /* the playing cover takes the pointer too, so it can lift on
+             hover like its neighbours — its click handler is a no-op.
+             Only the fully hidden ones stay out of the way. */
+          pointerEvents: a <= 1 ? 'auto' : 'none',
+          tabIndex: a === 1 ? 0 : -1
+        });
       });
+
+      clearTimeout(coverSwapTimer);
+      coverSwapTimer = setTimeout(() => {
+        swaps.forEach(({ c, side, zIndex, pointerEvents, tabIndex }) => {
+          c.classList.toggle('cover--side', side);
+          c.style.zIndex = zIndex;
+          c.style.pointerEvents = pointerEvents;
+          c.tabIndex = tabIndex;
+        });
+      }, getCoverSwapMs() / 2);
     }
 
     /* Tucked in behind the playing cover, a closer sliver showing each
@@ -1274,17 +1325,23 @@
       const t = track();
 
       /* Covers a cover's hover lift/veil-fade for exactly as long as the
-         swap below runs (.3s — matches .cover's own transform transition).
-         Without it, whichever cover the pointer happens to already be
-         resting on when it lands would ALSO start its hover transition on
-         top of the swap — the small transport buttons sit right under the
-         artwork, so that's the common case there, and it's what read as
-         an extra hop only on that path. Cleared and reset on every call
-         so a rapid run of clicks keeps it suppressed the whole time
-         rather than flickering back on between them. */
+         swap below runs (matches .cover's own transform transition —
+         getCoverSwapMs() reads the real number rather than duplicating
+         it). Without it, whichever cover the pointer happens to already
+         be resting on when it lands would ALSO start its hover
+         transition on top of the swap — the small transport buttons sit
+         right under the artwork, so that's the common case there, and
+         it's what read as an extra hop only on that path. It's also what
+         placeCovers()/css/styles.css lean on to keep the veil's own
+         background-color swap instant rather than fading (.covers.is-
+         changing .cover--side::after { transition: none; }) — so this
+         has to stay up for the whole move, not just the hover guard's
+         own original reason. Cleared and reset on every call so a rapid
+         run of clicks keeps it suppressed the whole time rather than
+         flickering back on between them. */
       el.covers.classList.add('is-changing');
       clearTimeout(changeTimer);
-      changeTimer = setTimeout(() => el.covers.classList.remove('is-changing'), 450);
+      changeTimer = setTimeout(() => el.covers.classList.remove('is-changing'), getCoverSwapMs());
 
       /* the artwork swaps straight to its new resting slots — paintCover's
          own short CSS transition. placeMeta() here is the default entry
