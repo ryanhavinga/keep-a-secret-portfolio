@@ -1052,7 +1052,12 @@ body.is-unlocked .leds {
   backdrop-filter: blur(52px) saturate(1.1);
   -webkit-backdrop-filter: blur(52px) saturate(1.1);
   border: 1px solid rgba(255, 255, 255, .09);
-  border-radius: 999px;
+  /* rounded on the two outer (top) corners only — pill-round on all four
+     the way .scrub__track below is would round the bottom corners too,
+     which right at the seam with .controls::before reads as two separate
+     overlapping capsules rather than one T-shaped piece of glass. Square
+     inner corners are what make the two actually read as one shape. */
+  border-radius: 999px 999px 0 0;
   box-shadow: 0 24px 70px -32px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .07);
 }
 .timeline__t {
@@ -1213,7 +1218,10 @@ body.is-unlocked .leds {
   backdrop-filter: blur(52px) saturate(1.1);
   -webkit-backdrop-filter: blur(52px) saturate(1.1);
   border: 1px solid rgba(255, 255, 255, .09);
-  border-radius: 999px;
+  /* square top corners (where it meets .timeline::before above), rounded
+     bottom — the other half of the same T-shape reasoning as the note
+     on .timeline::before's own border-radius. */
+  border-radius: 0 0 999px 999px;
   box-shadow: 0 24px 70px -32px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .07);
 }
 /* Filled white icons, floating free — no plates or containers, no ring or
