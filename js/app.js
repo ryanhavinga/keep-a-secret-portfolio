@@ -1766,8 +1766,11 @@
               && !e.target.closest('a, button')) { e.preventDefault(); toggle(); }
         });
 
-        /* volume */
-        let savedVolume = 1;
+        /* volume — defaults to 40% the first time anyone ever lands here
+           (no kas-volume in localStorage yet); once they touch the fader
+           themselves, that choice is what's remembered on every visit
+           after, same as before. */
+        let savedVolume = .4;
         try {
           const sv = parseFloat(localStorage.getItem('kas-volume'));
           if (isFinite(sv)) savedVolume = clamp(sv, 0, 1);
