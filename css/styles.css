@@ -543,6 +543,16 @@ body.is-unlocked .leds {
   opacity: .7;
   transition: opacity .8s var(--ease);
 }
+/* A step up from the exact text-height match above, desktop only (by
+   request — a phone's own corner is already tighter, and the topbar
+   logo/footer text it needs to keep pace with don't grow there either).
+   Still shares .social's own bottom offset with .footer-credit, so the
+   baseline the two actually align on holds — only the top edge now
+   rises a little past the footer text's own, rather than matching it
+   exactly. */
+@media (min-width: 761px) {
+  .social { width: 29px; }
+}
 .social svg {
   /* block, not the default inline — an inline replaced element leaves a
      few px of baseline gap below itself that a solid width:height 1:1
