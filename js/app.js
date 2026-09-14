@@ -1147,7 +1147,6 @@
 
       i = ((n % tracks.length) + tracks.length) % tracks.length;
       const t = track();
-      window.__lastLoadAt = now;   // read by the ?perf HUD at the bottom of this file, if it's running
 
       /* Covers a cover's hover lift/veil-fade for exactly as long as the
          swap below runs (.3s — matches .cover's own transform transition).
@@ -1889,88 +1888,4 @@
      showing up already wherever the gate's Enter button was clicked. The
      lamp is the one thing reserved for an actual password entry. */
   Gate.init(playSubIntro, playEntranceLamp);
-
-  /* ==========================================================
-     TEMPORARY — on-screen performance HUD, for chasing the reported
-     iPhone drag lag without a cable to plug into a Mac's Web Inspector.
-     Entirely inert unless the page is loaded with ?perf in the URL —
-     load()'s one `window.__lastLoadAt = now` line above is the only
-     thing that runs unconditionally either way, and that's a single
-     property write, not a measurable cost. Safe to delete this whole
-     block (and that one line) once it's no longer needed.
-
-     Logs every frame slower than 32ms (below ~30fps) along with how
-     long after the last track change it landed, so a screenshot or
-     screen recording of dragging right after a track change shows
-     exactly when the drops happen and whether they land inside the
-     light's crossfade window or well clear of it — the same question
-     the Web Inspector's Timelines tab would answer, just read straight
-     off the phone's own screen instead. */
-  if (new URLSearchParams(location.search).has('perf')) {
-    const hud = document.createElement('div');
-    hud.style.cssText = [
-      'position:fixed', 'inset:auto 0 0 0', 'z-index:99999',
-      'max-height:46vh', 'overflow:auto',
-      'background:rgba(0,0,0,.86)', 'color:#4f4',
-      'font:11px/1.4 ui-monospace,monospace', 'padding:8px 10px',
-      'white-space:pre-wrap', 'pointer-events:none'
-    ].join(';');
-    hud.textContent = 'build: PERF_BUILD_2026-09-13-crossfade\nperf HUD armed — drag to see frame spikes';
-    document.body.appendChild(hud);
-
-    /* Two things that made a screenshot hard to line up: the log kept
-       growing across several track changes at once, so "+Nms" from an
-       old change and a new one ended up interleaved out of order — and
-       the text rewrote itself the instant a fresh spike landed, so a
-       screenshot taken mid-drag could catch it between renders. Fixed
-       by clearing the log on every new track change (each capture now
-       only ever shows the one change just made), and by only touching
-       the DOM once a full second has passed with nothing new to add —
-       right up top it says RECORDING while spikes are still coming in
-       and SETTLED, safe to screenshot once they've stopped. */
-    const SPIKE_MS = 32;
-    let spikes = [];
-    let last = performance.now();
-    let lastRenderedAt = 0;
-    let seenLoadAt = window.__lastLoadAt || null;
-
-    function render(settled) {
-      hud.textContent =
-        /* a literal marker, bumped by hand on every edit to this file —
-           checking it against what you were told to expect is the only
-           reliable way to rule out a stale cached copy (Cloudflare's own
-           30-60s deploy lag, or Safari holding an old js/app.js), which
-           has caused real confusion more than once already this session */
-        `build: PERF_BUILD_2026-09-13-crossfade\n` +
-        `perf HUD — ${settled ? 'SETTLED, safe to screenshot' : 'RECORDING…'}\n` +
-        `frames slower than ${SPIKE_MS}ms since the last track change\n` +
-        `(most recent last)\n\n` +
-        (spikes.length
-          ? spikes.map(s => `+${s.since}ms after track change: ${s.dt}ms frame`).join('\n')
-          : seenLoadAt ? 'no slow frames since the last track change — smooth!' : 'change track, then drag');
-    }
-
-    function frame(t) {
-      if (window.__lastLoadAt && window.__lastLoadAt !== seenLoadAt) {
-        seenLoadAt = window.__lastLoadAt;
-        spikes = [];   // fresh log for this track change only
-      }
-      const dt = t - last;
-      last = t;
-      let dirty = false;
-      if (dt > SPIKE_MS && seenLoadAt) {
-        spikes.push({ dt: Math.round(dt), since: Math.round(t - seenLoadAt) });
-        if (spikes.length > 40) spikes.shift();
-        dirty = true;
-        lastRenderedAt = t;
-      }
-      if (dirty) render(false);
-      else if (lastRenderedAt && t - lastRenderedAt > 1000) {
-        render(true);
-        lastRenderedAt = 0;   // stop re-rendering every frame once settled
-      }
-      requestAnimationFrame(frame);
-    }
-    requestAnimationFrame(frame);
-  }
 })();
