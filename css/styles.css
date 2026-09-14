@@ -1056,26 +1056,32 @@ body.is-unlocked .leds {
      on this element's height at all, so doubling it on hold can't push
      the timeline row — or anything below it — around. */
   position: absolute; top: 50%; left: 0; right: 0;
-  transform: translateY(-50%);
-  height: 4px;
+  /* the hold-to-thicken effect below is a scaleY on this same transform
+     rather than an animated height — height forces a layout+paint on
+     every single frame it changes, which on a lower-powered phone reads
+     as exactly the low-frame-rate stutter this was: scaleY is a plain
+     compositor transform, so the browser can animate it smoothly off
+     the main thread instead. .scrub__fill (height:100% below) is a
+     child, so it visually stretches along with its parent's own scaleY
+     for free — no separate animation needed on it either. */
+  transform: translateY(-50%) scaleY(1);
+  height: 6px;
   /* a large, clamped radius rather than a fixed 2px one — a fixed value
      reads as proportionally squarer the thicker the bar gets; this stays
-     a full pill at 4px or 8px alike */
+     a full pill at 6px or scaled up alike, since border-radius isn't
+     touched by the scaleY at all */
   border-radius: 999px;
   background: #3a3a3d;
   overflow: hidden;
-  /* doubles while actually held (below) and eases back down on release —
-     .scrub__fill sits at height:100% of this, so it grows and shrinks
-     right along with it with no transition of its own needed: a
-     percentage height just recalculates every frame of this one
-     animating. */
-  transition: height .45s var(--ease);
+  transition: transform .45s var(--ease);
 }
 /* .is-held, not .is-scrubbing — held is true from the moment the pointer
    goes down, whether or not it ever actually moves; .is-scrubbing only
    lands once real dragging starts (see the note below), which would
-   leave a plain, unmoving tap never seeing this at all. */
-.scrub.is-held .scrub__track { height: 8px; }
+   leave a plain, unmoving tap never seeing this at all. scaleY(1.667)
+   takes the 6px resting height to 10px, same growth (+4px) the old
+   4px -> 8px jump had. */
+.scrub.is-held .scrub__track { transform: translateY(-50%) scaleY(1.667); }
 .scrub__fill {
   height: 100%; width: 0;
   background: #fff;
@@ -1139,29 +1145,21 @@ body.is-unlocked .leds {
   fill: currentColor; stroke: currentColor;
   stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
 }
-/* the speaker glyph (img/Volume icon.svg) is a single fused compound
-   path — body and sound-wave arcs all one shape, cut with fill-rule:
-   evenodd rather than separate strokeable paths the way the icon this
-   replaced worked. The shared stroke above would trace every internal
-   seam evenodd carves out as a visible line, so it's switched off here
-   same as before — this one just never needed it in the first place. */
-.vol-toggle__icon path:first-child { stroke: none; }
-/* muted: a diagonal stripe appears over the glyph — a second click
-   directly on the icon while the fader is already open toggles this,
-   rather than closing the flyout (js/app.js, setMuted). Since the base
-   glyph above is one fused shape now, there's no separate "waves" piece
-   left to hide the way the old icon's did — the slash on top is the
-   only muted indicator. */
-.vol-toggle__mute-line {
-  opacity: 0;
-  /* scaled up from the old icon's 2.2 to match — this icon's viewBox is
-     roughly 18.5x the old one's (445 units wide vs. 24), and SVG stroke-
-     width is specified in the same coordinate space as the path itself,
-     so the same visual thickness needs the same multiple here */
-  stroke-width: 40;
+/* Both glyphs (img/Volume icon.svg, img/Volume icon mute.svg) are solid
+   fills, no stroke needed on either — this just makes sure the shared
+   stroke:currentColor above never paints one. */
+.vol-toggle__icon path { stroke: none; }
+/* muted: the whole glyph cross-fades to the dedicated muted one (speaker
+   + ✕, no wave arcs) rather than an overlay on top of the unmuted one —
+   a second click directly on the icon while the fader is already open
+   toggles this, rather than closing the flyout (js/app.js, setMuted). */
+.vol-toggle__unmuted, .vol-toggle__muted {
+  opacity: 1;
   transition: opacity .3s var(--ease);
 }
-.vol-toggle.is-muted .vol-toggle__mute-line { opacity: 1; }
+.vol-toggle__muted { opacity: 0; }
+.vol-toggle.is-muted .vol-toggle__unmuted { opacity: 0; }
+.vol-toggle.is-muted .vol-toggle__muted { opacity: 1; }
 
 .controls {
   display: flex; align-items: center; justify-content: center;
@@ -1434,40 +1432,53 @@ body.is-unlocked .leds {
 }
 .contact__eyebrow {
   margin: 0;
-  padding-bottom: clamp(12px, 2.2vh, 20px);
+  /* closer to the word than before (was clamp(12px,2.2vh,20px)) */
+  padding-bottom: clamp(4px, 0.8vh, 8px);
   border-bottom: 1px solid var(--hairline);
-  /* the rule sits under the label at a readable width whatever the
-     email's own length turns out to be */
-  min-width: min(260px, 72vw);
+  /* was a fixed min-width wider than the word itself, so the rule read
+     as its own separate bar rather than an underline. No min-width at
+     all now — .contact__eyebrow is a flex child of .contact__inner
+     (align-items:center, not stretch), so its box already hugs its own
+     text; the border-bottom just inherits that same width for free. */
   font-size: 10px;
   letter-spacing: .42em;
   text-indent: .42em;
   text-transform: uppercase;
   color: var(--w-48);
 }
-.contact__mail {
-  /* the one thing on the page anyone came for — sized to stay on one
-     line down to narrow phones rather than breaking mid-address */
+/* Wraps .contact__mail and .contact__social so the two rows share a
+   left edge (their icons landing at the same x) while the pair as a
+   whole still centres on the page — .contact__inner's own
+   align-items:center centres this block by its own content width, and
+   flex-start here then left-aligns the two rows inside it. */
+.contact__rows {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(10px, 1.8vh, 16px);
+}
+.contact__mail, .contact__social {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.6vw, 12px);
   font-size: clamp(13px, 2.5vw, 21px);
   letter-spacing: .04em;
   color: var(--white);
-  border-bottom: 1px solid rgba(255, 255, 255, .18);
-  padding-bottom: 4px;
-  transition: border-color .6s var(--ease), text-shadow .6s var(--ease);
+  transition: opacity .6s var(--ease), text-shadow .6s var(--ease);
+}
+.contact__mail {
+  /* the one thing on the page anyone came for — sized to stay on one
+     line down to narrow phones rather than breaking mid-address */
   overflow-wrap: anywhere;
 }
-.contact__mail:hover {
-  border-bottom-color: var(--w-48);
+.contact__mail:hover, .contact__social:hover {
   text-shadow: 0 0 26px rgba(255, 255, 255, .4);
 }
-.contact__social {
-  display: block;
+.contact__row-icon {
+  flex: 0 0 auto;
   width: clamp(19px, 2vw, 24px);
-  opacity: .55;
-  transition: opacity .7s var(--ease), transform .7s var(--ease);
+  fill: none; stroke: #fff; stroke-width: 1.5;
 }
-.contact__social svg { width: 100%; fill: none; stroke: #fff; stroke-width: 1.5; }
-.contact__social:hover { opacity: 1; transform: scale(1.12); }
 
 /* ============================================================
    RESPONSIVE
