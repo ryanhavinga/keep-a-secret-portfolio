@@ -45,6 +45,12 @@
 
   /* carousel geometry */
   --ease: cubic-bezier(.16, .84, .24, 1);
+  /* a "back" curve — overshoots past its target before easing back to
+     it, rather than approaching it directly. Used on .cover's own
+     transform below for the playful elastic landing on a track change:
+     every cover swings slightly past its resting slot first (the
+     centred one included), then settles, instead of just arriving. */
+  --ease-elastic: cubic-bezier(.34, 1.56, .64, 1);
   --slow: 2600ms;
   /* the slide's own curve — eased at both ends rather than --ease's hard
      launch, so a panel leaves and arrives at the same unhurried rate */
@@ -802,14 +808,18 @@ body.is-unlocked .leds {
      ever plays once an actual track change lands, stepping straight to
      the new resting slot. Short and quick on purpose — a snap into place
      alongside the title, not a cinematic slide the text would have to
-     wait on. box-shadow rides a touch slower than the transform — the
+     wait on — --ease-elastic's own overshoot is what gives that snap a
+     playful bounce rather than just arriving flatly; a touch longer than
+     the plain-ease .3s this replaced so the eye actually catches the
+     swing past the slot before it settles, still quick rather than
+     lingering. box-shadow rides its own slower, plain-eased span — the
      hover glow below should ease up and back down gently rather than
-     snap with it. No scale, filter/blur or opacity here on purpose — a
+     bounce with it. No scale, filter/blur or opacity here on purpose — a
      cover stays fully solid and the same size throughout; a side cover
      reading as dimmer is the veil pseudo-element below, a flat overlay
      rather than the cover itself going translucent (which let whatever
      sat behind it show through mid-change). */
-  transition: transform .3s var(--ease), box-shadow .4s var(--ease);
+  transition: transform .36s var(--ease-elastic), box-shadow .4s var(--ease);
   will-change: transform;
   -webkit-tap-highlight-color: transparent;
 }
