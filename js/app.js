@@ -876,6 +876,7 @@
         /* still off to one side — keep extending the same way it was
            already headed rather than re-deriving a fresh shortest path */
         const d = near !== null ? near : (lastD[j] < 0 ? d0 - n : d0);
+        const prevD = lastD[j];
 
         lastD[j] = d;
         const a = Math.abs(d);
@@ -889,16 +890,25 @@
         c.style.pointerEvents = a <= 1 ? 'auto' : 'none';
         c.tabIndex = side ? 0 : -1;
 
-        /* the tip-and-settle (css/styles.css) — every side cover gets
-           one on every real call, since the circular-3-track math means
-           a track change always moves every cover to a new d, side
-           covers included. Restarted from scratch (remove both, force a
-           reflow, re-add just the one that applies) so a rapid run of
-           clicks replays it each time rather than the class already
-           being there doing nothing the second time — same technique as
-           .ctrl--play's own is-punching restart. */
+        /* the tip-and-settle (css/styles.css) — only for the one cover
+           that swaps sides directly (left slot to right, or back)
+           without ever passing through front: swiping to the next track
+           tips only the cover landing on the right, swiping to the
+           previous tips only the one landing on the left, and the cover
+           that just fell back from front to a side stays completely
+           still (by request — was tipping both, which didn't match
+           what a real swipe/next/prev actually does to a 3-item
+           circular stack: exactly one side cover swaps sides directly
+           every single step, the other side cover only ever loses front
+           and settles, it never "swings" anywhere). `prevD !== 0` is
+           what tells the two cases apart: a cover arriving from front
+           had prevD === 0, the hop cover didn't. Restarted from scratch
+           (remove both, force a reflow, re-add) so a rapid run of clicks
+           replays it each time — same technique as .ctrl--play's own
+           is-punching restart. */
         c.classList.remove('is-tipping-left', 'is-tipping-right');
-        if (side && !isFirstPlacement) {
+        const isHop = side && prevD !== 0 && Math.sign(prevD) !== Math.sign(d);
+        if (isHop && !isFirstPlacement) {
           void c.offsetWidth;
           c.classList.add(d < 0 ? 'is-tipping-left' : 'is-tipping-right');
         }
@@ -906,9 +916,10 @@
     }
 
     /* Tucked in behind the playing cover, a closer sliver showing each
-       side than before — brought in from 19% toward the middle for a
-       tidier stack now that it's static rather than something a drag
-       used to pull wide open. No scale and no opacity fade: a side cover
+       side than before — brought in further still (13% -> 10.5%, was
+       19% before that) for a tidier stack now that it's static rather
+       than something a drag used to pull wide open. No scale and no
+       opacity fade: a side cover
        reading dimmer is the veil pseudo-element below, a flat overlay
        rather than a transparency change on the cover itself, which on a
        3-track stack (every cover is always centred or one of the two
@@ -930,7 +941,7 @@
          instead (see .cover--side.is-tipping-left/right) — nothing extra
          to keep in sync for either. */
       c.style.transform =
-        `translate(-50%, -50%) translateX(${(d * 13).toFixed(2)}%) `
+        `translate(-50%, -50%) translateX(${(d * 10.5).toFixed(2)}%) `
         + `scale(var(--cover-hover-scale, 1)) rotate(var(--cover-tilt, 0deg))`;
     }
 
