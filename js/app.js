@@ -30,30 +30,50 @@
      WebKit engine), so vibrate() is simply undefined on an iPhone no
      matter what. This isn't that: it's the technique the tiny (MIT,
      no-dep) "tactus" package (https://github.com/aadeexyz/tactus) uses —
-     a hidden native <input type="checkbox" switch> plus its <label>,
-     Safari's own new "switch"-styled checkbox. Toggling a REAL one of
-     those is a native control interaction, and WebKit gives native
-     control interactions their own real Taptic Engine tick as a normal
-     side effect — nothing to do with the Vibration API, so the iOS
-     restriction on that API never applies to it. Built once, off-screen,
-     and reused for every call; a plain label.click() on it is enough to
-     fire the tick, iOS asks for no more "real" a gesture than that.
+     a native <input type="checkbox" switch> plus its <label>, Safari's
+     own new "switch"-styled checkbox. Toggling a REAL one of those is a
+     native control interaction, and WebKit gives native control
+     interactions their own real Taptic Engine tick as a normal side
+     effect — nothing to do with the Vibration API, so the iOS
+     restriction on that API never applies to it.
+
+     Kept "visually hidden" (off-screen, 1px, opacity near-zero) rather
+     than display:none, on purpose — a display:none element is dropped
+     from the render tree entirely, never laid out or painted at all,
+     and the native OS widget backing that a switch's haptic rides on is
+     reasonably suspect to depend on the element actually being
+     rendered. display:none was the first version here and reportedly
+     produced no felt tap at all on a real iPhone 11 — this is the most
+     likely reason, so it's the first thing worth ruling out. Two
+     genuine platform limits remain regardless of this: the `switch`
+     attribute itself only exists from Safari 17.4 (iOS 17.4) on, a no-op
+     on anything older; and iOS's own Settings > Sounds & Haptics >
+     System Haptics toggle gates every haptic on the device, this trick
+     included, same as it gates the keyboard's own click-taps.
+
+     Built once, reused for every call — a plain label.click() is enough
+     to fire the tick, iOS asks for no more "real" a gesture than that.
      Elsewhere (no Vibration API restriction to route around) this just
      calls vibrate() directly, same as before. */
   let hapticSwitchInput = null, hapticSwitchLabel = null;
+  function hideButRender(el) {
+    el.style.cssText =
+      'position:fixed; left:0; bottom:0; width:1px; height:1px;' +
+      'margin:0; padding:0; border:0; overflow:hidden; opacity:.01; pointer-events:none;';
+  }
   function mountHapticSwitch() {
     if (hapticSwitchInput) return;
     hapticSwitchInput = document.createElement('input');
     hapticSwitchInput.type = 'checkbox';
     hapticSwitchInput.id = '___kas-haptic-switch___';
     hapticSwitchInput.setAttribute('switch', '');
-    hapticSwitchInput.style.display = 'none';
     hapticSwitchInput.setAttribute('aria-hidden', 'true');
     hapticSwitchInput.tabIndex = -1;
+    hideButRender(hapticSwitchInput);
     document.body.appendChild(hapticSwitchInput);
     hapticSwitchLabel = document.createElement('label');
     hapticSwitchLabel.htmlFor = hapticSwitchInput.id;
-    hapticSwitchLabel.style.display = 'none';
+    hideButRender(hapticSwitchLabel);
     document.body.appendChild(hapticSwitchLabel);
   }
   function triggerHaptic(duration = 15) {
