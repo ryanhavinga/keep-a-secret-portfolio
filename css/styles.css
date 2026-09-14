@@ -1618,13 +1618,12 @@ html.is-remembered .gate { display: none; }
 .contact__mark:hover { text-shadow: 0 0 30px rgba(255, 255, 255, .5); }
 .contact__back {
   font-size: 10px;
+  font-weight: 600;
   letter-spacing: .34em;
   text-indent: .34em;
   text-transform: uppercase;
-  color: var(--w-48);
-  transition: color .7s var(--ease);
+  color: var(--white);
 }
-.contact__back:hover { color: var(--white); }
 
 .contact {
   flex: 1 1 auto;
