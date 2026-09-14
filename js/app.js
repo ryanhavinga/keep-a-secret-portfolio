@@ -869,31 +869,21 @@
        every single step, circular-3-stack math unchanged) and reads
        clearest staying close to paintCover.
 
-       A cover's ROLE — its size (.cover--side's height/aspect-ratio),
-       the darkening veil that comes with that class, and whether it can
-       take the pointer/keyboard — is decided the instant this runs, in
-       the same tick as the x-axis move (via paintCover) starts, not
-       gradually and not deferred. It has to be: a cover that's already
-       visibly sliding away but still full-size and undarkened for the
-       first half of the move doesn't read as "heading to the
-       background" at all, it reads as the same front cover just
-       sliding sideways — the whole point of the size/veil difference is
-       lost for exactly as long as it's delayed. --ease-expo's own shape
-       makes that worse, not better, here: it barely moves at all for
-       the first stretch of the span, so a delayed size/veil swap sits
-       there, visibly wrong, for a long beat before finally landing.
-       (.covers.is-changing .cover--side::after { transition: none } in
-       css/styles.css is what keeps the veil's own background-color from
-       fading in over its usual 1.1s here — instant, not eased, same as
-       the size change it lands alongside.)
-
-       Z-INDEX is the one exception, deliberately still deferred to
-       land at exactly half of --cover-swap, in its own single pass
-       after the loop, applied to every cover in the same tick: it only
-       ever matters for the instant two covers' boxes actually overlap
-       mid-crossing, and --ease-expo's fastest, blurriest instant is
-       right at that halfway point — hiding a stacking-order pop there
-       actually works, the way size/veil never did. */
+       Split into two passes now rather than one: the x-axis move (via
+       paintCover) starts immediately for every cover below, on --ease-
+       expo's fixed span — but which cover counts as "front" (z-index,
+       the .cover--side class that drives the darkening veil, tab order,
+       pointer-events) only actually changes in a second pass, deferred
+       to land at exactly half that span, applied to every cover in the
+       same tick. That's deliberate, not incidental: --ease-expo packs
+       almost all of its travel into the middle of the move, so the
+       instant the stacking order actually flips is also the single
+       blurriest, fastest-moving instant of the whole animation — the
+       swap reads as invisible rather than as a visible pop. Doing this
+       per-cover as each one was painted (the old, single-pass shape)
+       had covers flip at the moment THEY were painted, not at a shared
+       instant — fine when they all move on the same curve regardless,
+       but fragile the moment that ever isn't true again. */
     function placeCovers() {
       const n = tracks.length;
       if (!lastD || lastD.length !== n) {
@@ -903,7 +893,7 @@
         });
       }
 
-      const zSwaps = [];
+      const swaps = [];
 
       covers.forEach((c, j) => {
         const d0 = (j - i + n) % n;
@@ -942,19 +932,26 @@
         paintCover(c, d);   // the x-axis move starts now
 
         const a = Math.abs(d);
-        c.classList.toggle('cover--side', a === 1);
-        /* the playing cover takes the pointer too, so it can lift on
-           hover like its neighbours — its click handler is a no-op.
-           Only the fully hidden ones stay out of the way. */
-        c.style.pointerEvents = a <= 1 ? 'auto' : 'none';
-        c.tabIndex = a === 1 ? 0 : -1;
-
-        zSwaps.push({ c, zIndex: String(10 - a) });
+        swaps.push({
+          c,
+          side: a === 1,
+          zIndex: String(10 - a),
+          /* the playing cover takes the pointer too, so it can lift on
+             hover like its neighbours — its click handler is a no-op.
+             Only the fully hidden ones stay out of the way. */
+          pointerEvents: a <= 1 ? 'auto' : 'none',
+          tabIndex: a === 1 ? 0 : -1
+        });
       });
 
       clearTimeout(coverSwapTimer);
       coverSwapTimer = setTimeout(() => {
-        zSwaps.forEach(({ c, zIndex }) => { c.style.zIndex = zIndex; });
+        swaps.forEach(({ c, side, zIndex, pointerEvents, tabIndex }) => {
+          c.classList.toggle('cover--side', side);
+          c.style.zIndex = zIndex;
+          c.style.pointerEvents = pointerEvents;
+          c.tabIndex = tabIndex;
+        });
       }, getCoverSwapMs() / 2);
     }
 
