@@ -831,13 +831,14 @@ body.is-unlocked .leds {
      the new resting slot on --ease-expo (top of file). Every cover
      (front and sides alike) moves on the exact same curve and span now
      — js/app.js's placeCovers() is what makes them read as different
-     covers taking different roles, by snapping stacking order, z-index
-     and the veil below all together at the curve's own halfway point,
-     never gradually. box-shadow rides its own separate, slower,
-     plain-eased span — the hover glow should ease up and back down
-     gently regardless of how the position itself is moving. No scale,
-     filter/blur or opacity change here on purpose — a cover stays fully
-     solid and the same size throughout; reading as dimmer is the veil
+     covers taking different roles: size and the darkening veil below
+     switch the instant the move starts (never gradually — see the note
+     on .cover--side::after), while z-index alone is held back to swap
+     at the curve's own halfway point instead. box-shadow rides its own
+     separate, slower, plain-eased span — the hover glow should ease up
+     and back down gently regardless of how the position itself is
+     moving. No scale, filter/blur or opacity change here on purpose — a
+     cover stays fully solid throughout; reading as dimmer is the veil
      pseudo-element below, a flat overlay rather than the cover itself
      going translucent (which let whatever sat behind it show through
      mid-change). */
@@ -911,15 +912,13 @@ body.is-unlocked .leds {
      to actually make out now, still clearly dimmer than the playing one */
   background: rgba(4, 4, 5, .22);
   /* Eased everywhere else (the hover fade below) EXCEPT while a track
-     change is actually under way — js/app.js's placeCovers() toggles
-     which covers even carry this class at the exact halfway point of
-     the x-axis move, and that swap needs to read as an instant, one-
-     frame cut (no fade) landing right in the blurriest instant of the
-     motion, not a second, slower fade layered underneath it. .is-
-     changing (below, js/app.js's load()) is active for the whole move,
-     not just that instant, but this only ever actually repaints once,
-     at the swap — same reasoning as .covers.is-changing suppressing
-     hover just below. */
+     change is actually under way — js/app.js's placeCovers() decides
+     which covers even carry this class the instant a change starts (not
+     gradually, and not deferred the way z-index below is), so the
+     darkening/lightening has to land in that same single frame, not
+     ease in over its usual 1.1s underneath it. .is-changing (below,
+     js/app.js's load()) stays up for the whole move, matching the
+     window this actually needs suppressed for. */
   transition: background 1.1s var(--ease);
 }
 .covers.is-changing .cover--side::after { transition: none; }
