@@ -952,8 +952,8 @@ body.is-unlocked .leds {
    same 50% 100%. */
 @keyframes cover-tip-left  { 0%, 100% { --cover-tilt: 0deg; } 32% { --cover-tilt: 3.5deg; } }
 @keyframes cover-tip-right { 0%, 100% { --cover-tilt: 0deg; } 32% { --cover-tilt: -3.5deg; } }
-.cover--side.is-tipping-left  { animation: cover-tip-left  .85s var(--ease); transform-origin: 50% 100%; }
-.cover--side.is-tipping-right { animation: cover-tip-right .85s var(--ease); transform-origin: 50% 100%; }
+.cover--side.is-tipping-left  { animation: cover-tip-left  .34s var(--ease); transform-origin: 50% 100%; }
+.cover--side.is-tipping-right { animation: cover-tip-right .34s var(--ease); transform-origin: 50% 100%; }
 .cover--side::after {
   content: '';
   position: absolute; inset: 0;
