@@ -1495,10 +1495,13 @@ html.is-remembered .gate { display: none; }
      screen at full opacity the instant the gate starts to go (see the
      note on Gate.init in js/app.js), so this one transition is the whole
      room's entrance, all of it revealed at the same rate together.
-     Slowed a fraction from 1.6s; the light itself has its own separate,
-     much longer entrance (is-entering/playEntranceLamp) and isn't tied
-     to this number at all. */
-  transition: opacity 2.2s var(--ease);
+     Slowed again, 2.2s -> 3.4s (was 1.6s before that) — the light itself
+     has its own separate, longer entrance still (is-entering/
+     playEntranceLamp, 4.6s) and isn't tied to this number at all, so
+     there's still room under it. js/app.js's setTimeout removing the
+     gate element outright is timed off this same number — keep the two
+     matched if this changes again. */
+  transition: opacity 3.4s var(--ease);
 }
 /* the gate dissolving and the room coming up are the same move — both are
    black at the crossover, so it reads as one slow fade rather than a swap */
