@@ -926,7 +926,7 @@
        sides — there's no fourth, fully hidden slot to fade toward) would
        otherwise show the track behind it through mid-change. */
     function paintCover(c, d) {
-      /* scale(var(--cover-hover-scale, 1)) and rotate(var(--cover-tilt,
+      /* scale(var(--cover-hover-scale, 1)) and skewX(var(--cover-tilt,
          0deg)) are both a literal, permanent part of this — inline
          styles always beat an external stylesheet rule for the same
          property, so a plain CSS `:hover { transform: scale(...) }` (or
@@ -938,11 +938,13 @@
          and no tilt everywhere else. The grow rides the exact same
          transform transition (and its --ease-elastic bounce, on the
          front cover) this already had; the tilt rides its own `animation`
-         instead (see .cover--side.is-tipping-left/right) — nothing extra
-         to keep in sync for either. */
+         instead (see .cover--side.is-tipping-left/right — skewX there,
+         deliberately not rotate, is what actually keeps the bottom
+         corners fixed while only the top moves) — nothing extra to keep
+         in sync for either. */
       c.style.transform =
         `translate(-50%, -50%) translateX(${(d * 10.5).toFixed(2)}%) `
-        + `scale(var(--cover-hover-scale, 1)) rotate(var(--cover-tilt, 0deg))`;
+        + `scale(var(--cover-hover-scale, 1)) skewX(var(--cover-tilt, 0deg))`;
     }
 
     /* ---- title/artist carousel ---------------------------------
