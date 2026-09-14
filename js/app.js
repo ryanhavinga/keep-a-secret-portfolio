@@ -857,6 +857,12 @@
        there's nothing left for that trick to need to hide. */
     function placeCovers() {
       const n = tracks.length;
+      /* first call ever (page load's initial, silent paint — see the
+         firstPaintEls dance around load(0) in init() below) never gets
+         a tip: everything there is meant to land already in place, not
+         visibly settle into it. Captured before lastD gets its own
+         first value just below. */
+      const isFirstPlacement = !lastD;
       if (!lastD || lastD.length !== n) {
         lastD = covers.map((_, j) => {
           const d0 = (j - i + n) % n;
@@ -882,6 +888,20 @@
            fully hidden ones stay out of the way. */
         c.style.pointerEvents = a <= 1 ? 'auto' : 'none';
         c.tabIndex = side ? 0 : -1;
+
+        /* the tip-and-settle (css/styles.css) — every side cover gets
+           one on every real call, since the circular-3-track math means
+           a track change always moves every cover to a new d, side
+           covers included. Restarted from scratch (remove both, force a
+           reflow, re-add just the one that applies) so a rapid run of
+           clicks replays it each time rather than the class already
+           being there doing nothing the second time — same technique as
+           .ctrl--play's own is-punching restart. */
+        c.classList.remove('is-tipping-left', 'is-tipping-right');
+        if (side && !isFirstPlacement) {
+          void c.offsetWidth;
+          c.classList.add(d < 0 ? 'is-tipping-left' : 'is-tipping-right');
+        }
       });
     }
 
@@ -895,7 +915,23 @@
        sides — there's no fourth, fully hidden slot to fade toward) would
        otherwise show the track behind it through mid-change. */
     function paintCover(c, d) {
-      c.style.transform = `translate(-50%, -50%) translateX(${(d * 13).toFixed(2)}%)`;
+      /* scale(var(--cover-hover-scale, 1)) and rotate(var(--cover-tilt,
+         0deg)) are both a literal, permanent part of this — inline
+         styles always beat an external stylesheet rule for the same
+         property, so a plain CSS `:hover { transform: scale(...) }` (or
+         the side covers' own tip-and-settle animation) could never win
+         against this otherwise. Routing both through custom properties
+         instead sidesteps that entirely: css/styles.css only ever
+         touches --cover-hover-scale/--cover-tilt, and transform picks up
+         whatever those resolve to right here, defaulting to no growth
+         and no tilt everywhere else. The grow rides the exact same
+         transform transition (and its --ease-elastic bounce, on the
+         front cover) this already had; the tilt rides its own `animation`
+         instead (see .cover--side.is-tipping-left/right) — nothing extra
+         to keep in sync for either. */
+      c.style.transform =
+        `translate(-50%, -50%) translateX(${(d * 13).toFixed(2)}%) `
+        + `scale(var(--cover-hover-scale, 1)) rotate(var(--cover-tilt, 0deg))`;
     }
 
     /* ---- title/artist carousel ---------------------------------

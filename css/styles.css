@@ -24,6 +24,11 @@
 @property --ring-deep { syntax: '<number>+'; inherits: true; initial-value: 58 16 74; }
 @property --led-b     { syntax: '<number>+'; inherits: true; initial-value: 246 118 226; }
 @property --led-c     { syntax: '<number>+'; inherits: true; initial-value: 255 156 214; }
+/* the background covers' quick tip-and-settle (see .cover--side.is-
+   tipping-left/right further down) — registered so the angle actually
+   interpolates smoothly frame to frame instead of just jumping between
+   each @keyframes stop's value, the same reason the four above are. */
+@property --cover-tilt { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
 
 /* ---------- TOKENS ---------------------------------------- */
 :root {
@@ -40,7 +45,7 @@
      touch (was 272/700 before the glass card, briefly 300/740 with its
      first, wider padding) to give the card's own padding somewhere to
      come from, rather than eating into the artwork itself */
-  --panel: clamp(304px, min(75vh, 92vw), 764px);
+  --panel: clamp(316px, min(78vh, 94vw), 800px);
   --radius: clamp(28px, 4.6vw, 56px);
 
   /* carousel geometry */
@@ -679,13 +684,12 @@ body.is-unlocked .leds {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   /* Deliberately asymmetric now — more top than bottom — to nudge the
-     panel down a bit off dead centre, clear of the topbar logo sitting
-     above it (more of an issue now that a bigger --panel above brings
-     the artwork closer to it). Was a matched clamp() both sides on
-     purpose; any gap between top and bottom shifts the panel down by
-     half that gap, so this is a deliberate ~14-18px push rather than
-     the old exact-centre. */
-  padding: clamp(112px, 15.5vh, 150px) 0 clamp(80px, 11.5vh, 112px);
+     panel down off dead centre, clear of the topbar logo sitting above
+     it. Widened again along with the latest --panel bump above (a
+     bigger panel brings the artwork closer to the logo again unless
+     this grows to match) — any gap between top and bottom shifts the
+     panel down by half that gap. */
+  padding: clamp(128px, 17.5vh, 168px) 0 clamp(72px, 10vh, 98px);
 }
 
 .carousel {
@@ -840,14 +844,23 @@ body.is-unlocked .leds {
   will-change: transform;
   -webkit-tap-highlight-color: transparent;
 }
-/* Only the playing cover lights up under the cursor — no lift, no zoom,
-   just a brighter edge and a slightly deeper shadow, on the same slow
-   timing as the side covers' veil-fade below so the whole stack reads as
-   one light source responding at one speed. The two covers behind it sit
-   mostly underneath it, so a hover response there fired and unfired as the
-   pointer crossed the overlap — it read as a twitch, not a response. They
-   come out from under their shade instead, which says "you can pick this"
-   without moving anything.
+/* Only the playing cover lights up under the cursor — a brighter edge,
+   a slightly deeper shadow, and now a small uniform grow (--cover-
+   hover-scale, read by paintCover's own transform in js/app.js — an
+   inline style always beats a plain stylesheet rule for the same
+   property, so the grow has to ride along inside the value JS already
+   writes rather than trying to set transform here directly). Centred
+   scale, so it grows from every edge/corner evenly rather than toward
+   any one side. Brighter edge and deeper shadow ride their own slow
+   timing, same span as the side covers' veil-fade below so the whole
+   stack reads as one light source responding at one speed — only the
+   grow itself rides the faster, bouncier curve --cover-hover-scale
+   feeds into (.cover's own transform transition, --ease-elastic on the
+   front cover). The two covers behind it sit mostly underneath it, so
+   a hover response there fired and unfired as the pointer crossed the
+   overlap — it read as a twitch, not a response. They come out from
+   under their shade instead, which says "you can pick this" without
+   moving anything.
 
    Gated behind `.covers:not(.is-changing)`: the small transport buttons sit
    directly under the artwork, so the pointer is usually still resting on a
@@ -905,9 +918,31 @@ body.is-unlocked .leds {
      stack always has swap sides directly (left slot to right slot or
      back) on every single step — js/app.js's placeCovers() no longer
      needs its old teleport-to-the-mirrored-edge trick to hide that
-     sweep either, since there's nothing left to sweep. */
+     sweep either, since there's nothing left to sweep. The position
+     itself, at least — is-tipping-left/right below is a deliberate
+     exception, landing a small rotation on top of that otherwise-
+     static jump. */
   transition: none;
 }
+/* A quick tip-and-settle, not a slide — the side covers' own small
+   flourish now that their position itself is a static, instant jump
+   (above) rather than something that eases anywhere. Rotates toward
+   whichever side the cover is actually landing on (left cover tips
+   left, right cover tips right — js/app.js's placeCovers() picks the
+   class off the same sign as the slot itself), like it landed there
+   with a little too much momentum and tipped before settling flat.
+   `animation`, not `transition`: this needs its own start-peak-return
+   shape regardless of where --cover-tilt happened to already be, which
+   a transition (which only ever eases between two endpoints) can't
+   express on its own. Restarted from scratch on every placeCovers()
+   call the same way .ctrl--play.is-punching is (js/app.js: remove,
+   force a reflow, re-add) — without that, calling next/prev again
+   before a tip finishes would leave the class already present and do
+   nothing the second time. */
+@keyframes cover-tip-left  { 0%, 100% { --cover-tilt: 0deg; } 32% { --cover-tilt: -6deg; } }
+@keyframes cover-tip-right { 0%, 100% { --cover-tilt: 0deg; } 32% { --cover-tilt: 6deg; } }
+.cover--side.is-tipping-left  { animation: cover-tip-left  .42s var(--ease); }
+.cover--side.is-tipping-right { animation: cover-tip-right .42s var(--ease); }
 .cover--side::after {
   content: '';
   position: absolute; inset: 0;
@@ -925,7 +960,10 @@ body.is-unlocked .leds {
 }
 .cover__demo span {
   font-family: var(--display);
-  font-weight: 800;
+  /* Regular rather than Ultrabold (the only two weights this face even
+     loads — see the @font-face declarations at the top of this file) —
+     the placeholder card read as too heavy next to everything else. */
+  font-weight: 400;
   font-size: 19cqw;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -1298,15 +1336,13 @@ body.is-unlocked .leds {
      untouched, so the row still sits the same distance under the
      timeline; only the buttons themselves grow. */
   width: clamp(38px, 9.6cqw, 52px); height: clamp(38px, 9.6cqw, 52px);
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, .18));
   /* transition is a shorthand — it doesn't merge across rules the way
      individual properties do, so .ctrl's own transform/color transitions
      would otherwise just be silently replaced by this one entirely
      rather than added to. Repeated here (and on .ctrl--play below) with
-     everything this variant needs, opacity/filter included. */
-  transition: transform .32s var(--ease), opacity .6s ease, color .32s var(--ease), filter .6s var(--ease);
+     everything this variant needs, opacity included. */
+  transition: transform .32s var(--ease), opacity .6s ease, color .32s var(--ease);
 }
-.ctrl--side:hover { filter: drop-shadow(0 0 8px rgba(255, 255, 255, .26)); }
 /* filled to match the play button rather than the shared hairline .ctrl
    svg rule — the stroke stays on at a modest width just to bulk out the
    bar (an open path, so it has no fill area of its own) and round the
@@ -1315,18 +1351,18 @@ body.is-unlocked .leds {
 
 /* A solid filled glyph rather than a ring around a hairline icon — no
    border, no plate, just the shape itself at a size that makes it the
-   obvious focal point of the transport row. A small glow rather than the
-   old ring's much larger bloom — enough to lift it off the background,
-   not a light source of its own. */
+   obvious focal point of the transport row. No glow any more (was a
+   small drop-shadow, on this and .ctrl--side above, both at rest and
+   brighter on hover/while playing) — by request, read as unwanted
+   rather than as "lifting it off the background". */
 .ctrl--play {
   position: relative;
   /* a noticeably bigger jump than before (was clamp(58px,13.5cqw,78px)) */
   width: clamp(72px, 17cqw, 98px); height: clamp(72px, 17cqw, 98px);
   border: 0;
   background: none;
-  filter: drop-shadow(0 0 7px rgba(255, 255, 255, .22));
   /* see the same note on .ctrl--side above — repeated in full here too */
-  transition: transform .32s var(--ease), opacity .6s ease, color .32s var(--ease), filter .6s var(--ease);
+  transition: transform .32s var(--ease), opacity .6s ease, color .32s var(--ease);
 }
 /* filled rather than the shared hairline .ctrl svg rule — the stroke
    stays on at a modest width just to round the triangle's corners
@@ -1341,13 +1377,10 @@ body.is-unlocked .leds {
    attempt to style these bars was overridden and never actually rendered.
    Scoped through the parent class here so it actually wins. */
 .ctrl--play .ctrl__icon--pause { stroke: none; }
-/* a touch brighter on hover and while actually playing, on top of the
-   shared .ctrl:hover brighten-and-grow above. js/app.js adds/removes
-   .is-punching for the animation's own duration around every toggle() —
-   a separate, momentary press feedback, layered on top of whatever the
-   hover state already has the button doing rather than replacing it. */
-.ctrl--play:hover { filter: drop-shadow(0 0 10px rgba(255, 255, 255, .3)); }
-.ctrl--play[data-state='playing'] { filter: drop-shadow(0 0 9px rgba(255, 255, 255, .3)); }
+/* js/app.js adds/removes .is-punching for the animation's own duration
+   around every toggle() — a separate, momentary press feedback, layered
+   on top of whatever the hover state already has the button doing
+   rather than replacing it. */
 /* White for as long as it's actually playing, hovered or not — not just
    on hover the way every other .ctrl still works. Higher specificity
    (class + attribute) than the shared .ctrl's plain color:#999, so this
@@ -1651,7 +1684,7 @@ html.is-remembered .gate { display: none; }
        desktop ratio gives it. Floor/ceiling bumped a little further on
        top of that for the glass card's own padding, same as the shared
        default above. */
-    --panel: clamp(380px, min(88vh, 100vw), 730px);
+    --panel: clamp(392px, min(90vh, 100vw), 750px);
     /* considerably smaller relative to the viewport than the desktop
        ratio (was min(136vh,245vw) — over 2x the viewport width, so only
        its near-vertical side edges ever showed): sized instead to sit
@@ -1672,19 +1705,21 @@ html.is-remembered .gate { display: none; }
      is up more often than not) has to give — see the note on .stage's
      `100dvh` above, and on .gate__input's font-size, for the two other
      things that were fighting this same fit-without-scrolling goal.
-     Slightly more top than bottom now (was matched) — the same small
-     downward nudge as the shared desktop rule above, kept modest here
-     since a phone's own vertical budget is already tight. */
-  .stage { padding: clamp(88px, 13.5vh, 118px) 0 clamp(64px, 9.5vh, 86px); }
-  /* Narrower inset than the shared desktop one (was 20-46px, tightened
-     to 12-28px) — --panel itself is already pinned to 100vw on every
+     More top than bottom — the same downward nudge as the shared
+     desktop rule above, widened along with the latest --panel bump so
+     the now-bigger artwork doesn't crowd the ring's own top edge (the
+     ring is positioned independently via --ring-y, so it doesn't move
+     with the player — this is what keeps clearance between the two). */
+  .stage { padding: clamp(98px, 15vh, 130px) 0 clamp(56px, 8vh, 78px); }
+  /* Narrower inset than the shared desktop one (tightened again, was
+     12-28px) — --panel itself is already pinned to 100vw on every
      portrait phone (width, not height, is always the binding term in
      that min() on anything taller than it is wide), so bumping --panel
      further does nothing more for a phone specifically; this inset is
      the actual remaining lever for "bigger" there. Still leaves a real
      margin either side, just a tighter one. */
   .player {
-    width: calc(100% - 2 * clamp(12px, 5vw, 28px));
+    width: calc(100% - 2 * clamp(8px, 3.5vw, 20px));
     padding: 12px 14px 14px;
   }
 
