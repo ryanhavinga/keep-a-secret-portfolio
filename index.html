@@ -185,11 +185,17 @@ try {
                      own content bounds — the wider of the two, since the
                      muted glyph's speaker+✕ span less) so the glyph sits
                      at the same scale and position in both states; only
-                     the content swaps. preserveAspectRatio="none" on the
-                     svg stretches that shared box to fill the square
-                     button edge to edge (~20% horizontal squeeze from a
-                     536:426 source aspect, same tradeoff as before —
-                     checked visually, not noticeable at this size).
+                     the content swaps. Left at the default
+                     preserveAspectRatio (xMidYMid meet) rather than
+                     "none" — that stretched the shared box to fill the
+                     square button edge to edge, but broke the muted
+                     icon's clipPath-based reveal on iOS Safari, which
+                     doesn't handle clip-path referencing a local
+                     clipPath under a non-uniform (preserveAspectRatio=
+                     none) scale reliably. Letterboxed top/bottom instead
+                     now (536:426 source aspect within a square box) —
+                     visibly not edge to edge, but every browser renders
+                     the muted state correctly, which matters more.
 
                      Both source files reuse one path for more geometry
                      than they show, relying on a clipPath to reveal only
@@ -200,7 +206,7 @@ try {
                      and referenced exactly as those files define them
                      rather than hand-trimming the path data itself. -->
                 <svg class="vol-toggle__icon" viewBox="476.710938 12.003906 536.25 426.246094"
-                     preserveAspectRatio="none" aria-hidden="true">
+                     aria-hidden="true">
                   <defs>
                     <clipPath id="vt-mute-speaker"><path d="M 476.710938 12.003906 L 768.460938 12.003906 L 768.460938 438.25 L 476.710938 438.25 Z"/></clipPath>
                     <clipPath id="vt-mute-x"><path d="M 791.902344 42 L 950 42 L 950 410.570312 L 791.902344 410.570312 Z"/></clipPath>
