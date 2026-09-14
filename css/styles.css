@@ -549,9 +549,9 @@ body.is-unlocked .leds {
    Still shares .social's own bottom offset with .footer-credit, so the
    baseline the two actually align on holds — only the top edge now
    rises a little past the footer text's own, rather than matching it
-   exactly. */
+   exactly. Raised again (29px -> 34px). */
 @media (min-width: 761px) {
-  .social { width: 29px; }
+  .social { width: 34px; }
 }
 .social svg {
   /* block, not the default inline — an inline replaced element leaves a
