@@ -1248,65 +1248,8 @@
        for real once it actually happens. Two independent "ready" flags,
        gated by generation so a second change landing before the first
        finishes cancels its pending pulse rather than firing two. */
-    /* A tiny synthesised click, not a sample — nothing to fetch or
-       license, same reasoning as the gate's own woosh() (js/app.js,
-       Gate, below). A short noise transient through a highpass filter
-       for the actual "tick", plus a quiet low sine pop underneath for a
-       bit of body, both gone inside 90ms. This is the real felt-or-heard
-       feedback on an iPhone specifically: iOS Safari has never
-       implemented the Vibration API at all (see hapticPulse below), so
-       there is nothing for navigator.vibrate to do there regardless of
-       how well the animations are synced — this plays instead, on every
-       platform, right alongside whatever vibrate() also managed. A
-       fresh AudioContext per call, closed the moment it's done — same
-       one-shot pattern as woosh(), nothing left running between ticks.
-       iOS also only allows audio to start from inside a real user
-       gesture the first time on a page; every track change here is one
-       except the very rare auto-advance at a track's natural end, which
-       this silently no-ops on there rather than force. */
-    function trackTick() {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      let ctx;
-      try { ctx = new AC(); } catch (_) { return; }
-
-      const t = ctx.currentTime, dur = .09;
-
-      const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let n = 0; n < data.length; n++) data[n] = Math.random() * 2 - 1;
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-
-      const hp = ctx.createBiquadFilter();
-      hp.type = 'highpass';
-      hp.frequency.value = 3200;
-
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(.0001, t);
-      gain.gain.exponentialRampToValueAtTime(.5, t + .003);
-      gain.gain.exponentialRampToValueAtTime(.0001, t + dur);
-
-      const pop = ctx.createOscillator();
-      pop.type = 'sine';
-      pop.frequency.setValueAtTime(520, t);
-      pop.frequency.exponentialRampToValueAtTime(220, t + dur);
-      const popGain = ctx.createGain();
-      popGain.gain.setValueAtTime(.0001, t);
-      popGain.gain.exponentialRampToValueAtTime(.16, t + .004);
-      popGain.gain.exponentialRampToValueAtTime(.0001, t + dur);
-
-      src.connect(hp).connect(gain).connect(ctx.destination);
-      pop.connect(popGain).connect(ctx.destination);
-
-      src.start(t); src.stop(t + dur);
-      pop.start(t); pop.stop(t + dur);
-      src.onended = () => ctx.close();
-    }
-
     let hapticGen = 0, hapticCoverReady = false, hapticTextReady = false;
     function hapticPulse() {
-      if (SOUND_ENABLED) trackTick();
       triggerHaptic();   // real Taptic tick on iOS, navigator.vibrate() elsewhere — see triggerHaptic, top of file
     }
     function hapticCheck(gen) {

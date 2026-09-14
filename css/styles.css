@@ -708,10 +708,15 @@ body.is-unlocked .leds {
    keyboard at all, but that also makes this the thing the page's own
    shared :focus-visible rule above outlines — a thin ring drawn right
    around the whole square block, artwork included, the moment a ←/→
-   press is what gave it focus. Silenced here specifically rather than
-   loosening the shared rule itself, which other, genuinely-tabbed-to
-   controls (the scrub slider, links) still want to keep. */
-.block--player:focus-visible { outline: none; }
+   press is what gave it focus. By request, silenced for every
+   focusable thing inside the player now, not just the block itself —
+   the scrub slider, the volume fader, the transport buttons all sit
+   close enough together that a keyboard ring on any one of them still
+   read as "a box around the player" — rather than loosening the shared
+   :focus-visible rule itself, which everything outside the player
+   (links, the gate input) still wants to keep. */
+.block--player:focus-visible,
+.block--player :focus-visible { outline: none; }
 /* A flat horizontal slide, nothing more. The block leaving centre blurs
    and fades as it travels out of frame; the one arriving comes in from the
    opposite edge blurred and sharpens as it settles. No scale: shrinking a
@@ -1338,6 +1343,16 @@ body.is-unlocked .leds {
    hover state already has the button doing rather than replacing it. */
 .ctrl--play:hover { filter: drop-shadow(0 0 10px rgba(255, 255, 255, .3)); }
 .ctrl--play[data-state='playing'] { filter: drop-shadow(0 0 9px rgba(255, 255, 255, .3)); }
+/* White for as long as it's actually playing, hovered or not — not just
+   on hover the way every other .ctrl still works. Higher specificity
+   (class + attribute) than the shared .ctrl's plain color:#999, so this
+   wins outright while playing; .ctrl:hover above still wins once paused
+   again (same specificity, but the one live/matching at that point),
+   which is what lets the button stay white through a pause if the
+   pointer never actually left it, and only fade back to grey once it
+   does. Nothing new needed for either half of that — nowhere else
+   overrides .ctrl's own color once this stops matching. */
+.ctrl--play[data-state='playing'] { color: #fff; }
 @keyframes ctrl-play-punch {
   0%   { transform: scale(1); }
   45%  { transform: scale(.8); }
@@ -1349,9 +1364,12 @@ body.is-unlocked .leds {
    binnen naar buiten". The outgoing icon does the same in reverse.
    Both properties now share the one curve (opacity was the generic
    keyword `ease`, transform var(--ease) — two different curves on the
-   same motion is exactly what read as not smooth) and a longer span
-   (was .38s) for a more graceful grow/shrink instead of a quick pop. */
-.ctrl__icon { position: absolute; transition: opacity .5s var(--ease), transform .5s var(--ease); }
+   same motion is exactly what read as not smooth). Settled at .35s —
+   quicker than the .5s this had grown to (itself a lengthening from an
+   original .38s "quick pop"), now that the matched-transform-lists fix
+   above means a desktop hover no longer fights it for the same frames;
+   still a grow/shrink rather than the pop .38s alone read as. */
+.ctrl__icon { position: absolute; transition: opacity .35s var(--ease), transform .35s var(--ease); }
 /* the triangle's own weight sits toward its left edge, and the pause bars'
    toward theirs a little too once thickened — both nudged right by the
    same amount so they land on the same optical centre, not just the same
