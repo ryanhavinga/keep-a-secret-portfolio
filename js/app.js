@@ -916,10 +916,10 @@
     }
 
     /* Tucked in behind the playing cover, a closer sliver showing each
-       side than before — brought in further still (13% -> 10.5%, was
-       19% before that) for a tidier stack now that it's static rather
-       than something a drag used to pull wide open. No scale and no
-       opacity fade: a side cover
+       side than before — brought in further still (10.5% -> 8%, was 13%
+       and 19% before that) for a tidier stack now that it's static
+       rather than something a drag used to pull wide open. No scale and
+       no opacity fade: a side cover
        reading dimmer is the veil pseudo-element below, a flat overlay
        rather than a transparency change on the cover itself, which on a
        3-track stack (every cover is always centred or one of the two
@@ -943,7 +943,7 @@
          corners fixed while only the top moves) — nothing extra to keep
          in sync for either. */
       c.style.transform =
-        `translate(-50%, -50%) translateX(${(d * 10.5).toFixed(2)}%) `
+        `translate(-50%, -50%) translateX(${(d * 8).toFixed(2)}%) `
         + `scale(var(--cover-hover-scale, 1)) skewX(var(--cover-tilt, 0deg))`;
     }
 
