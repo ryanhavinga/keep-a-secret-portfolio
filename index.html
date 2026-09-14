@@ -1,6 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+/* Runs before anything else in the document — deliberately the very
+   first thing in <head>, ahead of even the stylesheet link. The gate's
+   own markup appears early in <body>, and on a real network (not this
+   file arriving instantly over localhost) a large HTML document can
+   paint in chunks as they stream in — a script placed right after the
+   gate's markup (the previous approach here) was still in a race with
+   that: nothing stops the browser from painting the gate's chunk before
+   a later chunk containing the un-hiding script has even arrived. A
+   class set on <html> this early has no such race — css/styles.css is
+   itself render-blocking, so by the time there's anything to paint at
+   all, the CSS rule keyed on this class (see html.is-remembered .gate
+   in css/styles.css) is already in effect, regardless of how the body
+   streams in after it. 'kas-entered' is hardcoded rather than read off
+   CONFIG.gate, which js/config.js hasn't loaded yet at this point — but
+   the key only ever gets set when remember was already on, so its bare
+   presence is the right check on its own. Gate.init() (js/app.js) still
+   runs its own complete version of this later and does the actual
+   el.remove() — this only ever needs to keep the gate invisible for
+   the (now impossible-to-flash) moment before that runs. */
+try {
+  if (sessionStorage.getItem('kas-entered') === '1') {
+    document.documentElement.classList.add('is-remembered');
+  }
+} catch (_) {}
+</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Keep A Secret — Private Listening</title>
@@ -46,26 +72,6 @@
     </form>
   </div>
 </div>
-<script>
-/* Runs synchronously, the moment the parser reaches it — before the
-   browser has painted anything, and well before js/app.js (loaded at
-   the very end of body) gets a chance to run its own, fuller version of
-   this same check. Without this, a fast refresh of an already-remembered
-   session could paint the gate for a frame or more before app.js caught
-   up and hid it — a visible flash of the password screen on every quick
-   reload. 'kas-entered' is hardcoded rather than read off CONFIG.gate,
-   which js/config.js hasn't loaded yet at this point in the parse — but
-   the key only ever gets set in the first place when remember was on,
-   so its bare presence is already the right check. Gate.init() (js/app.js)
-   still runs its own complete version of this after — harmless, since
-   el?.remove() and adding is-unlocked are both idempotent either way. */
-try {
-  if (sessionStorage.getItem('kas-entered') === '1') {
-    document.querySelector('[data-gate]')?.remove();
-    document.body.classList.add('is-unlocked');
-  }
-} catch (_) {}
-</script>
 
 <!-- cinematic environment layers -->
 <div class="env" aria-hidden="true">

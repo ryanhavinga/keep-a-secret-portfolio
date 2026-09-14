@@ -1403,33 +1403,23 @@
     const prevTrack = () => load(position() > 4 ? i : i - 1, playing);
     const nextTrack = () => load(i + 1, playing);
 
-    function seekFromEvent(e) {
-      const r = el.scrub.getBoundingClientRect();
-      const p = clamp((e.clientX - r.left) / r.width, 0, 1);
-      const d = duration();
-      if (fallback) fakeTime = p * d; else audio.currentTime = p * d;
-      /* through paint() rather than writing the bar directly, so the cached
-         values above stay in step with what is actually on screen */
-      paint();
-    }
-
-    /* Live dragging used to call seekFromEvent on every pointermove, so
-       the real audio.currentTime followed the finger continuously —
-       during playback that meant it was audibly fast-forwarding the
-       whole way through a drag, not just landing somewhere once you let
-       go. Worse, dragging all the way to the right kept re-setting
-       currentTime to (at or past) duration on every single move event
-       still fired while held there, which could re-trigger the audio
-       element's own 'ended' handler (load(i+1, true)) more than once in
-       a row — read as rapidly skipping through several tracks back to
-       back, and inconsistently so depending on exactly how many move
-       events landed before release.
-       previewFromEvent is the fix: it paints where a release would land
-       — the fill and the live clock — without ever touching
+    /* Every scrub gesture — tap, hold-and-release-in-place, or a genuine
+       drag — used to call a version of this that set audio.currentTime
+       directly, whether from pointerdown or every subsequent pointermove.
+       During playback that meant it was audibly fast-forwarding for the
+       entire time a finger was down, not just once it lifted — and
+       holding at the far right kept re-setting currentTime to (at or
+       past) duration on every move event still firing while held there,
+       which could re-trigger the audio element's own 'ended' handler
+       (load(i+1, true)) more than once in a row: read as rapidly
+       skipping through several tracks back to back, and inconsistently
+       so depending on exactly how many move events landed before
+       release. previewFromEvent is the fix: it paints where a release
+       would land — the fill and the live clock — without ever touching
        audio.currentTime/fakeTime itself. scrubRelease below is the only
-       place that actually commits it, exactly once, so 'ended' can only
-       ever fire at most once per gesture, right at release, same as a
-       real seek. */
+       place that actually commits it, exactly once per gesture, so
+       'ended' can only ever fire at most once, right at release, same
+       as a real seek always should. */
     let scrubPreviewP = null;
     function previewFromEvent(e) {
       const r = el.scrub.getBoundingClientRect();
@@ -1553,8 +1543,15 @@
           scrubbing = true;
           el.scrub.classList.add('is-held');   // the track's own thickness — see styles.css
           el.scrub.setPointerCapture(e.pointerId);
-          seekFromEvent(e);   // a plain tap lands here and nowhere else — the
-                               // full .18s ease plays out, untouched by is-scrubbing
+          /* previewFromEvent even here, not a real seek — holding down
+             and going nowhere used to jump the track immediately on
+             touch, before there was any way to tell a press-and-hold
+             apart from a quick tap. Every gesture now previews on down
+             and commits exactly once on release (below); a genuinely
+             quick tap still reads as instant, since its release follows
+             within a handful of milliseconds of the down that already
+             painted the preview there. */
+          previewFromEvent(e);
         });
         el.scrub.addEventListener('pointermove', e => {
           if (!scrubbing) return;
@@ -1565,23 +1562,18 @@
              rather than a timer off pointerdown itself: a timer was
              cutting the tap's own animation short after one frame
              regardless of whether the gesture was still just a tap,
-             which defeated the point of it entirely. previewFromEvent,
-             not seekFromEvent — see the note on it above: this only
-             paints where a release would land, the actual seek happens
-             once, on release, below. */
+             which defeated the point of it entirely. */
           el.scrub.classList.add('is-scrubbing');
           previewFromEvent(e);
         });
         const scrubRelease = e => {
           if (!scrubbing) return;
           scrubbing = false;
-          const wasScrubbing = el.scrub.classList.contains('is-scrubbing');
           el.scrub.classList.remove('is-scrubbing', 'is-held');
           el.scrub.releasePointerCapture(e.pointerId);
-          /* the actual seek, committed exactly once — a plain tap (no
-             movement) already seeked for real back in pointerdown, so
-             this only fires for a genuine drag, and only the one time. */
-          if (wasScrubbing && scrubPreviewP !== null) {
+          /* the actual seek, committed exactly once, on every release —
+             tap, hold-and-release-in-place, or a genuine drag alike. */
+          if (scrubPreviewP !== null) {
             const d = duration();
             if (fallback) fakeTime = scrubPreviewP * d; else audio.currentTime = scrubPreviewP * d;
             paint();

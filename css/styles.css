@@ -1292,6 +1292,14 @@ body.is-unlocked .leds {
 /* ============================================================
    THE GATE
    ============================================================ */
+/* Set synchronously by the very first thing in index.html's <head> —
+   see the note there — if an already-remembered session's own flag is
+   already in sessionStorage. This rule is what actually keeps the gate
+   invisible for the already-remembered case: css/styles.css is itself
+   render-blocking, so it's in effect before there's anything on the
+   page to paint at all, regardless of how the rest of the document
+   streams in after it. */
+html.is-remembered .gate { display: none; }
 .gate {
   position: fixed; inset: 0; z-index: 100;
   display: grid; place-items: center;
