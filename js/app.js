@@ -11,6 +11,14 @@
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const SOUND_ENABLED = true;   // the gate woosh — set false to mute it again
+  /* Off by request: real Vibration-API haptics (Android and everything
+     else that isn't iOS) were never verifiable from here — no Android
+     device to actually feel the result on, and shipping an untested
+     physical sensation to real visitors' hands isn't a good trade for a
+     nice-to-have. triggerHaptic() below still gets called at exactly the
+     same moments either way, so flipping this back to true is the whole
+     re-enable, nothing else to wire back up. */
+  const HAPTICS_ENABLED = false;
 
   /* Shared by the volume fader (real playback volume is hardware-buttons-
      only on iOS by policy) and by triggerHaptic below (no Vibration API
@@ -77,6 +85,7 @@
     document.body.appendChild(hapticSwitchLabel);
   }
   function triggerHaptic(duration = 15) {
+    if (!HAPTICS_ENABLED) return;
     if (IS_IOS) {
       if (!hapticSwitchLabel) mountHapticSwitch();
       hapticSwitchLabel?.click();
@@ -1588,6 +1597,13 @@
     let volDragging = false, muted = false;
     function setVolume(v, { persist = true } = {}) {
       v = clamp(v, 0, 1);
+      /* Dragging (or clicking) the fader down to the very bottom now taps
+         the mute icon on by itself, and off again the moment the fader
+         moves off zero — setMuted below is what actually drives the icon
+         (.is-muted) as well as audio.muted, so this stays correct for
+         real playback too, not just the glyph. Defined below but callable
+         here regardless — a plain function declaration, hoisted. */
+      setMuted(v === 0);
       audio.volume = v;
       const pct = `${(v * 100).toFixed(1)}%`;
       el.volFill.style.height = pct;
@@ -1794,7 +1810,6 @@
           closeVolume();
         });
         el.volTrack.addEventListener('pointerdown', e => {
-          if (muted) setMuted(false);   // adjusting the fader by hand always means "audible"
           volDragging = true;
           el.volTrack.setPointerCapture?.(e.pointerId);
           volumeFromEvent(e);   // a plain tap lands here and nowhere else — the
@@ -1825,8 +1840,8 @@
         el.volTrack.addEventListener('pointerup', volRelease);
         el.volTrack.addEventListener('pointercancel', volRelease);
         el.volTrack.addEventListener('keydown', e => {
-          if (e.key === 'ArrowUp')   { e.preventDefault(); if (muted) setMuted(false); setVolume(audio.volume + .05); }
-          if (e.key === 'ArrowDown') { e.preventDefault(); if (muted) setMuted(false); setVolume(audio.volume - .05); }
+          if (e.key === 'ArrowUp')   { e.preventDefault(); setVolume(audio.volume + .05); }
+          if (e.key === 'ArrowDown') { e.preventDefault(); setVolume(audio.volume - .05); }
         });
 
         /* the artwork's width is a flex-layout result (driven by available
@@ -2067,6 +2082,21 @@
 
     const remembers = () => cfg.remember !== false;
 
+    /* SHA-256 of the (trimmed, uppercased) candidate, hex-encoded — what
+       actually gets compared against js/config.js's passwordHash below,
+       instead of the real password sitting there in plain text for
+       anyone who opens the file to just read straight off. Doesn't turn
+       this into real security (see the note on CONFIG.gate in
+       config.js) — a short password's hash is still crackable by anyone
+       determined enough — but it does stop the one attack this was
+       actually worried about: a link forwarded around, and whoever it
+       lands on peeking at the page source for the password itself
+       rather than asking whoever sent it. */
+    async function sha256Hex(str) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     return {
       /* `enter` runs on both paths — it is whatever should happen once the
          room is on screen. `unlocked` runs only when a password was
@@ -2080,7 +2110,7 @@
            ambient light animations run at all — there is no gate here to
            hide behind, so they may as well start immediately. */
         const straightIn = () => { document.body.classList.add('is-unlocked'); el?.remove(); enter(); };
-        if (!el || !cfg.password) return straightIn();
+        if (!el || !cfg.passwordHash) return straightIn();
 
         let seen = false;
         if (remembers()) { try { seen = sessionStorage.getItem(KEY) === '1'; } catch (_) {} }
@@ -2088,11 +2118,12 @@
 
         const form = $('[data-gate-form]', el);
         const input = $('[data-gate-input]', el);
-        const want = String(cfg.password).trim().toUpperCase();
+        const wantHash = String(cfg.passwordHash).trim().toLowerCase();
 
-        form.addEventListener('submit', e => {
+        form.addEventListener('submit', async e => {
           e.preventDefault();
-          if (input.value.trim().toUpperCase() !== want) {
+          const gotHash = await sha256Hex(input.value.trim().toUpperCase());
+          if (gotHash !== wantHash) {
             el.classList.remove('is-wrong');
             void el.offsetWidth;                 // restart the shake
             el.classList.add('is-wrong');

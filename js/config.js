@@ -5,20 +5,38 @@
 
 const CONFIG = {
   /* ---------- THE GATE ----------
-     A doorman for an invite-only link, not real security. This password
-     sits in this file, which anyone can read by viewing source, and the
-     portfolio markup is in the page whether they type it or not. It stops
-     the link being passed around; it does not stop anyone who looks. If
-     the material behind it ever needs actually protecting, put the site
-     behind your host's own password (Netlify and Cloudflare both do this
+     A doorman for an invite-only link, not real security. The portfolio
+     markup is already in the page whether someone types the password or
+     not, and this only ever runs in the visitor's own browser — nothing
+     server-side is checking anything. It stops the link being casually
+     passed around; it does not stop anyone determined. If the material
+     behind it ever needs actually protecting, put the site behind your
+     host's own password (Netlify and Cloudflare both do this
      server-side) instead of this.
 
-     password : set to null to remove the gate entirely.
+     passwordHash : a SHA-256 hash of the real password, not the password
+                    itself — so it isn't just sitting here in plain text
+                    for anyone who opens this file to read straight off.
+                    Set to null to remove the gate entirely.
+
+                    To set or change the password: open this page in any
+                    browser, open its JavaScript console, and run —
+
+                      await crypto.subtle.digest('SHA-256',
+                        new TextEncoder().encode('yournewpassword'))
+                        .then(b => [...new Uint8Array(b)]
+                        .map(x => x.toString(16).padStart(2, '0')).join(''))
+
+                    — typing the password in capitals (the gate compares
+                    case-insensitively, always against the uppercase
+                    form), then paste the hex string it prints below.
+
      remember : stay in for the rest of this browser tab. false asks again
                 on every reload.
   ------------------------------------------------------------ */
   gate: {
-    password: 'SEP26',
+    // SHA-256 of "SEP26"
+    passwordHash: 'd324ca2db4d1e8d85c21cb35336fc96de500e4e5ce0aa38823ff205a95369efe',
     remember: true
   },
 

@@ -1487,7 +1487,10 @@ html.is-remembered .gate { display: none; }
   position: fixed; inset: 0; z-index: 100;
   display: grid; place-items: center;
   padding: 32px;
-  background: #000;
+  /* matches .page-contact's own background exactly, rather than a flat
+     #000 — the same soft vignette both places now. */
+  background:
+    radial-gradient(120% 90% at 50% 30%, #0e0e11 0%, #08080a 44%, #030304 70%, #000 100%);
   /* Everything behind this — topbar, player, artwork — is already on
      screen at full opacity the instant the gate starts to go (see the
      note on Gate.init in js/app.js), so this one transition is the whole
@@ -1514,20 +1517,14 @@ html.is-remembered .gate { display: none; }
   letter-spacing: .015em; word-spacing: -.3em;
   text-transform: uppercase;
 }
-/* white and a size down from the mark, same wordmark-sub scale used
-   elsewhere on the site (.wordmark__sub in the topbar) */
-.gate__sub {
-  margin: 8px 0 0;
-  font-family: var(--display); font-weight: 400;
-  font-size: 11px; letter-spacing: .3em; text-indent: .3em;
-  text-transform: uppercase;
-  color: var(--white);
-}
+/* was 14px, back when this sat below .gate__sub ("Demo Portal", removed)
+   — closer to the mark now that it's the very next line, and brighter
+   (was --w-30) by request. */
 .gate__eyebrow {
-  margin: 14px 0 0;
+  margin: 6px 0 0;
   font-size: 9px; letter-spacing: .42em; text-indent: .42em;
   text-transform: uppercase;
-  color: var(--w-30);
+  color: var(--w-72);
 }
 
 .gate__form {
@@ -1540,7 +1537,12 @@ html.is-remembered .gate { display: none; }
   padding: 12px 4px;
   background: none; border: 0;
   border-bottom: 1px solid var(--hairline);
-  font-family: var(--display); font-weight: 400;
+  /* Plain sans rather than --display (Monument Extended) — a password
+     input never actually renders its typed characters, only the native
+     mask dot glyph repeated, and Monument Extended's own version of that
+     glyph reads as a stretched oval rather than a round dot. --sans's
+     own is a plain circle. */
+  font-family: var(--sans); font-weight: 400;
   /* iOS Safari zooms the whole page in on focus for any input under 16px,
      and since the gate's submit is intercepted with preventDefault rather
      than a real navigation, nothing ever resets that zoom afterward — the
@@ -1577,10 +1579,10 @@ html.is-remembered .gate { display: none; }
 .gate.is-wrong .gate__input { border-bottom-color: var(--w-48); }
 @keyframes refuse {
   0%, 100% { transform: translateX(0); }
-  18% { transform: translateX(-7px); }
-  38% { transform: translateX(6px); }
-  58% { transform: translateX(-4px); }
-  78% { transform: translateX(2px); }
+  18% { transform: translateX(-4px); }
+  38% { transform: translateX(3px); }
+  58% { transform: translateX(-2px); }
+  78% { transform: translateX(1px); }
 }
 
 /* ============================================================
