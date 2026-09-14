@@ -1175,8 +1175,65 @@
        for real once it actually happens. Two independent "ready" flags,
        gated by generation so a second change landing before the first
        finishes cancels its pending pulse rather than firing two. */
+    /* A tiny synthesised click, not a sample — nothing to fetch or
+       license, same reasoning as the gate's own woosh() (js/app.js,
+       Gate, below). A short noise transient through a highpass filter
+       for the actual "tick", plus a quiet low sine pop underneath for a
+       bit of body, both gone inside 90ms. This is the real felt-or-heard
+       feedback on an iPhone specifically: iOS Safari has never
+       implemented the Vibration API at all (see hapticPulse below), so
+       there is nothing for navigator.vibrate to do there regardless of
+       how well the animations are synced — this plays instead, on every
+       platform, right alongside whatever vibrate() also managed. A
+       fresh AudioContext per call, closed the moment it's done — same
+       one-shot pattern as woosh(), nothing left running between ticks.
+       iOS also only allows audio to start from inside a real user
+       gesture the first time on a page; every track change here is one
+       except the very rare auto-advance at a track's natural end, which
+       this silently no-ops on there rather than force. */
+    function trackTick() {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      let ctx;
+      try { ctx = new AC(); } catch (_) { return; }
+
+      const t = ctx.currentTime, dur = .09;
+
+      const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let n = 0; n < data.length; n++) data[n] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 3200;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(.0001, t);
+      gain.gain.exponentialRampToValueAtTime(.5, t + .003);
+      gain.gain.exponentialRampToValueAtTime(.0001, t + dur);
+
+      const pop = ctx.createOscillator();
+      pop.type = 'sine';
+      pop.frequency.setValueAtTime(520, t);
+      pop.frequency.exponentialRampToValueAtTime(220, t + dur);
+      const popGain = ctx.createGain();
+      popGain.gain.setValueAtTime(.0001, t);
+      popGain.gain.exponentialRampToValueAtTime(.16, t + .004);
+      popGain.gain.exponentialRampToValueAtTime(.0001, t + dur);
+
+      src.connect(hp).connect(gain).connect(ctx.destination);
+      pop.connect(popGain).connect(ctx.destination);
+
+      src.start(t); src.stop(t + dur);
+      pop.start(t); pop.stop(t + dur);
+      src.onended = () => ctx.close();
+    }
+
     let hapticGen = 0, hapticCoverReady = false, hapticTextReady = false;
     function hapticPulse() {
+      if (SOUND_ENABLED) trackTick();
       /* iOS Safari has never implemented the Vibration API at all — not
          for an ordinary page, not for a homescreen-installed one — so
          navigator.vibrate is simply undefined there and this quietly
@@ -1423,21 +1480,19 @@
     }
     const toggle = () => { punchPlay(); playing ? pause() : play(); };
 
-    /* EXPERIMENT: caps how often tick() below can call paint() while
-       playing — a different code path from everything tried on the perf
-       HUD so far (all CSS/light-side). audio.currentTime tends to read
-       erratically for the first second or so right after audio.src is
-       reassigned and .load() is called (js/app.js's load()), while the
-       new source is still buffering — and paint() runs unthrottled on
-       every rAF tick while playing, so an erratic position() during
-       exactly that window could mean far more frequent DOM writes to
-       .scrub__fill/.scrub__head than the steady ~1-in-12-frames a stable
-       position needs. The perf HUD's spikes ran ~70-100ms apart, which
-       is suspiciously regular for "occasional" — this caps paint() to
-       roughly that same cadence deliberately, so if this is the actual
-       cause the spikes should thin out noticeably, not just shift. */
-    const PAINT_INTERVAL = 66;   // ~15/sec — the .18s fill/head transition covers the rest
-    let lastPaintAt = 0;
+    /* Used to cap paint() to ~15 calls/sec while playing (a throttling
+       EXPERIMENT, guarding against a suspected perf cost that turned out
+       not to be this). Reverted: at that cadence, .scrub__fill's own
+       .18s transition was catching up in bursts between writes rather
+       than reading as one continuous sweep — every ~66ms a chunk of
+       travel would land and ease in, then sit still until the next
+       write, over and over, which is exactly what read as the bar
+       stepping rather than filling. paint() runs on every rAF tick
+       again now; at the fine 1/1000 step resolution below, most frames
+       still don't actually touch the DOM (a real change in the rounded
+       step, not the frame rate, is still what gates a write) — this
+       just lets it write as often as the position genuinely moves,
+       instead of on a fixed clock that didn't line up with it. */
     function tick(now) {
       if (playing && fallback && !scrubbing) {
         fakeTime += (now - lastTick) / 1000;
@@ -1449,10 +1504,7 @@
          and re-deriving the bar position sixty times a second for a
          playhead that was standing still. Every other thing that moves the
          playhead — load(), a seek, metadata arriving — paints for itself. */
-      if (playing && !scrubbing && now - lastPaintAt > PAINT_INTERVAL) {
-        lastPaintAt = now;
-        paint();
-      }
+      if (playing && !scrubbing) paint();
       requestAnimationFrame(tick);
     }
 
@@ -1666,17 +1718,24 @@
         } catch (_) {}
         setVolume(savedVolume, { persist: false });
 
-        /* iOS Safari makes audio.volume read-only in practice — assigning
-           to it silently does nothing, by design (Apple reserves volume
-           for the hardware buttons alone). Detected once, here: an actual
-           assignment either sticks or it doesn't. If it doesn't, the
-           whole draggable fader has nothing real to control, so it's
-           skipped entirely below in favour of what still does work on
-           iOS — audio.muted — wired as a direct tap-to-mute instead of
-           the open-a-fader dance. */
-        audio.volume = .0001;
-        const volumeControllable = audio.volume !== 1;
-        setVolume(savedVolume, { persist: false });   // whichever of the two actually applies
+        /* iOS Safari (and every other browser on iOS — Chrome, Firefox,
+           all of them are forced onto the same WebKit engine there)
+           makes real playback volume hardware-buttons-only by policy.
+           Used to be detected at runtime instead — write a throwaway
+           value to audio.volume, then check whether it actually stuck.
+           That doesn't hold up on a real iPhone: on current iOS/WebKit
+           the *property* round-trips completely normally (read back
+           whatever was just assigned), even though the real audible
+           output never moves — so the probe reported "controllable",
+           the fader opened, and dragging it visibly moved but silently
+           did nothing, which is exactly what this looked like live.
+           Platform-detected instead: nothing at runtime to be fooled by.
+           iPadOS 13+ reports as a plain Mac (navigator.platform ===
+           'MacIntel'), so a real Mac is told apart from an iPad by
+           touch support — a Mac has none. */
+        const IS_IOS = /iP(hone|od|ad)/.test(navigator.platform)
+          || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const volumeControllable = !IS_IOS;
 
         /* first click opens the fader; a second click landing directly
            on the icon while it's already open mutes instead of closing

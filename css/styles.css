@@ -78,7 +78,7 @@
      cross-fade over this span, rather than any colour interpolating over
      it. Lengthening it is cheap again — the cost that used to scale with
      this number is what the banks removed. */
-  --tint: 2s;
+  --tint: 4s;
   --ease-tint: cubic-bezier(.3, .05, .3, .95);
 
   /* Cut to .3s/.5s during the drag-lag investigation, to isolate whether
@@ -704,6 +704,14 @@ body.is-unlocked .leds {
   will-change: transform, opacity, filter, scale;
   -webkit-tap-highlight-color: transparent;
 }
+/* tabindex="0" (index.html) is what lets ←/→ step tracks with the
+   keyboard at all, but that also makes this the thing the page's own
+   shared :focus-visible rule above outlines — a thin ring drawn right
+   around the whole square block, artwork included, the moment a ←/→
+   press is what gave it focus. Silenced here specifically rather than
+   loosening the shared rule itself, which other, genuinely-tabbed-to
+   controls (the scrub slider, links) still want to keep. */
+.block--player:focus-visible { outline: none; }
 /* A flat horizontal slide, nothing more. The block leaving centre blurs
    and fades as it travels out of frame; the one arriving comes in from the
    opposite edge blurred and sharpens as it settles. No scale: shrinking a
@@ -1347,11 +1355,23 @@ body.is-unlocked .leds {
 /* the triangle's own weight sits toward its left edge, and the pause bars'
    toward theirs a little too once thickened — both nudged right by the
    same amount so they land on the same optical centre, not just the same
-   geometric one */
-.ctrl__icon--play { transform: translateX(6%); }
-.ctrl__icon--pause { transform: translateX(6%); }
-.ctrl--play[data-state='playing'] .ctrl__icon--play  { opacity: 0; transform: scale(0); }
-.ctrl--play[data-state='paused']  .ctrl__icon--pause { opacity: 0; transform: scale(0); }
+   geometric one. Kept as part of BOTH states' transform below (never
+   dropped, only ever joined by scale()) — the resting and hidden states
+   need matching transform FUNCTION LISTS (translateX() then scale() on
+   both sides), not just matching end results, or the browser can't
+   interpolate the two per-component on the compositor and falls back to
+   decomposing full matrices every frame instead. That fallback was the
+   actual cause of the icon swap reading as janky on desktop specifically:
+   .ctrl--play also gets a continuous hover transform there (.ctrl:hover
+   below, never active on iPhone — touch has no real hover), so the two
+   competing matrix decompositions on the same element were landing in
+   the same handful of frames. Plain, matching transform lists both sides
+   let this run as a cheap scale-only interpolation instead, hover or
+   not. */
+.ctrl__icon--play { transform: translateX(6%) scale(1); }
+.ctrl__icon--pause { transform: translateX(6%) scale(1); }
+.ctrl--play[data-state='playing'] .ctrl__icon--play  { opacity: 0; transform: translateX(6%) scale(0); }
+.ctrl--play[data-state='paused']  .ctrl__icon--pause { opacity: 0; transform: translateX(6%) scale(0); }
 
 /* Out of the flex flow on purpose. .covers takes whatever height this
    column has left over, so a note appearing under the controls used to
@@ -1608,7 +1628,7 @@ html.is-remembered .gate { display: none; }
        desktop ratio gives it. Floor/ceiling bumped a little further on
        top of that for the glass card's own padding, same as the shared
        default above. */
-    --panel: clamp(362px, min(84vh, 100vw), 704px);
+    --panel: clamp(380px, min(88vh, 100vw), 730px);
     /* considerably smaller relative to the viewport than the desktop
        ratio (was min(136vh,245vw) — over 2x the viewport width, so only
        its near-vertical side edges ever showed): sized instead to sit
@@ -1633,11 +1653,15 @@ html.is-remembered .gate { display: none; }
      downward nudge as the shared desktop rule above, kept modest here
      since a phone's own vertical budget is already tight. */
   .stage { padding: clamp(88px, 13.5vh, 118px) 0 clamp(64px, 9.5vh, 86px); }
-  /* a little narrower than the shared desktop inset — a phone's own
-     screen is already snug, so the glass card reads better with a bit
-     more of it visible around the artwork */
+  /* Narrower inset than the shared desktop one (was 20-46px, tightened
+     to 12-28px) — --panel itself is already pinned to 100vw on every
+     portrait phone (width, not height, is always the binding term in
+     that min() on anything taller than it is wide), so bumping --panel
+     further does nothing more for a phone specifically; this inset is
+     the actual remaining lever for "bigger" there. Still leaves a real
+     margin either side, just a tighter one. */
   .player {
-    width: calc(100% - 2 * clamp(20px, 8vw, 46px));
+    width: calc(100% - 2 * clamp(12px, 5vw, 28px));
     padding: 12px 14px 14px;
   }
 
