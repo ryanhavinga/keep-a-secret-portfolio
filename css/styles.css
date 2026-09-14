@@ -320,12 +320,17 @@ body.is-entering .light-surge {
    opacity, so it lifts the dots without filling the gaps between them */
 .ring--core {
   --o: .45;
+  /* band widened 1.5x — every stop scaled around the shared 88.5% centre
+     (unchanged) rather than shifted, so this stays centred on the same
+     line the wash layers and .leds' mask below are keyed to. Was
+     83.5/86.5/90.5/93.5, each an offset of -5/-2/+2/+5 from 88.5; now
+     -7.5/-3/+3/+7.5. */
   background: radial-gradient(closest-side,
-      transparent 0 83.5%,
-      rgb(var(--ring) / .16) 86.5%,
+      transparent 0 81%,
+      rgb(var(--ring) / .16) 85.5%,
       rgb(var(--ring) / .4) 88.5%,
-      rgb(var(--ring) / .16) 90.5%,
-      transparent 93.5%);
+      rgb(var(--ring) / .16) 91.5%,
+      transparent 96%);
   filter: blur(8px);
   animation-duration: 7.2s;
 }
@@ -383,12 +388,14 @@ body.is-entering .light-surge {
   position: absolute; inset: 0;
   opacity: var(--o);
   mix-blend-mode: screen;
-  /* the band, matched to the ring layers above: 86.5%→90.5% lit, feathered
-     from 83.5% and out to 94%. Half the width it used to be. */
+  /* the band, matched to .ring--core above: widened 1.5x the same way —
+     was 86.5%→90.5% lit, feathered from 83.5% and out to 94% (offsets
+     -5/-2/+2/+5.5 from the shared 88.5% centre); now 85.5%→91.5%,
+     feathered from 81% out to 96.75%. */
   -webkit-mask-image: radial-gradient(circle calc(var(--ring-size) / 2) at 50% var(--ring-y),
-      transparent 0 83.5%, #000 86.5% 90.5%, transparent 94%);
+      transparent 0 81%, #000 85.5% 91.5%, transparent 96.75%);
   mask-image: radial-gradient(circle calc(var(--ring-size) / 2) at 50% var(--ring-y),
-      transparent 0 83.5%, #000 86.5% 90.5%, transparent 94%);
+      transparent 0 81%, #000 85.5% 91.5%, transparent 96.75%);
   /* stepped — see the note on .ring's own flicker above */
   animation: flicker 7.8s steps(40, end) infinite;
   will-change: opacity;   /* see the note on .ring's own will-change above */
@@ -1066,32 +1073,38 @@ body.is-unlocked .leds {
      on this element's height at all, so doubling it on hold can't push
      the timeline row — or anything below it — around. */
   position: absolute; top: 50%; left: 0; right: 0;
-  /* the hold-to-thicken effect below is a scaleY on this same transform
-     rather than an animated height — height forces a layout+paint on
-     every single frame it changes, which on a lower-powered phone reads
-     as exactly the low-frame-rate stutter this was: scaleY is a plain
-     compositor transform, so the browser can animate it smoothly off
-     the main thread instead. .scrub__fill (height:100% below) is a
-     child, so it visually stretches along with its parent's own scaleY
-     for free — no separate animation needed on it either. */
-  transform: translateY(-50%) scaleY(1);
+  /* Back to animating height directly rather than a scaleY transform.
+     scaleY was worth it while this thickness change was entangled with
+     a continuous, per-pointermove drag loop — animating height there
+     really did force a layout+paint every single frame for as long as
+     a drag lasted. It no longer is: previewFromEvent (js/app.js) now
+     drives the live drag entirely through .scrub__fill's own width, and
+     is-held only ever toggles twice per gesture (press, release), so
+     this is back to being a plain, bounded, twice-per-interaction CSS
+     transition — cheap regardless of which property drives it. Worth
+     reverting because scaleY had a real cost of its own: it stretches
+     the ALREADY-ROUNDED corners non-uniformly (border-radius is
+     computed against this element's own unscaled height, so scaleY
+     turns each circular cap into an ellipse), which read as less
+     rounded at the held size specifically. Animating height directly
+     means border-radius is always computed against the real, current
+     height, so the caps stay genuinely circular at 6px and 10px alike. */
+  transform: translateY(-50%);
   height: 6px;
   /* a large, clamped radius rather than a fixed 2px one — a fixed value
      reads as proportionally squarer the thicker the bar gets; this stays
-     a full pill at 6px or scaled up alike, since border-radius isn't
-     touched by the scaleY at all */
+     a full pill at 6px or 10px alike */
   border-radius: 999px;
   background: #3a3a3d;
   overflow: hidden;
-  transition: transform .45s var(--ease);
+  /* a bit quicker than before (was .45s) */
+  transition: height .32s var(--ease);
 }
 /* .is-held, not .is-scrubbing — held is true from the moment the pointer
    goes down, whether or not it ever actually moves; .is-scrubbing only
    lands once real dragging starts (see the note below), which would
-   leave a plain, unmoving tap never seeing this at all. scaleY(1.667)
-   takes the 6px resting height to 10px, same growth (+4px) the old
-   4px -> 8px jump had. */
-.scrub.is-held .scrub__track { transform: translateY(-50%) scaleY(1.667); }
+   leave a plain, unmoving tap never seeing this at all. */
+.scrub.is-held .scrub__track { height: 10px; }
 .scrub__fill {
   height: 100%; width: 0;
   background: #fff;
@@ -1187,14 +1200,39 @@ body.is-unlocked .leds {
   display: grid; place-items: center;
   border-radius: 50%;
   opacity: 1;
+  /* a bit grey at rest, brightening to full white only on a real hover
+     (below) — fill/stroke on the icons themselves now read currentColor
+     rather than a hardcoded #fff, so this one property drives all of it.
+     Solid and fully opaque rather than a translucent rgba(255,255,255,.6)
+     — these icons carry both a fill AND a stroke (the stroke there just
+     to round corners / bulk out thin paths, meant to be invisible at
+     matching color), and a transparent colour lets the two paint over
+     each other where the stroke straddles the fill's own edge, doubling
+     up into a visibly brighter rim right along it. Solid, opaque colour
+     paints the same either way no matter how many times it overlaps
+     itself, so that rim can't appear at all. */
+  color: #999;
   /* skips the ~300ms the browser otherwise waits to see whether a tap is
      going to turn into a double-tap-to-zoom — real on iOS Safari even with
      width=device-width set, and enough on its own for a tap on a small
      target to feel like it "didn't take" the first time */
   touch-action: manipulation;
-  transition: transform .8s var(--ease), opacity .6s ease;
+  /* transform was .8s — presumably tuned for a hover-lift this button no
+     longer had by the time of a later pass ("no hover movement, by
+     request", the old note on .ctrl--play:hover below). Now that hover
+     genuinely moves it again, .8s read as sluggish for that; matched to
+     .scrub__track's own .32s hold-to-thicken pace instead (same "grows a
+     bit, smoothly" feeling in both places), color riding along at the
+     same span. */
+  transition: transform .32s var(--ease), opacity .6s ease, color .32s var(--ease);
 }
-.ctrl svg { fill: none; stroke: #fff; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+.ctrl svg { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
+/* real hover only — a touchscreen fakes :hover on whatever a tap last
+   landed on, which would otherwise leave a button looking permanently
+   brightened/grown after every press */
+@media (hover: hover) and (pointer: fine) {
+  .ctrl:hover { color: #fff; transform: scale(1.08); }
+}
 
 .ctrl--side {
   /* a noticeably bigger jump than before (was clamp(30px,7.6cqw,41px))
@@ -1203,14 +1241,19 @@ body.is-unlocked .leds {
      timeline; only the buttons themselves grow. */
   width: clamp(38px, 9.6cqw, 52px); height: clamp(38px, 9.6cqw, 52px);
   filter: drop-shadow(0 0 5px rgba(255, 255, 255, .18));
-  transition: opacity .6s ease, filter .6s var(--ease);
+  /* transition is a shorthand — it doesn't merge across rules the way
+     individual properties do, so .ctrl's own transform/color transitions
+     would otherwise just be silently replaced by this one entirely
+     rather than added to. Repeated here (and on .ctrl--play below) with
+     everything this variant needs, opacity/filter included. */
+  transition: transform .32s var(--ease), opacity .6s ease, color .32s var(--ease), filter .6s var(--ease);
 }
 .ctrl--side:hover { filter: drop-shadow(0 0 8px rgba(255, 255, 255, .26)); }
 /* filled to match the play button rather than the shared hairline .ctrl
    svg rule — the stroke stays on at a modest width just to bulk out the
    bar (an open path, so it has no fill area of its own) and round the
    triangle's corners */
-.ctrl--side svg { width: 68%; fill: #fff; stroke-width: 2.6; }
+.ctrl--side svg { width: 68%; fill: currentColor; stroke-width: 2.6; }
 
 /* A solid filled glyph rather than a ring around a hairline icon — no
    border, no plate, just the shape itself at a size that makes it the
@@ -1224,13 +1267,14 @@ body.is-unlocked .leds {
   border: 0;
   background: none;
   filter: drop-shadow(0 0 7px rgba(255, 255, 255, .22));
-  transition: opacity .6s ease, filter .6s var(--ease);
+  /* see the same note on .ctrl--side above — repeated in full here too */
+  transition: transform .32s var(--ease), opacity .6s ease, color .32s var(--ease), filter .6s var(--ease);
 }
 /* filled rather than the shared hairline .ctrl svg rule — the stroke
    stays on at a modest width just to round the triangle's corners
    (stroke-linejoin) and bulk out the pause bars, which are open paths
    and have no fill area of their own to speak of */
-.ctrl--play svg { width: 60%; fill: #fff; stroke: #fff; stroke-width: 1.6; stroke-linejoin: round; }
+.ctrl--play svg { width: 60%; fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
 /* Two solid rects rather than a thick stroked line — a stroke's round cap
    is a full semicircle (as wide as the bar itself), which reads as a pill,
    not "subtly rounded". `rx` gives an actual, small corner radius instead.
@@ -1239,11 +1283,11 @@ body.is-unlocked .leds {
    attempt to style these bars was overridden and never actually rendered.
    Scoped through the parent class here so it actually wins. */
 .ctrl--play .ctrl__icon--pause { stroke: none; }
-/* a touch brighter on hover and while actually playing — filter only,
-   never transform: no hover movement, by request. The only motion left
-   on this button is the punch below, on an actual press. js/app.js adds/
-   removes .is-punching for the animation's own duration around every
-   toggle(). */
+/* a touch brighter on hover and while actually playing, on top of the
+   shared .ctrl:hover brighten-and-grow above. js/app.js adds/removes
+   .is-punching for the animation's own duration around every toggle() —
+   a separate, momentary press feedback, layered on top of whatever the
+   hover state already has the button doing rather than replacing it. */
 .ctrl--play:hover { filter: drop-shadow(0 0 10px rgba(255, 255, 255, .3)); }
 .ctrl--play[data-state='playing'] { filter: drop-shadow(0 0 9px rgba(255, 255, 255, .3)); }
 @keyframes ctrl-play-punch {
@@ -1254,8 +1298,12 @@ body.is-unlocked .leds {
 .ctrl--play.is-punching { animation: ctrl-play-punch .36s var(--ease); }
 /* the icon swap itself: whichever icon is coming in grows from nothing
    at its own centre out to full size, rather than just fading — "van
-   binnen naar buiten". The outgoing icon does the same in reverse. */
-.ctrl__icon { position: absolute; transition: opacity .38s ease, transform .38s var(--ease); }
+   binnen naar buiten". The outgoing icon does the same in reverse.
+   Both properties now share the one curve (opacity was the generic
+   keyword `ease`, transform var(--ease) — two different curves on the
+   same motion is exactly what read as not smooth) and a longer span
+   (was .38s) for a more graceful grow/shrink instead of a quick pop. */
+.ctrl__icon { position: absolute; transition: opacity .5s var(--ease), transform .5s var(--ease); }
 /* the triangle's own weight sits toward its left edge, and the pause bars'
    toward theirs a little too once thickened — both nudged right by the
    same amount so they land on the same optical centre, not just the same
