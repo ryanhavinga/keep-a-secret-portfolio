@@ -895,20 +895,25 @@ body.is-unlocked .leds {
   aspect-ratio: auto;
   height: 82%;
   /* Overrides .cover's transform transition wholesale (the shorthand
-     doesn't merge) to drop the elastic overshoot for the two side
-     covers — the bounce reads as a deliberate "landing" flourish on the
-     one cover actually taking focus; on the side covers, which are
-     just quietly stepping over one slot, the same overshoot looked like
-     a twitch. Same duration as .cover's own, just the plain ease back
-     instead of --ease-elastic. */
-  transition: transform .36s var(--ease), box-shadow .4s var(--ease);
+     doesn't merge) — not just to drop the elastic overshoot any more,
+     but to drop motion entirely. A side cover now jumps straight to its
+     new slot, no animation at all: the bounce is a "landing" flourish
+     meant for the one cover actually taking focus, and even the plain,
+     non-bouncy ease this replaced still read as an unwanted little hop
+     on the two that are supposed to just be sitting there in the
+     background, most noticeably on the one cover a 3-item circular
+     stack always has swap sides directly (left slot to right slot or
+     back) on every single step — js/app.js's placeCovers() no longer
+     needs its old teleport-to-the-mirrored-edge trick to hide that
+     sweep either, since there's nothing left to sweep. */
+  transition: none;
 }
 .cover--side::after {
   content: '';
   position: absolute; inset: 0;
-  /* lighter veil than before (was .38) — the side covers read as easier
-     to actually make out now, still clearly dimmer than the playing one */
-  background: rgba(4, 4, 5, .22);
+  /* Darker than before (was .22) — read as too close to the playing
+     cover's own brightness at that lower alpha. */
+  background: rgba(4, 4, 5, .5);
   transition: background 1.1s var(--ease);
 }
 

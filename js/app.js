@@ -843,11 +843,18 @@
     /* The artwork no longer tracks a swipe at all (see the note on .cover
        in styles.css) — it only ever moves when a track actually changes,
        so `d` is always exactly -1, 0 or 1 here. Kept as its own function
-       from when it did handle a live drag rather than folded away,
-       since the teleport-jump logic below still earns its keep on every
-       plain track change (next/prev is still one cover swapping sides
-       every single step, circular-3-stack math unchanged) and reads
-       clearest staying close to paintCover. */
+       from when it did handle a live drag rather than folded away, since
+       it still reads clearest staying close to paintCover.
+
+       Used to also carry a teleport-jump for whichever cover swaps
+       sides directly (left slot to right slot or back) on every single
+       step — inherent to a 3-item circular stack, the "prev" cover is
+       always exactly the next "next" cover too. That existed to hide a
+       visible sweep straight across the stack behind an instant,
+       invisible jump to the mirrored far edge first. .cover--side now
+       has no transition at all (css/styles.css) — every side cover
+       jumps straight to its new slot with no animation regardless, so
+       there's nothing left for that trick to need to hide. */
     function placeCovers() {
       const n = tracks.length;
       if (!lastD || lastD.length !== n) {
@@ -860,35 +867,9 @@
       covers.forEach((c, j) => {
         const d0 = (j - i + n) % n;
         const near = d0 === 0 ? 0 : d0 === 1 ? 1 : d0 === n - 1 ? -1 : null;
-        let d;
-
-        if (near !== null) {
-          /* Parked on the wrong side to enter smoothly — jump it to the
-             mirrored far position first, invisibly, then let it slide in
-             from there. With exactly 3 tracks every cover sits at exactly
-             -1, 0 or +1 at rest (never further out), so the old
-             `Math.abs(lastD[j]) > 1` guard here never actually matched a
-             sign flip in ordinary next/prev use — only a cover already
-             out past ±1 mid-drag tripped it. That left the one cover
-             that has to swap sides on every single step (inherent to a
-             3-item circular stack: the "prev" cover is always exactly the
-             next "next" cover too) visibly sweeping straight across the
-             stack instead of entering from its edge like this branch
-             intends. `lastD[j] !== 0` is the correct guard: only a cover
-             that was actually sitting on a side (not centred) needs the
-             teleport, regardless of how far out it was. */
-          if (near !== 0 && lastD[j] !== 0 && Math.sign(lastD[j]) !== Math.sign(near)) {
-            c.style.transition = 'none';
-            paintCover(c, Math.sign(near) * 2);
-            void c.offsetWidth;          // force the jump to land before re-enabling
-            c.style.transition = '';
-          }
-          d = near;
-        } else {
-          /* still off to one side — keep extending the same way it was
-             already headed rather than re-deriving a fresh shortest path */
-          d = lastD[j] < 0 ? d0 - n : d0;
-        }
+        /* still off to one side — keep extending the same way it was
+           already headed rather than re-deriving a fresh shortest path */
+        const d = near !== null ? near : (lastD[j] < 0 ? d0 - n : d0);
 
         lastD[j] = d;
         const a = Math.abs(d);
