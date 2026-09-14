@@ -1124,35 +1124,42 @@ body.is-unlocked .leds {
 }
 .vol-toggle:hover, .vol-toggle.is-open { color: #fff; }
 .vol-toggle__icon {
+  /* forced square regardless of the new icon's own (non-square) viewBox
+     — .vol-toggle is display:grid; place-items:center, which doesn't
+     stretch a grid item to its cell, so a plain height:100% here had
+     nothing definite to resolve against and silently fell back to the
+     svg's intrinsic aspect ratio instead. aspect-ratio:1 forces it
+     regardless of any of that, so preserveAspectRatio="none" on the svg
+     element (index.html) has an actually-square box to stretch into,
+     landing edge to edge the way the old icon did. */
   width: 100%;
+  aspect-ratio: 1;
   fill: currentColor; stroke: currentColor;
   stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
 }
-/* the speaker body is a single compound path (box + triangle) rather
-   than two separate shapes, so the shared stroke above was tracing its
-   internal seam — the box/triangle join — as a visible line straight
-   through the middle of an otherwise solid silhouette. Only the two
-   sound-wave arcs after it are stroke-only (fill: none) and actually
-   need it. */
+/* the speaker glyph (img/Volume icon.svg) is a single fused compound
+   path — body and sound-wave arcs all one shape, cut with fill-rule:
+   evenodd rather than separate strokeable paths the way the icon this
+   replaced worked. The shared stroke above would trace every internal
+   seam evenodd carves out as a visible line, so it's switched off here
+   same as before — this one just never needed it in the first place. */
 .vol-toggle__icon path:first-child { stroke: none; }
-/* muted: the two sound-wave arcs swap for a single diagonal stripe
-   through the speaker — a second click directly on the icon while the
-   fader is already open toggles this, rather than closing the flyout
-   (js/app.js, setMuted). */
+/* muted: a diagonal stripe appears over the glyph — a second click
+   directly on the icon while the fader is already open toggles this,
+   rather than closing the flyout (js/app.js, setMuted). Since the base
+   glyph above is one fused shape now, there's no separate "waves" piece
+   left to hide the way the old icon's did — the slash on top is the
+   only muted indicator. */
 .vol-toggle__mute-line {
   opacity: 0;
-  /* thicker than the arcs it replaces, and overshooting the speaker's
-     own silhouette at both ends — a slash cutting across the whole
-     glyph, not a line traced tightly around it */
-  stroke-width: 2.2;
+  /* scaled up from the old icon's 2.2 to match — this icon's viewBox is
+     roughly 18.5x the old one's (445 units wide vs. 24), and SVG stroke-
+     width is specified in the same coordinate space as the path itself,
+     so the same visual thickness needs the same multiple here */
+  stroke-width: 40;
   transition: opacity .3s var(--ease);
 }
 .vol-toggle.is-muted .vol-toggle__mute-line { opacity: 1; }
-.vol-toggle.is-muted .vol-toggle__icon path:nth-child(2),
-.vol-toggle.is-muted .vol-toggle__icon path:nth-child(3) {
-  opacity: 0;
-  transition: opacity .3s var(--ease);
-}
 
 .controls {
   display: flex; align-items: center; justify-content: center;
