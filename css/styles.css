@@ -881,7 +881,11 @@ body.is-unlocked .leds {
 @media (hover: hover) and (pointer: fine) {
   .covers:not(.is-changing) .cover:not(.cover--side):hover {
     box-shadow: 0 16px 30px -18px rgba(0, 0, 0, .88), inset 0 0 0 1px rgba(255, 255, 255, .12);
-    --cover-hover-scale: 1.035;
+    /* was 1.035 — the same relative grow the transport buttons use
+       (.ctrl:hover, scale(1.08)) reads as far more dramatic at the
+       artwork's own size than at a small button's, so this needs to sit
+       well under that number to feel like the same restrained touch. */
+    --cover-hover-scale: 1.015;
   }
   .covers:not(.is-changing) .cover--side:hover::after { background: rgba(4, 4, 5, 0); }
 }
