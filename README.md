@@ -44,7 +44,7 @@ Set `logoImage: 'img/logo.svg'` to swap the whole wordmark for an image.
 {
   title: 'Nergens Liever',
   artist: 'Gilles',
-  artwork: 'img/track-1.png',                    // square image — 1000×1000 is plenty
+  artwork: 'img/track-1.jpg',                     // square image — 1000×1000 is plenty
   audio: 'audio/track 1 - Nergens Liever.m4a',
   color: '#9d386f',                              // fallback panel colour
   duration: 194                                  // fallback length in seconds

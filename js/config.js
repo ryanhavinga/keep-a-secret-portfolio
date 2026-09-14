@@ -42,7 +42,7 @@ const CONFIG = {
     {
       title: 'Nergens Liever',
       artist: 'Gilles',
-      artwork: 'img/track-1.png',
+      artwork: 'img/track-1.jpg',
       audio: 'audio/track 1 - Nergens Liever.m4a',
       color: '#9d386f',
       duration: 197
@@ -50,7 +50,7 @@ const CONFIG = {
     {
       title: 'Beter dan ooit - Akoestisch',
       artist: 'Gilles',
-      artwork: 'img/track-3.png',
+      artwork: 'img/track-3.jpg',
       audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',
       color: '#022137',
       duration: 167
@@ -74,7 +74,7 @@ const CONFIG = {
     {
       title: 'Boemerang',
       artist: 'Gilles',
-      artwork: 'img/track-2.png',
+      artwork: 'img/track-2.jpg',
       audio: 'audio/track 2 - Boemerang.m4a',
       color: '#c465de',
       duration: 189
