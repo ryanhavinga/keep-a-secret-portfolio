@@ -748,9 +748,22 @@
            still up, move that cost earlier so it's finished before
            there's anything to compete with. */
         const priority = n === 0 ? 'high' : 'low';
-        c.innerHTML = t.artwork
+        /* .cover__tilt wraps the actual art — the tip-and-settle
+           (css/styles.css, .is-tipping-left/right) animates skewX
+           directly on ITS OWN transform, entirely separate from
+           .cover's own JS-driven translate/scale below (paintCover).
+           Used to be one shared custom property (--cover-tilt) folded
+           into the same transform chain as the position — technically
+           smooth, but animating a custom property that transform merely
+           references can't run on the compositor the way animating
+           transform directly can; every frame has to be recomputed on
+           the main thread instead, right in the middle of everything
+           else a track change already has running. A dedicated element
+           with its own plain @keyframes animation costs nothing by
+           comparison. */
+        c.innerHTML = `<div class="cover__tilt">${t.artwork
           ? `<img src="${t.artwork}" alt="${t.title} — artwork" draggable="false" decoding="async" fetchpriority="${priority}">`
-          : '<span class="cover__demo"><span>Demo</span></span>';
+          : '<span class="cover__demo"><span>Demo</span></span>'}</div>`;
         c.addEventListener('click', () => {
           if (Carousel.wasDragged() || n === i) return;
           load(n, playing);
@@ -916,35 +929,38 @@
     }
 
     /* Tucked in behind the playing cover, a closer sliver showing each
-       side than before — brought in further still (13% -> 10.5%, was
-       19% before that) for a tidier stack now that it's static rather
-       than something a drag used to pull wide open. No scale and no
-       opacity fade: a side cover
+       side than before — brought in further still (10.5% -> 8%, was 13%
+       and 19% before that) for a tidier stack now that it's static
+       rather than something a drag used to pull wide open. No scale and
+       no opacity fade: a side cover
        reading dimmer is the veil pseudo-element below, a flat overlay
        rather than a transparency change on the cover itself, which on a
        3-track stack (every cover is always centred or one of the two
        sides — there's no fourth, fully hidden slot to fade toward) would
        otherwise show the track behind it through mid-change. */
     function paintCover(c, d) {
-      /* scale(var(--cover-hover-scale, 1)) and skewX(var(--cover-tilt,
-         0deg)) are both a literal, permanent part of this — inline
-         styles always beat an external stylesheet rule for the same
-         property, so a plain CSS `:hover { transform: scale(...) }` (or
-         the side covers' own tip-and-settle animation) could never win
-         against this otherwise. Routing both through custom properties
-         instead sidesteps that entirely: css/styles.css only ever
-         touches --cover-hover-scale/--cover-tilt, and transform picks up
-         whatever those resolve to right here, defaulting to no growth
-         and no tilt everywhere else. The grow rides the exact same
-         transform transition (and its --ease-elastic bounce, on the
-         front cover) this already had; the tilt rides its own `animation`
-         instead (see .cover--side.is-tipping-left/right — skewX there,
-         deliberately not rotate, is what actually keeps the bottom
-         corners fixed while only the top moves) — nothing extra to keep
-         in sync for either. */
+      /* scale(var(--cover-hover-scale, 1)) is a literal, permanent part
+         of this — inline styles always beat an external stylesheet rule
+         for the same property, so a plain CSS `:hover { transform:
+         scale(...) }` could never win against this otherwise. Routing
+         the grow through a custom property instead sidesteps that
+         entirely: css/styles.css's hover rule only ever touches
+         --cover-hover-scale, and transform picks up whatever that
+         resolves to right here, defaulting to no growth everywhere
+         else. Rides the exact same transform transition (and its
+         --ease-elastic bounce, on the front cover) this already had.
+         The tip-and-settle tilt used to live here too (a --cover-tilt
+         custom property, folded into this same transform), moved out
+         to its own dedicated .cover__tilt element and a plain skewX
+         @keyframes animation instead (see .cover--side.is-tipping-left/
+         right) — a custom property that transform merely references
+         can't run on the compositor the way animating transform
+         directly can, so that was real main-thread cost landing right
+         in the middle of everything else a track change already has
+         running. */
       c.style.transform =
-        `translate(-50%, -50%) translateX(${(d * 10.5).toFixed(2)}%) `
-        + `scale(var(--cover-hover-scale, 1)) skewX(var(--cover-tilt, 0deg))`;
+        `translate(-50%, -50%) translateX(${(d * 8).toFixed(2)}%) `
+        + `scale(var(--cover-hover-scale, 1))`;
     }
 
     /* ---- title/artist carousel ---------------------------------

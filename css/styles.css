@@ -24,11 +24,6 @@
 @property --ring-deep { syntax: '<number>+'; inherits: true; initial-value: 58 16 74; }
 @property --led-b     { syntax: '<number>+'; inherits: true; initial-value: 246 118 226; }
 @property --led-c     { syntax: '<number>+'; inherits: true; initial-value: 255 156 214; }
-/* the background covers' quick tip-and-settle (see .cover--side.is-
-   tipping-left/right further down) — registered so the angle actually
-   interpolates smoothly frame to frame instead of just jumping between
-   each @keyframes stop's value, the same reason the four above are. */
-@property --cover-tilt { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
 
 /* ---------- TOKENS ---------------------------------------- */
 :root {
@@ -923,37 +918,52 @@ body.is-unlocked .leds {
      static jump. */
   transition: none;
 }
+/* Fills .cover exactly (same box .cover img/.cover__demo used to sit
+   in directly) — exists purely so the tip-and-settle below has its own
+   element to animate `transform` on, separate from .cover's own
+   JS-driven translate/scale (paintCover, js/app.js). Animating
+   `transform` directly like this can run entirely on the compositor;
+   an earlier version drove the same skew through a --cover-tilt custom
+   property folded into .cover's own transform instead, which measured
+   smooth in isolation but can't take that same fast path — a custom
+   property feeding into transform via var() has to be recomputed on
+   the main thread every frame, real cost landing right in the middle
+   of everything else a track change already has running (the cover's
+   own position settle, box-shadow, the title/artist swap, the light
+   crossfade). Reported as the whole player suddenly running laggy;
+   this is the fix. */
+.cover__tilt { position: absolute; inset: 0; }
 /* A quick tip-and-settle, not a slide — the side covers' own small
-   flourish now that their position itself is a static, instant jump
-   (above) rather than something that eases anywhere. Only ever lands on
-   the one cover actually swapping sides directly (js/app.js's
+   flourish now that .cover--side's own position is a static, instant
+   jump (above) rather than something that eases anywhere. Only ever
+   lands on the one cover actually swapping sides directly (js/app.js's
    placeCovers() — see the isHop note there); the other side cover, the
    one that just fell back from front, stays completely still.
    `animation`, not `transition`: this needs its own start-peak-return
-   shape regardless of where --cover-tilt happened to already be, which
-   a transition (which only ever eases between two endpoints) can't
+   shape regardless of wherever a still-running tip left off, which a
+   transition (which only ever eases between two endpoints) can't
    express on its own. Restarted from scratch on every placeCovers()
    call the same way .ctrl--play.is-punching is (js/app.js: remove,
    force a reflow, re-add) — without that, calling next/prev again
    before a tip finishes would leave the class already present and do
    nothing the second time.
 
-   --cover-tilt drives a skewX, not a rotate, and that distinction is
-   the whole point: a rotation can't hold both bottom corners perfectly
-   still (fixing 2 points of a rigid rectangle fixes all 4), but a shear
-   can — skewX's own horizontal shift at any point depends only on that
-   point's distance from transform-origin's Y coordinate, never its X,
-   so pinning the origin to the bottom edge (Y 100%) leaves every point
+   A skewX, not a rotate, and that distinction is the whole point: a
+   rotation can't hold both bottom corners perfectly still (fixing 2
+   points of a rigid rectangle fixes all 4), but a shear can — skewX's
+   own horizontal shift at any point depends only on that point's
+   distance from transform-origin's Y coordinate, never its X, so
+   pinning the origin to the bottom edge (Y 100%) leaves every point
    already on that edge — both bottom corners, the entire edge really —
    with zero shift, while the top edge (furthest away) shifts the most.
    Reads as tipping from the bottom, exactly because the bottom is the
    one part of it that's actually staying still. Origin's X half doesn't
    matter for a skewX at all (only Y does), so both directions share the
    same 50% 100%. */
-@keyframes cover-tip-left  { 0%, 100% { --cover-tilt: 0deg; } 32% { --cover-tilt: 3.5deg; } }
-@keyframes cover-tip-right { 0%, 100% { --cover-tilt: 0deg; } 32% { --cover-tilt: -3.5deg; } }
-.cover--side.is-tipping-left  { animation: cover-tip-left  .34s var(--ease); transform-origin: 50% 100%; }
-.cover--side.is-tipping-right { animation: cover-tip-right .34s var(--ease); transform-origin: 50% 100%; }
+@keyframes cover-tip-left  { 0%, 100% { transform: skewX(0deg); } 32% { transform: skewX(3.5deg); } }
+@keyframes cover-tip-right { 0%, 100% { transform: skewX(0deg); } 32% { transform: skewX(-3.5deg); } }
+.cover--side.is-tipping-left  .cover__tilt { animation: cover-tip-left  .34s var(--ease); transform-origin: 50% 100%; }
+.cover--side.is-tipping-right .cover__tilt { animation: cover-tip-right .34s var(--ease); transform-origin: 50% 100%; }
 .cover--side::after {
   content: '';
   position: absolute; inset: 0;
