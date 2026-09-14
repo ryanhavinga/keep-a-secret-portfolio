@@ -381,7 +381,7 @@
     const audio = $('[data-audio]');
     const el = {
       covers: $('[data-covers]'), meta: $('[data-meta]'),
-      fill: $('[data-fill]'), head: $('[data-head]'),
+      fill: $('[data-fill]'),
       cur: $('[data-current]'), dur: $('[data-duration]'),
       play: $('[data-play]'), prev: $('[data-prev]'), next: $('[data-next]'),
       scrub: $('[data-scrub]'), note: $('[data-note]'),
@@ -1317,9 +1317,7 @@
       const step = Math.round(p * 1000);
       if (step !== lastStep) {
         lastStep = step;
-        const pct = `${step / 10}%`;
-        el.fill.style.width = pct;
-        el.head.style.left = pct;
+        el.fill.style.width = `${step / 10}%`;
       }
 
       const cur = time(position());
@@ -1413,6 +1411,33 @@
       /* through paint() rather than writing the bar directly, so the cached
          values above stay in step with what is actually on screen */
       paint();
+    }
+
+    /* Live dragging used to call seekFromEvent on every pointermove, so
+       the real audio.currentTime followed the finger continuously —
+       during playback that meant it was audibly fast-forwarding the
+       whole way through a drag, not just landing somewhere once you let
+       go. Worse, dragging all the way to the right kept re-setting
+       currentTime to (at or past) duration on every single move event
+       still fired while held there, which could re-trigger the audio
+       element's own 'ended' handler (load(i+1, true)) more than once in
+       a row — read as rapidly skipping through several tracks back to
+       back, and inconsistently so depending on exactly how many move
+       events landed before release.
+       previewFromEvent is the fix: it paints where a release would land
+       — the fill and the live clock — without ever touching
+       audio.currentTime/fakeTime itself. scrubRelease below is the only
+       place that actually commits it, exactly once, so 'ended' can only
+       ever fire at most once per gesture, right at release, same as a
+       real seek. */
+    let scrubPreviewP = null;
+    function previewFromEvent(e) {
+      const r = el.scrub.getBoundingClientRect();
+      const p = clamp((e.clientX - r.left) / r.width, 0, 1);
+      scrubPreviewP = p;
+      el.fill.style.width = `${(p * 100).toFixed(1)}%`;
+      el.cur.textContent = time(p * duration());
+      el.scrub.setAttribute('aria-valuenow', Math.round(p * 100));
     }
 
     /* ---- volume -----------------------------------------------
@@ -1533,22 +1558,35 @@
         });
         el.scrub.addEventListener('pointermove', e => {
           if (!scrubbing) return;
-          /* real movement, not just a held tap — from here on the dot and
-             fill should sit under the finger, not ease toward it (that
-             .18s is for playback filling in between updates; dragging it
+          /* real movement, not just a held tap — from here on the fill
+             should sit under the finger, not ease toward it (that .18s
+             is for playback filling in between updates; dragging it
              yourself, it reads as lag). Added on the first actual move
              rather than a timer off pointerdown itself: a timer was
              cutting the tap's own animation short after one frame
              regardless of whether the gesture was still just a tap,
-             which defeated the point of it entirely. */
+             which defeated the point of it entirely. previewFromEvent,
+             not seekFromEvent — see the note on it above: this only
+             paints where a release would land, the actual seek happens
+             once, on release, below. */
           el.scrub.classList.add('is-scrubbing');
-          seekFromEvent(e);
+          previewFromEvent(e);
         });
         const scrubRelease = e => {
           if (!scrubbing) return;
           scrubbing = false;
+          const wasScrubbing = el.scrub.classList.contains('is-scrubbing');
           el.scrub.classList.remove('is-scrubbing', 'is-held');
           el.scrub.releasePointerCapture(e.pointerId);
+          /* the actual seek, committed exactly once — a plain tap (no
+             movement) already seeked for real back in pointerdown, so
+             this only fires for a genuine drag, and only the one time. */
+          if (wasScrubbing && scrubPreviewP !== null) {
+            const d = duration();
+            if (fallback) fakeTime = scrubPreviewP * d; else audio.currentTime = scrubPreviewP * d;
+            paint();
+          }
+          scrubPreviewP = null;
         };
         el.scrub.addEventListener('pointerup', scrubRelease);
         el.scrub.addEventListener('pointercancel', scrubRelease);
@@ -1606,11 +1644,23 @@
           el.volTrack.classList.add('is-dragging');
           volumeFromEvent(e);
         });
-        el.volTrack.addEventListener('pointerup', e => {
+        /* pointerup alone used to be it — but a drag that ends in a
+           pointercancel instead (the browser's own gesture recognition
+           stepping in, losing capture, anything short of a clean release)
+           never fired it, leaving volDragging and is-dragging stuck on
+           permanently. Every fader move after that read as an instant
+           jump with no eased animation at all, since .is-dragging turns
+           the transition off — exactly the intermittent "sometimes no
+           delayed animation" this was. .scrub's own release handler
+           already covers both events (see scrubRelease above); this
+           just brings the volume fader in line with it. */
+        const volRelease = e => {
           volDragging = false;
           el.volTrack.classList.remove('is-dragging');
           el.volTrack.releasePointerCapture?.(e.pointerId);
-        });
+        };
+        el.volTrack.addEventListener('pointerup', volRelease);
+        el.volTrack.addEventListener('pointercancel', volRelease);
         el.volTrack.addEventListener('keydown', e => {
           if (e.key === 'ArrowUp')   { e.preventDefault(); if (muted) setMuted(false); setVolume(audio.volume + .05); }
           if (e.key === 'ArrowDown') { e.preventDefault(); if (muted) setMuted(false); setVolume(audio.volume - .05); }
@@ -1637,7 +1687,24 @@
         new ResizeObserver(syncArtWidth).observe(el.covers);
         syncArtWidth();
 
+        /* .cover and .meta-item's CSS transitions are unconditional (no
+           gating class the way .block's is-animating one is) — without
+           this, the transform load(0) below sets as it calls placeCovers/
+           placeMeta for the very first time animates in from each
+           element's untransformed default position rather than landing
+           silently. Invisible behind a fresh password entry's entrance
+           lamp, but every refresh of an already-remembered session skips
+           straight to content with nothing covering it, which is exactly
+           when this was visible. Transition off, let load(0) paint the
+           real positions, force the jump to land, transition back on —
+           same technique placeCovers already uses per-cover for its own
+           teleport-jump case, just covering every cover and meta-item
+           once up front here instead. */
+        const firstPaintEls = [...covers, ...metaItems.map(m => m.el)];
+        firstPaintEls.forEach(node => { node.style.transition = 'none'; });
         load(0, false);
+        void el.covers.offsetWidth;
+        firstPaintEls.forEach(node => { node.style.transition = ''; });
         requestAnimationFrame(tick);
       },
       pause

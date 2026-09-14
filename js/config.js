@@ -18,7 +18,7 @@ const CONFIG = {
                 on every reload.
   ------------------------------------------------------------ */
   gate: {
-    password: 'AUG26',
+    password: 'SEP26',
     remember: true
   },
 

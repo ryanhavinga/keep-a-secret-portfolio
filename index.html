@@ -46,6 +46,26 @@
     </form>
   </div>
 </div>
+<script>
+/* Runs synchronously, the moment the parser reaches it — before the
+   browser has painted anything, and well before js/app.js (loaded at
+   the very end of body) gets a chance to run its own, fuller version of
+   this same check. Without this, a fast refresh of an already-remembered
+   session could paint the gate for a frame or more before app.js caught
+   up and hid it — a visible flash of the password screen on every quick
+   reload. 'kas-entered' is hardcoded rather than read off CONFIG.gate,
+   which js/config.js hasn't loaded yet at this point in the parse — but
+   the key only ever gets set in the first place when remember was on,
+   so its bare presence is already the right check. Gate.init() (js/app.js)
+   still runs its own complete version of this after — harmless, since
+   el?.remove() and adding is-unlocked are both idempotent either way. */
+try {
+  if (sessionStorage.getItem('kas-entered') === '1') {
+    document.querySelector('[data-gate]')?.remove();
+    document.body.classList.add('is-unlocked');
+  }
+} catch (_) {}
+</script>
 
 <!-- cinematic environment layers -->
 <div class="env" aria-hidden="true">
@@ -145,7 +165,6 @@
             <div class="scrub" data-scrub role="slider" tabindex="0"
                  aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div class="scrub__track"><div class="scrub__fill" data-fill></div></div>
-              <span class="scrub__head" data-head></span>
             </div>
             <!-- volume flyout: rises directly above this button rather than
                  beside the artwork, so it stays anchored to the control

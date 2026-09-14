@@ -1098,29 +1098,15 @@ body.is-unlocked .leds {
   box-shadow: 0 0 10px rgba(255, 255, 255, .6);
   transition: width .18s linear;
 }
-.scrub__head {
-  position: absolute; top: 50%; left: 0;
-  width: 9px; height: 9px;
-  margin-left: -4.5px;
-  border-radius: 50%;
-  background: #fff;
-  transform: translateY(-50%) scale(0);
-  transition: left .18s linear;
-}
-.scrub:hover .scrub__head, .scrub.is-scrubbing .scrub__head { transform: translateY(-50%) scale(1); }
-/* Once actually dragging, both the fill and the dot should sit under the
-   finger rather than easing toward it — the .18s smoothing is there for
-   playback, where it fills in between updates, and reads as lag the
-   moment you're moving it yourself. `is-scrubbing` lands a beat after the
-   initial touch-down (see seekFromEvent's call site in init()), so the
-   very first jump to wherever you tapped still gets that same .18s ease
-   — a tiny, deliberate delay rather than a snap — and only the
-   continued dragging after it is instant. Both properties disabled
-   together: a click snapping the fill instantly while the dot eased
-   in on its own .18s glide behind it was the original version of this
-   bug. */
-.scrub.is-scrubbing .scrub__fill,
-.scrub.is-scrubbing .scrub__head { transition: none; }
+/* Dragging should sit under the finger rather than easing toward it —
+   the .18s smoothing is there for playback, where it fills in between
+   updates, and reads as lag the moment you're moving it yourself.
+   `is-scrubbing` lands a beat after the initial touch-down (see
+   previewFromEvent's call site in init()), so the very first jump to
+   wherever you tapped still gets that same .18s ease — a tiny,
+   deliberate delay rather than a snap — and only the continued
+   dragging after it is instant. */
+.scrub.is-scrubbing .scrub__fill { transition: none; }
 
 /* ---------- volume ------------------------------------------
    The toggle sits inline in the timeline row, sized off the same scale as
@@ -1134,6 +1120,7 @@ body.is-unlocked .leds {
   display: flex;
 }
 .vol-toggle {
+  position: relative;
   display: grid; place-items: center;
   /* a bit smaller than before (was clamp(20px,4.3cqw,25px)) */
   width: clamp(16px, 3.6cqw, 20px); height: clamp(16px, 3.6cqw, 20px);
@@ -1142,6 +1129,22 @@ body.is-unlocked .leds {
   transition: color .5s var(--ease);
 }
 .vol-toggle:hover, .vol-toggle.is-open { color: #fff; }
+/* Touch only — a mouse is precise enough not to need this, and padding
+   the hit area that far on desktop would start stealing clicks meant
+   for the scrub bar or the duration label sitting right next to it.
+   A tap landing anywhere in this invisible, larger ::before still
+   counts as hitting .vol-toggle itself for both opening the fader and
+   the document-level "tapped outside, close it" listener below (e.target
+   resolves to the real element a pseudo-element belongs to, not the
+   pseudo-element), so this only ever makes a near-miss more forgiving —
+   never anything read as "outside" that wasn't already. */
+@media (pointer: coarse) {
+  .vol-toggle::before {
+    content: '';
+    position: absolute;
+    inset: -14px;
+  }
+}
 .vol-toggle__icon {
   /* forced square regardless of the new icon's own (non-square) viewBox
      — .vol-toggle is display:grid; place-items:center, which doesn't
