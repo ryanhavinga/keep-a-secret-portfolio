@@ -877,6 +877,14 @@ body.is-unlocked .leds {
      than before. */
   aspect-ratio: auto;
   height: 82%;
+  /* Overrides .cover's transform transition wholesale (the shorthand
+     doesn't merge) to drop the elastic overshoot for the two side
+     covers — the bounce reads as a deliberate "landing" flourish on the
+     one cover actually taking focus; on the side covers, which are
+     just quietly stepping over one slot, the same overshoot looked like
+     a twitch. Same duration as .cover's own, just the plain ease back
+     instead of --ease-elastic. */
+  transition: transform .36s var(--ease), box-shadow .4s var(--ease);
 }
 .cover--side::after {
   content: '';
@@ -963,7 +971,6 @@ body.is-unlocked .leds {
   bottom: 0; left: 0; width: 100%; height: 100%;
   border-radius: 2px;
   background: #fff;
-  box-shadow: 0 0 10px rgba(255, 255, 255, .6);
   transition: height .45s var(--ease);
 }
 .volume__head {
@@ -972,7 +979,6 @@ body.is-unlocked .leds {
   margin-left: -5.5px; margin-bottom: -5.5px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 16px rgba(255, 255, 255, .8);
   transition: bottom .45s var(--ease);
 }
 .volume__track.is-dragging .volume__fill,
