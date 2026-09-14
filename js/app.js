@@ -12,6 +12,59 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const SOUND_ENABLED = true;   // the gate woosh — set false to mute it again
 
+  /* Shared by the volume fader (real playback volume is hardware-buttons-
+     only on iOS by policy) and by triggerHaptic below (no Vibration API
+     on iOS at all) — both are genuine iOS/WebKit platform restrictions,
+     not runtime-probeable, so both key off this once rather than each
+     guessing at it separately. iPadOS 13+ reports as a plain Mac
+     (navigator.platform === 'MacIntel'), so a real Mac is told apart
+     from an iPad by touch support — a Mac has none. */
+  const IS_IOS = /iP(hone|od|ad)/.test(navigator.platform)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  /* ---- haptic feedback -------------------------------------------
+     navigator.vibrate() is the obvious way to ask for this, and it's
+     exactly what earlier passes here used — except iOS Safari has never
+     implemented the Vibration API at all, for any browser there (Chrome,
+     Firefox and everything else on iOS are all forced onto the same
+     WebKit engine), so vibrate() is simply undefined on an iPhone no
+     matter what. This isn't that: it's the technique the tiny (MIT,
+     no-dep) "tactus" package (https://github.com/aadeexyz/tactus) uses —
+     a hidden native <input type="checkbox" switch> plus its <label>,
+     Safari's own new "switch"-styled checkbox. Toggling a REAL one of
+     those is a native control interaction, and WebKit gives native
+     control interactions their own real Taptic Engine tick as a normal
+     side effect — nothing to do with the Vibration API, so the iOS
+     restriction on that API never applies to it. Built once, off-screen,
+     and reused for every call; a plain label.click() on it is enough to
+     fire the tick, iOS asks for no more "real" a gesture than that.
+     Elsewhere (no Vibration API restriction to route around) this just
+     calls vibrate() directly, same as before. */
+  let hapticSwitchInput = null, hapticSwitchLabel = null;
+  function mountHapticSwitch() {
+    if (hapticSwitchInput) return;
+    hapticSwitchInput = document.createElement('input');
+    hapticSwitchInput.type = 'checkbox';
+    hapticSwitchInput.id = '___kas-haptic-switch___';
+    hapticSwitchInput.setAttribute('switch', '');
+    hapticSwitchInput.style.display = 'none';
+    hapticSwitchInput.setAttribute('aria-hidden', 'true');
+    hapticSwitchInput.tabIndex = -1;
+    document.body.appendChild(hapticSwitchInput);
+    hapticSwitchLabel = document.createElement('label');
+    hapticSwitchLabel.htmlFor = hapticSwitchInput.id;
+    hapticSwitchLabel.style.display = 'none';
+    document.body.appendChild(hapticSwitchLabel);
+  }
+  function triggerHaptic(duration = 15) {
+    if (IS_IOS) {
+      if (!hapticSwitchLabel) mountHapticSwitch();
+      hapticSwitchLabel?.click();
+    } else {
+      try { navigator.vibrate?.(duration); } catch (_) {}
+    }
+  }
+
   const time = s => {
     if (!isFinite(s) || s < 0) s = 0;
     return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -1234,13 +1287,7 @@
     let hapticGen = 0, hapticCoverReady = false, hapticTextReady = false;
     function hapticPulse() {
       if (SOUND_ENABLED) trackTick();
-      /* iOS Safari has never implemented the Vibration API at all — not
-         for an ordinary page, not for a homescreen-installed one — so
-         navigator.vibrate is simply undefined there and this quietly
-         does nothing on iPhone, regardless of how well the two
-         animations above are synced. Android Chrome and other
-         Vibration-API browsers get one short, single tick. */
-      try { navigator.vibrate?.(15); } catch (_) {}
+      triggerHaptic();   // real Taptic tick on iOS, navigator.vibrate() elsewhere — see triggerHaptic, top of file
     }
     function hapticCheck(gen) {
       if (gen === hapticGen && hapticCoverReady && hapticTextReady) hapticPulse();
@@ -1729,12 +1776,9 @@
            output never moves — so the probe reported "controllable",
            the fader opened, and dragging it visibly moved but silently
            did nothing, which is exactly what this looked like live.
-           Platform-detected instead: nothing at runtime to be fooled by.
-           iPadOS 13+ reports as a plain Mac (navigator.platform ===
-           'MacIntel'), so a real Mac is told apart from an iPad by
-           touch support — a Mac has none. */
-        const IS_IOS = /iP(hone|od|ad)/.test(navigator.platform)
-          || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+           IS_IOS (top of file, shared with triggerHaptic) sidesteps that
+           the same way: platform-detected, nothing at runtime to be
+           fooled by. */
         const volumeControllable = !IS_IOS;
 
         /* first click opens the fader; a second click landing directly
