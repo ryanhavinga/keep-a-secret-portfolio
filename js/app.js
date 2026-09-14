@@ -1741,10 +1741,24 @@
 
   /* The sub-line only. The main wordmark is plain text from the first
      frame — one line resolving under a name that is already there reads as
-     a system coming up; both of them doing it reads as an effect. */
+     a system coming up; both of them doing it reads as an effect.
+
+     Gate.init calls this as `enter()` on *every* successful entry, remembered
+     ones included — so navigating to contact.html and back (a real page
+     load, gate already unlocked this session) was replaying the reveal
+     each time. Gated the same way the gate's own remember flag is: once
+     sessionStorage has seen it, later calls just leave fillContent()'s
+     plain text in place, same as decryptReveal already does for reduced
+     motion. */
+  const SUB_INTRO_KEY = 'kas-sub-intro-played';
   function playSubIntro() {
     const sub = $('[data-logo-sub]');
-    if (sub && !sub.hidden) decryptReveal(sub);
+    if (!sub || sub.hidden) return;
+    try {
+      if (sessionStorage.getItem(SUB_INTRO_KEY) === '1') return;
+      sessionStorage.setItem(SUB_INTRO_KEY, '1');
+    } catch (_) {}
+    decryptReveal(sub);
   }
 
   /* The entrance lamp — see `intro-lamp` in styles.css, which is where the
