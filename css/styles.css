@@ -855,9 +855,11 @@ body.is-unlocked .leds {
      needed. .cover img below is object-fit:cover, so the image itself
      crops evenly off its own top and bottom to fill the shorter box —
      a smaller supporting note rather than a second square competing
-     with the one that's actually playing. */
+     with the one that's actually playing. Raised from 74% — still
+     clearly shorter than the full square playing, just less trimmed
+     than before. */
   aspect-ratio: auto;
-  height: 74%;
+  height: 82%;
 }
 .cover--side::after {
   content: '';
