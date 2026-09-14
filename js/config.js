@@ -66,14 +66,6 @@ const CONFIG = {
       duration: 197
     },
     {
-      title: 'Beter dan ooit - Akoestisch',
-      artist: 'Gilles',
-      artwork: 'img/track-3.jpg',
-      audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',
-      color: '#022137',
-      duration: 167
-    },
-    {
       title: 'Hoogtes',
       artist: 'Tim Tiago',
       artwork: null,               // null  ->  DEMO placeholder card
@@ -81,6 +73,14 @@ const CONFIG = {
       color: '#0e0e10',
       duration: 200,
       demo: true
+    },
+    {
+      title: 'Beter dan ooit - Akoestisch',
+      artist: 'Gilles',
+      artwork: 'img/track-3.jpg',
+      audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',
+      color: '#022137',
+      duration: 167
     }
   ],
 
