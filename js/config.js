@@ -35,8 +35,11 @@ const CONFIG = {
                 on every reload.
   ------------------------------------------------------------ */
   gate: {
-    // SHA-256 of "SEP26"
-    passwordHash: 'd324ca2db4d1e8d85c21cb35336fc96de500e4e5ce0aa38823ff205a95369efe',
+    // A single hash string, or a list — any one of them opens the gate.
+    passwordHash: [
+      'd324ca2db4d1e8d85c21cb35336fc96de500e4e5ce0aa38823ff205a95369efe', // "SEP26"
+      '1f4b417790666d9e24d108e598ab1b1eceeb923c7025d4b3c41c205c025a112f'  // "OKT26"
+    ],
     remember: true
   },
 

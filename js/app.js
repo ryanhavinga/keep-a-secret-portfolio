@@ -2121,12 +2121,12 @@
 
         const form = $('[data-gate-form]', el);
         const input = $('[data-gate-input]', el);
-        const wantHash = String(cfg.passwordHash).trim().toLowerCase();
+        const wantHashes = [].concat(cfg.passwordHash).map(h => String(h).trim().toLowerCase());
 
         form.addEventListener('submit', async e => {
           e.preventDefault();
           const gotHash = await sha256Hex(input.value.trim().toUpperCase());
-          if (gotHash !== wantHash) {
+          if (!wantHashes.includes(gotHash)) {
             el.classList.remove('is-wrong');
             void el.offsetWidth;                 // restart the shake
             el.classList.add('is-wrong');
