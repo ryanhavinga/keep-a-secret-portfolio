@@ -2126,6 +2126,18 @@
         form.addEventListener('submit', async e => {
           e.preventDefault();
           const gotHash = await sha256Hex(input.value.trim().toUpperCase());
+
+          /* a password that goes to its own page (cfg.redirects) — it sets
+             that page's flag and leaves, without opening this one */
+          const hop = (cfg.redirects || []).find(r => String(r.passwordHash).trim().toLowerCase() === gotHash);
+          if (hop) {
+            try { sessionStorage.setItem(hop.key, '1'); } catch (_) {}
+            el.classList.remove('is-wrong');
+            el.classList.add('is-leaving');
+            if (window.kasGo) window.kasGo(hop.to); else setTimeout(() => { location.href = hop.to; }, 450);
+            return;
+          }
+
           if (!wantHashes.includes(gotHash)) {
             el.classList.remove('is-wrong');
             void el.offsetWidth;                 // restart the shake

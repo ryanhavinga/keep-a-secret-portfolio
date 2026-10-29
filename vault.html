@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" class="vault-html">
+<head>
+<script>
+/* Same pre-paint trick as index.html's own first script — see the note
+   there. Two flags here: the gate's (shared with the portfolio, so a
+   visitor who already typed the password there walks straight in), and
+   the vault's own, so a second visit inside the same session skips the
+   door and lands in the room rather than sitting through it again. */
+try {
+  if (sessionStorage.getItem('kas-entered') === '1') {
+    document.documentElement.classList.add('is-remembered');
+  }
+  if (sessionStorage.getItem('kas-vault-opened') === '1') {
+    document.documentElement.classList.add('is-vault-opened');
+  }
+} catch (_) {}
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Vault — Keep A Secret</title>
+<meta name="description" content="Finished songs, ready to cut. By invitation only.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#08080a">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Keep A Secret">
+<meta property="og:title" content="Keep A Secret — The Vault">
+<meta property="og:description" content="Finished songs, ready to cut. By invitation only.">
+<meta property="og:url" content="https://keepasecret.nl/vault.html">
+<meta property="og:image" content="https://keepasecret.nl/img/track-1.jpg">
+
+<!-- the two faces the page opens with, fetched in parallel with the CSS
+     rather than discovered by it, so the letters are right on first paint -->
+<link rel="preload" as="font" type="font/otf" href="fonts/MonumentExtended-Ultrabold.otf" crossorigin>
+<link rel="preload" as="font" type="font/otf" href="fonts/MonumentExtended-Regular.otf" crossorigin>
+<link rel="preload" as="image" href="img/vault-poster-portrait.jpg" media="(max-aspect-ratio: 1/1)">
+<link rel="preload" as="image" href="img/vault-poster-landscape.jpg" media="(min-aspect-ratio: 1/1)">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/vault.css">
+<script>
+/* Keeps the lettering out of sight until Monument Extended is in, instead
+   of showing it in the fallback face for a moment and swapping it. Runs
+   after the stylesheets above (a script waits for those), which is what
+   lets document.fonts know the faces exist. Gives up after 1.2s so a slow
+   or failed font can never hold the page back. */
+(function () {
+  var d = document.documentElement, done = function () { d.classList.remove('fonts-wait'); };
+  d.classList.add('fonts-wait');
+  try {
+    Promise.all([document.fonts.load('800 1em "Monument Extended"'), document.fonts.load('400 1em "Monument Extended"')]).then(done, done);
+  } catch (e) { done(); }
+  setTimeout(done, 1200);
+})();
+</script>
+<script src="js/transition.js"></script>
+</head>
+<body class="page-vault">
+
+<!-- The same doorman as the portfolio, sharing its session flag — so this
+     page can be linked to directly without becoming a way round it. -->
+<div class="gate" data-gate>
+  <div class="gate__inner">
+    <p class="gate__mark">Keep A Secret</p>
+    <p class="gate__eyebrow">By invitation</p>
+    <form class="gate__form" data-gate-form>
+      <input class="gate__input" data-gate-input type="password" placeholder="Password"
+             aria-label="Password" autocomplete="off" autocapitalize="characters"
+             autocorrect="off" spellcheck="false" autofocus>
+      <button class="gate__btn" type="submit">Enter</button>
+    </form>
+  </div>
+</div>
+
+<header class="topbar">
+  <a class="wordmark" href="index.html">
+    <span class="wordmark__main">Keep A Secret</span>
+    <span class="wordmark__sub">The Vault</span>
+  </a>
+  <nav class="topbar__links">
+    <a class="tag" href="index.html">Portfolio</a>
+    <a class="tag" href="contact.html">Contact</a>
+  </nav>
+</header>
+
+<!-- ══════════ THE DOOR ══════════
+     The door itself is a 3D scene drawn into the canvas by
+     js/vault3d.bundle.js (source: js/vault3d.src.js); js/vault.js runs the
+     timing and the sound. The whole block is removed once the visitor is
+     inside. Where WebGL can't run, or the visitor has asked for reduced
+     motion, it never shows and the page opens straight onto the boxes. -->
+<div class="vault-intro" data-intro>
+  <canvas class="vault-gl" data-gl aria-hidden="true"></canvas>
+
+  <div class="vault-intro__ui">
+    <p class="vault-intro__eyebrow">Ready to cut</p>
+    <button class="vault-intro__btn" type="button" data-open>Open the vault</button>
+  </div>
+
+  <div class="vault-flood" aria-hidden="true"></div>
+</div>
+
+<!-- ══════════ THE ROOM ══════════ -->
+<main class="vault-room" data-room>
+  <div class="vault-room__light" aria-hidden="true"></div>
+
+  <section class="vault-room__head">
+    <p class="vault-room__eyebrow" data-vault-eyebrow>The Vault</p>
+    <h1 class="vault-room__title" data-vault-heading>Ready to cut</h1>
+    <p class="vault-room__intro" data-vault-intro></p>
+  </section>
+
+  <!-- one safe-deposit box per song, built from CONFIG.vault.tracks -->
+  <ol class="boxes" data-boxes></ol>
+
+  <footer class="vault-room__foot">
+    <p>&copy; Keep A Secret. All Rights Reserved</p>
+    <p>Written &amp; Produced by Keep A Secret</p>
+  </footer>
+</main>
+
+<audio data-audio preload="none"></audio>
+
+<script src="js/config.js"></script>
+<script src="js/vault3d.bundle.js"></script>
+<script src="js/vault.js"></script>
+</body>
+</html>

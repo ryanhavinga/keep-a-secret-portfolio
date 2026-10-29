@@ -44,15 +44,28 @@ try {
 <meta property="og:title" content="Keep A Secret — Demo Portal">
 <meta property="og:description" content="A private listening room. By invitation only.">
 <meta property="og:url" content="https://keepasecret.nl/">
-<meta property="og:image" content="https://keepasecret.nl/img/track-1.jpg">
-<meta property="og:image:width" content="1086">
-<meta property="og:image:height" content="1086">
+<meta property="og:image" content="https://keepasecret.nl/img/og-preview.jpg">
+<meta property="og:image:width" content="1000">
+<meta property="og:image:height" content="1000">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Keep A Secret — Demo Portal">
 <meta name="twitter:description" content="A private listening room. By invitation only.">
-<meta name="twitter:image" content="https://keepasecret.nl/img/track-1.jpg">
+<meta name="twitter:image" content="https://keepasecret.nl/img/og-preview.jpg">
 
+<link rel="preload" as="font" type="font/otf" href="fonts/MonumentExtended-Ultrabold.otf" crossorigin>
+<link rel="preload" as="font" type="font/otf" href="fonts/MonumentExtended-Regular.otf" crossorigin>
 <link rel="stylesheet" href="css/styles.css">
+<!-- The Vault is one click away: fetch its page and scripts quietly in the
+     background so the door is up the instant it's opened, not after a load. -->
+<!-- switched off while the Vault is (put these back with it):
+<link rel="prefetch" href="vault.html">
+<link rel="prefetch" href="css/vault.css">
+<link rel="prefetch" href="js/vault3d.bundle.js" as="script">
+<link rel="prefetch" href="js/vault.js" as="script">
+<link rel="prefetch" href="img/vault-poster-portrait.jpg" as="image" media="(max-aspect-ratio: 1/1)">
+<link rel="prefetch" href="img/vault-poster-landscape.jpg" as="image" media="(min-aspect-ratio: 1/1)">
+-->
+<script src="js/transition.js"></script>
 </head>
 <body>
 
@@ -138,7 +151,11 @@ try {
     <span class="wordmark__main" data-logo-main>Keep A Secret</span>
     <span class="wordmark__sub" data-logo-sub>Portfolio</span>
   </div>
-  <a class="tag" data-tagline href="contact.html">Private Session</a>
+  <nav class="topbar__links">
+    <a class="tag" href="portfolio.html">Portfolio</a>
+    <!-- The Vault is switched off for now: <a class="tag" href="vault.html">The Vault</a> -->
+    <a class="tag" data-tagline href="contact.html">Private Session</a>
+  </nav>
 </header>
 
 <main class="stage">

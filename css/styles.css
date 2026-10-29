@@ -30,6 +30,11 @@
    each @keyframes stop's value, the same reason the four above are. */
 @property --cover-tilt { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
 
+/* Page changes are one fade through black, the same on every page and in every
+   browser — see js/transition.js. (The browser's own cross-document view
+   transition is deliberately not used: it only exists in some browsers and
+   would double up with it.) */
+
 /* ---------- TOKENS ---------------------------------------- */
 :root {
   --display: 'Monument Extended', 'Helvetica Neue', Arial, sans-serif;
@@ -45,7 +50,7 @@
      touch (was 272/700 before the glass card, briefly 300/740 with its
      first, wider padding) to give the card's own padding somewhere to
      come from, rather than eating into the artwork itself */
-  --panel: clamp(304px, min(75vh, 92vw), 764px);
+  --panel: clamp(304px, min(90vh, 92vw), 920px);
   --radius: clamp(28px, 4.6vw, 56px);
 
   /* carousel geometry */
@@ -683,6 +688,15 @@ body.is-unlocked .leds {
   transition: text-shadow .7s var(--ease);
 }
 .tag:hover { text-shadow: 0 0 16px rgba(255, 255, 255, .28); }
+/* "The Vault" and "Contact" side by side top-right — stacked on a phone,
+   where the two of them in a row would run into the wordmark */
+.topbar__links {
+  display: flex; align-items: flex-start;
+  gap: clamp(18px, 2.4vw, 34px);
+}
+@media (max-width: 760px) {
+  .topbar__links { flex-direction: column; align-items: flex-end; gap: 9px; }
+}
 
 /* ============================================================
    STAGE + CAROUSEL
@@ -697,7 +711,7 @@ body.is-unlocked .leds {
      panel down off dead centre, clear of the topbar logo sitting above
      it — any gap between top and bottom shifts the panel down by half
      that gap. */
-  padding: clamp(112px, 15.5vh, 150px) 0 clamp(80px, 11.5vh, 112px);
+  padding: clamp(92px, 12vh, 124px) 0 clamp(56px, 7.5vh, 84px);   /* trimmed so the player can take more of the screen */
 }
 
 .carousel {
@@ -1522,6 +1536,10 @@ html.is-remembered .gate { display: none; }
    while that happens */
 .gate__inner { width: min(340px, 100%); text-align: center; opacity: 1; }
 .gate.is-open .gate__inner { opacity: 0; transition: none; }
+/* a password that sends you to another page: the door's words go quietly,
+   then the page changes */
+.gate__inner { transition: opacity .4s var(--ease); }
+.gate.is-leaving .gate__inner { opacity: 0; pointer-events: none; }
 
 .gate__mark {
   margin: 0;
@@ -1631,14 +1649,17 @@ html.is-remembered .gate { display: none; }
   transition: text-shadow .7s var(--ease);
 }
 .contact__mark:hover { text-shadow: 0 0 30px rgba(255, 255, 255, .5); }
-.contact__back {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .34em;
-  text-indent: .34em;
+.contact__back {                       /* the same lettering as the links on the other pages */
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(12px, 1.4vw, 16px);
+  letter-spacing: .04em;
   text-transform: uppercase;
   color: var(--white);
+  white-space: nowrap;
+  transition: text-shadow .7s var(--ease);
 }
+.contact__back:hover { text-shadow: 0 0 16px rgba(255, 255, 255, .28); }
 
 .contact {
   flex: 1 1 auto;

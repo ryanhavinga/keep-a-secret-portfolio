@@ -26,14 +26,15 @@ This site is live and connected to GitHub + Cloudflare. Read this before making 
 
 ## The push workflow
 
-The user wants edits pushed live immediately once they're good — no need to ask each time or
-wait for an explicit "push it" (standing instruction, given 2026-08-05).
+**Never push (or commit) unless the user explicitly says so in that moment** (instruction given
+2026-10-08, replacing the earlier "push immediately once good" standing permission from
+2026-08-05). Build and verify locally, show the result, then wait for a clear "push it".
 
 1. Make changes locally as normal.
 2. Preview with `python3 -m http.server 4321` (or the browser preview tool) and verify the
    change actually works before pushing — Cloudflare will build whatever's pushed, so this is
    the only check that happens before it's live.
-3. Push straight away once it checks out:
+3. Only when the user explicitly says to push:
    ```bash
    git add -A
    git commit -m "describe the change"
@@ -42,9 +43,8 @@ wait for an explicit "push it" (standing instruction, given 2026-08-05).
 4. That's it — Cloudflare picks up the push on its own, live within ~30-60s at both
    demo-portal.keepasecret.nl and keepasecret.nl.
 
-Still hold off and ask first for anything destructive or hard to reverse (force-push, history
-rewrite, deleting tracked files wholesale) — this standing permission covers ordinary forward
-edits, not those.
+Even with a go-ahead, ask separately before anything destructive or hard to reverse
+(force-push, history rewrite, deleting tracked files wholesale).
 
 ## Things that will break the deploy if forgotten
 
@@ -58,6 +58,9 @@ edits, not those.
   (macOS's `afconvert` can *read* MP3 but has no MP3 *encoder* — this produces AAC, which
   plays natively in every modern browser. Don't try `-f MPG3` for output, it fails.) Then point
   the track's `audio:` field in `js/config.js` at the new `.m4a`, and commit only the `.m4a`.
+- **Never add a `package.json`, `node_modules` or a build step to the repo.** Cloudflare would start
+  running an install/build on every push. `js/vault3d.bundle.js` is a prebuilt bundle of
+  `js/vault3d.src.js` + three.js, built outside the repo — see README, "The Vault door in 3D".
 - `.claude/` (this tool's local session/permission state) is gitignored — never commit it.
 - `.DS_Store` is gitignored too.
 

@@ -1,0 +1,597 @@
+/* ============================================================
+   KEEP A SECRET — PORTFOLIO (portfolio.html)
+   Loaded after css/styles.css, which supplies the fonts, tokens, topbar
+   and door. Two parts: the shelf (a column of big covers, laid back in
+   perspective, each floating a little, its title on the edge) and the
+   focus view (one cover pulled out and turned to face you, info on the
+   right).
+   ============================================================ */
+
+/* styles.css locks <html>/<body> to the viewport for the player's one fixed
+   room; this page is one fixed screen too, so nothing scrolls */
+html.pf-html,
+html.pf-html body {
+  height: 100%;
+  overflow: hidden;                 /* one screen: the page never scrolls */
+}
+
+/* (the shelf is deliberately not hidden here: its big 3D covers have to be drawn while the page
+   is still behind js/transition.js's black, not only once they become visible) */
+html.fonts-wait .pf__bar,
+html.fonts-wait .gate__inner { visibility: hidden; }
+
+.page-pf {
+  background:
+    radial-gradient(120% 60% at 50% 0%, #131316 0%, #08080a 46%, #030304 78%, #000 100%) fixed,
+    #040405;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ---------- the bar ------------------------------------------- */
+.pf__bar {
+  position: absolute; z-index: 20;
+  top: clamp(20px, 3.4vh, 40px);
+  left: clamp(20px, 3.4vw, 48px);
+  right: clamp(20px, 3.4vw, 48px);
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 20px;
+}
+.pf__bar .wordmark { display: block; }
+/* a small masthead, the same proportions as on the publishing page */
+.pf__bar .wordmark__main { font-size: clamp(16px, 1.9vw, 22px); }
+.pf__bar .wordmark__sub {
+  margin-top: clamp(5px, .5vw, 7px);
+  font-size: clamp(7px, .62vw, 9px);
+  letter-spacing: .4em;
+}
+
+/* ---------- the filter pill ------------------------------------ */
+/* Same lettering as the credit line at the foot of the page. A light glass
+   track with a dark slider that glides to the chosen artist. */
+.seg {
+  position: absolute; z-index: 25;
+  top: clamp(18px, 3vh, 36px);
+  left: 50%; transform: translateX(-50%);
+  display: flex;
+  padding: 2px;                     /* a thin rim of the grey pill shows round the slider */
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2); backdrop-filter: blur(16px) saturate(1.2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12), 0 14px 34px -16px rgba(0, 0, 0, .9);
+}
+.seg__thumb {
+  position: absolute; top: 2px; bottom: 2px; left: 0;
+  width: var(--tw, 0px);
+  border-radius: 999px;
+  background: #0a0a0b;
+  transform: translateX(var(--tx, 0px));
+  /* a little overshoot, the way a real switch settles */
+  transition: transform .4s cubic-bezier(.3, 1.2, .45, 1), width .4s cubic-bezier(.3, 1.2, .45, 1);
+}
+.seg__btn {
+  position: relative; z-index: 1;
+  padding: 9px clamp(12px, 1.3vw, 17px);
+  font-family: Helvetica, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;                 /* the same weight in every state, so the segments never change width */
+  line-height: 1;
+  letter-spacing: .08em;
+  color: rgba(255, 255, 255, .76);   /* the ones not chosen sit back; the chosen one is pure white */
+  white-space: nowrap;
+  cursor: pointer;
+  border-radius: 999px;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .4s var(--ease);
+}
+.seg__btn:hover { color: rgba(255, 255, 255, .92); }
+.seg__btn[aria-pressed='true'] { color: #fff; }
+.seg__btn:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+
+/* ---------- the shelf ------------------------------------------ */
+.pf {
+  /* The covers stand upright in a row, all turned toward the middle, and the
+     whole row is meant to be in view at once. Their size comes from the
+     height of the window (what's left under the header, over the credit),
+     and the spacing from its width. */
+  --n: 7;                                          /* set from the track count by portfolio.js */
+  --pad-top: calc(clamp(100px, 14vh, 150px) + 18px);   /* clear of the header and the filter pill above the row */
+  --head: 6px;                                     /* the breath between the header and the row */
+  --sink: clamp(8px, 2vh, 22px);                  /* the whole row sits lower, so a lifted cover keeps clear of the top */
+  --pad-bot: 58px;                                 /* room for the credit line under the row */
+  --w: min(800px, calc(100vh - var(--pad-top) - var(--head) - var(--pad-bot) - 64px));
+  --w: min(800px, calc(100dvh - var(--pad-top) - var(--head) - var(--pad-bot) - 64px));
+  /* distance from one cover's near edge to the next. The row is stretched
+     across the width of the page (the outermost spines sit just inside the
+     edges), but never so far apart that the covers stop belonging together */
+  --p: min(calc(var(--w) * .6), calc((110vw - var(--w) * .06) / max(1, var(--n) - 1)));
+  --t: max(16px, calc(var(--w) * .047));           /* the sleeve's thickness — the width of the spine; never thinner than the lettering can read in */
+  position: relative;
+  padding: calc(var(--pad-top) + var(--sink)) 0 var(--pad-bot);
+}
+/* There's no visible heading — the covers are the page — but the page keeps
+   one for screen readers. */
+.pf__title {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* The row. Every cover is a slab standing on edge, its plane running away
+   from you towards a vanishing point in the middle of the row. So the ones
+   in the middle are seen almost edge-on (only their spine shows) and each
+   one further out shows more of its face — all from one perspective, no
+   per-cover tilt. Covers are NOT in a shared 3D space on purpose: each is
+   drawn on its own, in a set order, so two of them can never intersect or
+   flicker against each other; whichever one you're on is simply drawn on top. */
+.shelf {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  height: var(--w);
+  /* how steep the perspective is: the nearer the viewpoint (the smaller
+     this), the more of its face each cover shows towards the edges of the
+     row. Where a cover's face reaches under its inner neighbour it simply
+     goes behind it — the neighbour is nearer, so it's drawn on top. */
+  z-index: 1;
+  perspective: calc(var(--w) * 1.25);
+  perspective-origin: calc(50% - var(--shift, 0px) + var(--px, 0) * 2.6%) calc(50% + var(--py, 0) * 1.3%);
+  /* when the filter changes, covers sink out of the bottom of the row and
+     the new ones rise in; this is the floor they sink through */
+  clip-path: inset(-120px -100vw -100vh -100vw);
+}
+/* with an odd number the middle cover would be exactly edge-on and
+   invisible, so the viewpoint sits a hair to the left of the middle */
+.pf[data-odd] .shelf,
+.pf[data-odd] .floor { --shift: calc(var(--p) * .42); }
+
+.cd {
+  --h: 280; --s: 60; --l: 38;       /* the spine's tint, set from the artwork by portfolio.js */
+  --x: calc(var(--k, 0) * var(--p));
+  /* all the pointer does is lift a cover a little (--mag is 0..1, eased
+     in JS), so it never moves into its neighbours */
+  --y: calc(var(--mag, 0) * var(--w) * -.1);
+  --drop: 0px;                       /* how far it has sunk below the row (the filter) */
+  position: absolute; top: 0; left: 50%;
+  width: var(--w); height: var(--w);
+  transform-style: preserve-3d;      /* inside one cover: its face and its spine */
+  will-change: transform;
+  /* Its place along the row and its sinking are the individual `translate`
+     property, kept apart from `transform` (the hover lift, written every
+     frame by JS) so each can animate without disturbing the other. Rising
+     back in settles with a touch of overshoot, like it's dropped into place. */
+  translate: var(--x) var(--drop);
+  transition: translate .6s cubic-bezier(.22, 1.04, .3, 1);
+}
+.cd.is-leaving {
+  --drop: 100vh;                     /* all the way down and off the bottom of the screen */
+  transition-duration: .36s;
+  transition-timing-function: cubic-bezier(.5, 0, .85, .45);
+}
+.cd.no-tr { transition: none !important; }
+.cd.is-filtered { visibility: hidden; pointer-events: none; }
+/* left of the middle: hinged on its left edge, face turned to the right;
+   right of it: hinged on its right edge, face turned to the left */
+.cd--l {
+  transform-origin: 0 50%;
+  transform: translate3d(0, var(--y), 0) rotateY(calc(90deg - var(--open, 0deg)));
+}
+.cd--r {
+  margin-left: calc(var(--w) * -1);
+  transform-origin: 100% 50%;
+  transform: translate3d(0, var(--y), 0) rotateY(calc(-90deg + var(--open, 0deg)));
+}
+
+.cd__btn {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.cd__btn:focus-visible .cd__edge { outline: 2px solid #fff; outline-offset: 2px; }
+/* the one that's been pulled out leaves its slot empty, like a shelf — a
+   beat after the big cover has begun to fade in over it, so the swap has no seam */
+.cd.is-out .cd__btn { visibility: hidden; transition: visibility 0s linear .14s; }
+
+.cd__bob {                            /* a plain 3D wrapper for the face and spine; the covers stand still until the pointer lifts one */
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+}
+
+.cd__face {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  backface-visibility: hidden;
+}
+
+/* the far end of each artwork is tucked under its inner neighbour, so it falls into that
+   neighbour's shadow: a soft darkening towards the end, away from the spine. (No gloss or
+   shine on the artwork itself — the picture is shown as it is.) */
+.cd__shade {
+  position: absolute; inset: 0;
+  backface-visibility: hidden;
+  pointer-events: none;
+}
+.cd--l .cd__shade { background: linear-gradient(to right, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .3) 68%, rgba(0, 0, 0, .78) 100%); box-shadow: 0 1px 0 var(--edge-dark), inset 0 1px 0 var(--edge-lite); }
+.cd--r .cd__shade { background: linear-gradient(to left,  rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .3) 68%, rgba(0, 0, 0, .78) 100%); box-shadow: 0 1px 0 var(--edge-dark), inset 0 1px 0 var(--edge-lite); }
+
+/* the outermost two covers sit slightly out of focus, as if at the edge of the
+   field; the one under the pointer sharpens as it lifts (--mag) */
+.cd.is-rim .cd__face {
+  filter: blur(calc(max(2px, var(--w) * .0055) * (1 - var(--mag, 0))));
+}
+
+/* the spine: the sleeve's thickness, on the end nearest you, carrying the
+   title running up it. Hinged to the face's near edge and folded back. */
+.cd__edge {
+  position: absolute; top: 0;
+  width: var(--t); height: 100%;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 60%),
+    hsl(var(--h) calc(var(--s) * 1%) calc(var(--l) * 1%));
+  filter: brightness(calc(1 + var(--mag, 0) * .22));
+}
+/* soft edges, lit from one side and shaded on the other, like a real sleeve's corners.
+   The dark edges are a dark shade of the artwork's own colour (not black) and are drawn
+   just OUTSIDE the shapes, exactly on the fold lines: down the spine where it meets the
+   cover, and along the foot of both — so they can never sit inside the surface with a
+   strip showing between them and the break. The lit edges, a light tint of the colour,
+   are inset on the outer side and along the top. All faint. */
+.cd {
+  --edge-dark: hsl(var(--h) calc(var(--s) * 1%) 11% / .7);
+  --edge-lite: hsl(var(--h) calc(var(--s) * 1%) 80% / .3);
+}
+.cd--l .cd__edge { box-shadow: 1px 1px 0 var(--edge-dark), inset 1.5px 0 0 var(--edge-lite), inset 0 1.5px 0 var(--edge-lite); }
+.cd--r .cd__edge { box-shadow: -1px 1px 0 var(--edge-dark), inset -1.5px 0 0 var(--edge-lite), inset 0 1.5px 0 var(--edge-lite); }
+.cd--l .cd__edge { left: calc(var(--t) * -1);  transform-origin: 100% 50%; transform: rotateY(-90deg); }
+.cd--r .cd__edge { left: 100%;                  transform-origin: 0 50%;    transform: rotateY(90deg); }
+
+.cd__label {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; gap: .45em;   /* title and artist centred on the spine, both ways */
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);          /* reads from the bottom up */
+  padding: calc(var(--w) * .03) 0;
+  font-family: var(--sans);
+  font-size: max(14px, calc(var(--w) * .0295));
+  color: #fff;
+  white-space: nowrap;
+}
+.cd.is-ink-dark .cd__label { color: #0b0b0c; }
+.cd.is-ink-dark .cd__label b { -webkit-text-stroke-color: #0b0b0c; }
+.cd.is-ink-dark .cd__label span { color: rgba(11, 11, 12, .66); }
+.cd__label b { font-weight: 800; letter-spacing: .05em; -webkit-text-stroke: .035em currentColor; }   /* the title is always the heavier of the two */
+.cd__label span { font-weight: 500; letter-spacing: .06em; color: rgba(255, 255, 255, .7); }
+
+/* ---------- the ground ----------------------------------------- */
+/* Under the row: each cover throws a pool of its own colour onto the floor
+   and is mirrored in it, fading out. Drawn in a second 3D box with exactly the
+   shelf's perspective and each piece placed like its cover, but outside the
+   shelf's clip so it can spill below the row. */
+.floor {
+  position: absolute; z-index: 0;
+  left: 0; right: 0; top: calc(var(--pad-top) + var(--sink));
+  height: var(--w);
+  pointer-events: none;
+  perspective: calc(var(--w) * 1.25);
+  perspective-origin: calc(50% - var(--shift, 0px) + var(--px, 0) * 2.6%) calc(50% + var(--py, 0) * 1.3%);
+}
+.floor::after {                       /* a faint wash of light along the floor line */
+  content: '';
+  position: absolute; left: -10%; right: -10%; top: calc(100% - var(--w) * .02); height: calc(var(--w) * .26);
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .05), rgba(255, 255, 255, 0));
+}
+.fl {
+  --x: calc(var(--k, 0) * var(--p));
+  position: absolute; top: 0; left: 50%;
+  width: var(--w); height: var(--w);
+  transform-style: preserve-3d;
+  translate: var(--x) 0;
+  transition: translate .52s cubic-bezier(.22, 1.04, .3, 1), opacity .25s var(--ease);
+}
+.fl.is-leaving { opacity: 0; transition-duration: .3s, .2s; }
+.fl.no-tr { transition: none !important; }
+.fl.is-filtered { visibility: hidden; }
+.fl.cd--l { transform-origin: 0 50%;    transform: rotateY(calc(90deg - var(--open, 0deg))); }
+.fl.cd--r { transform-origin: 100% 50%; transform: rotateY(calc(-90deg + var(--open, 0deg))); margin-left: calc(var(--w) * -1); }
+
+.fl__glow {
+  position: absolute; left: -45%; top: calc(100% + 7px);      /* reaches out past the front of the cover, towards you */
+  width: 140%; height: calc(var(--w) * .7);
+  transform-origin: 50% 0;
+  transform: translateZ(calc(var(--w) * -.35)) rotateX(90deg);     /* lying on the floor, centred under the sleeve */
+  background: radial-gradient(closest-side,
+    hsl(var(--h) calc(var(--s) * 1%) 58% / .46),
+    hsl(var(--h) calc(var(--s) * 1%) 50% / .15) 55%,
+    hsl(var(--h) calc(var(--s) * 1%) 50% / 0));
+  opacity: calc(.7 - var(--mag, 0) * .38);           /* a lifted cover throws a fainter pool, but never none */
+}
+.fl.cd--r .fl__glow { left: 5%; }          /* on the right the front of the cover is local +x, so mirror the reach */
+.fl__edge {
+  /* the spine's reflection, straight down under it: it drifts further away and fades as the cover lifts (--mag) */
+  position: absolute; top: calc(100% + 14px + var(--mag, 0) * var(--w) * .1);
+  width: var(--t); height: 100%;
+  background: hsl(var(--h) calc(var(--s) * 1%) calc(var(--l, 38) * 1%));
+  backface-visibility: hidden;
+  filter: blur(max(5px, calc(var(--w) * .008)));
+  opacity: calc(1 - var(--mag, 0) * .62);
+  -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, .3), rgba(0, 0, 0, .15) 18%, rgba(0, 0, 0, .05) 36%, rgba(0, 0, 0, 0) 56%);
+          mask-image: linear-gradient(to top, rgba(0, 0, 0, .3), rgba(0, 0, 0, .15) 18%, rgba(0, 0, 0, .05) 36%, rgba(0, 0, 0, 0) 56%);
+}
+.fl.cd--l .fl__edge { left: calc(var(--t) * -1); transform-origin: 100% 50%; transform: rotateY(-90deg) scaleY(-1); }
+.fl.cd--r .fl__edge { left: 100%;                transform-origin: 0 50%;    transform: rotateY(90deg) scaleY(-1); }
+
+/* ---------- foot ---------------------------------------------- */
+.pf__foot {
+  position: fixed; z-index: 5;
+  left: 50%; bottom: clamp(10px, 2vh, 20px);
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  text-align: center; white-space: nowrap;
+  pointer-events: none;
+}
+.pf__foot p {
+  margin: 0;
+  font-family: Helvetica, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 9.5px; line-height: 1.16; letter-spacing: .1em;
+  color: #cecece;
+}
+
+/* ============================================================
+   THE FOCUS VIEW
+   ============================================================ */
+.focus {
+  --pad-y: clamp(72px, 11vh, 110px);
+  position: fixed; inset: 0; z-index: 60;
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(300px, .88fr);
+  align-items: center;
+  column-gap: clamp(24px, 4.5vw, 84px);
+  padding: var(--pad-y) clamp(56px, 6vw, 96px);
+  overflow: hidden;
+}
+.focus[hidden] { display: none; }
+
+.focus__veil {
+  position: absolute; inset: 0;
+  /* a plain dark layer, deliberately without a backdrop blur: blurring the
+     scene live while the cover is in flight is what made the pull-out stutter */
+  background: rgba(3, 3, 4, .92);
+  opacity: 0;
+  transition: opacity .5s var(--ease);
+}
+.focus.is-open .focus__veil { opacity: 1; }
+/* going out is quicker than coming in, and nothing waits its turn */
+.focus.is-closing .focus__veil { transition-duration: .26s; }
+.focus.is-closing .focus__info,
+.focus.is-closing .focus__close,
+.focus.is-closing .focus__nav,
+.focus.is-closing .focus__stream { transition-duration: .2s; transition-delay: 0s; }
+
+/* where the cover ends up: big, flat, square, in the left column. The
+   perspective here is what the slide-and-turn plays against. */
+.focus__stage {
+  position: relative;
+  justify-self: center;
+  width: min(100%, calc(100vh - 2 * var(--pad-y)));
+  aspect-ratio: 1;
+  perspective: 1800px;
+  perspective-origin: 50% 40%;
+}
+.focus__card {
+  position: absolute; inset: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #060607;
+  box-shadow:
+    0 50px 100px -34px rgba(0, 0, 0, .95),
+    0 0 110px -30px hsl(var(--h, 280) calc(var(--s, 60) * 1%) 50% / .55),
+    inset 0 0 0 1px rgba(255, 255, 255, .07);
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+.focus__card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.focus__info {
+  position: relative;
+  max-width: 460px;
+  max-height: calc(100vh - 2 * var(--pad-y));
+  overflow-y: auto; scrollbar-width: none;
+  opacity: 0;
+  transform: translateX(34px);
+  transition: opacity .5s var(--ease) .26s, transform .7s var(--ease) .26s;
+}
+.focus.is-open .focus__info { opacity: 1; transform: none; }
+
+/* the player's own title/artist pairing, grown up */
+.focus__title {
+  margin: 0;
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: clamp(28px, 3.7vw, 54px);
+  line-height: 1.06;
+  letter-spacing: .005em;
+  overflow-wrap: anywhere;
+}
+.focus__artist {
+  margin: clamp(8px, 1.2vh, 14px) 0 0;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: clamp(15px, 1.5vw, 20px);
+  color: rgba(255, 255, 255, .82);
+}
+.focus__line {
+  margin: clamp(18px, 2.6vh, 28px) 0 0;
+  font-size: 10px; letter-spacing: .3em; text-transform: uppercase;
+  color: var(--w-48);
+}
+.focus__note {
+  margin: 12px 0 0;
+  font-size: 14px; line-height: 1.65;
+  color: var(--w-72);
+}
+
+/* the player's play button and timeline, reused */
+.focus__player {
+  margin-top: clamp(26px, 4vh, 44px);
+  display: flex; align-items: center; gap: 14px;
+}
+.focus__play {
+  position: relative; flex: 0 0 auto;
+  width: 64px; height: 64px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  color: #999;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform .32s var(--ease), color .32s var(--ease);
+}
+.focus__play svg {
+  position: absolute; width: 56%;
+  fill: currentColor; stroke: currentColor; stroke-width: 1.6;
+  stroke-linejoin: round; stroke-linecap: round;
+  transition: opacity .35s var(--ease), transform .35s var(--ease);
+}
+.focus__play .i-pause { stroke: none; }
+.focus__play .i-play,
+.focus__play .i-pause { transform: translateX(6%) scale(1); }
+.focus.is-playing .focus__play { color: #fff; }
+.focus.is-playing .focus__play .i-play { opacity: 0; transform: translateX(6%) scale(0); }
+.focus:not(.is-playing) .focus__play .i-pause { opacity: 0; transform: translateX(6%) scale(0); }
+@media (hover: hover) and (pointer: fine) {
+  .focus__play:hover { color: #fff; transform: scale(1.08); }
+}
+.focus__play:active { color: #fff; transform: scale(1.08); }
+
+.focus__scrub { position: relative; flex: 1 1 auto; min-width: 0; padding: 12px 0; cursor: pointer; touch-action: none; }
+.focus__track {
+  position: absolute; top: 50%; left: 0; right: 0;
+  transform: translateY(-50%);
+  height: 6px; border-radius: 999px; background: #3a3a3d; overflow: hidden;
+  transition: height .32s var(--ease);
+}
+.focus__scrub.is-held .focus__track { height: 13px; }
+@media (hover: hover) and (pointer: fine) {
+  .focus__scrub:hover .focus__track { height: 13px; }
+}
+.focus__fill {
+  height: 100%; width: 0; background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, .6);
+  transition: width .18s linear;
+}
+.focus__scrub.is-scrubbing .focus__fill { transition: none; }
+.focus__time {
+  flex: 0 0 auto; min-width: 3.3em; text-align: right;
+  font-size: 12px; letter-spacing: .14em; font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, .75);
+}
+
+.focus__links { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 10px 26px; }
+.focus__links a {
+  font-size: 9.5px; font-weight: 600; letter-spacing: .3em; text-transform: uppercase;
+  color: var(--w-72);
+  transition: color .5s var(--ease), text-shadow .5s var(--ease);
+}
+.focus__links a::after { content: ' \2192'; letter-spacing: 0; }
+.focus__links a:hover { color: #fff; text-shadow: 0 0 16px rgba(255, 255, 255, .3); }
+
+.focus__info::-webkit-scrollbar { display: none; }
+.focus__credits { margin-top: clamp(22px, 3.4vh, 34px); }
+.focus__credits[hidden] { display: none; }
+.focus__credits h3 {
+  margin: clamp(18px, 2.8vh, 26px) 0 clamp(8px, 1.2vh, 12px);
+  font-family: var(--sans); font-weight: 700;
+  font-size: clamp(16px, 1.25vw, 19px); line-height: 1.2; letter-spacing: -.005em;
+  color: #fff;
+}
+.focus__credits h3:first-child { margin-top: 0; }
+.focus__who {
+  margin: 0 0 clamp(8px, 1.3vh, 13px);
+  font-size: clamp(14px, 1.1vw, 16px); line-height: 1.35;
+  color: #fff;
+}
+.focus__who span { display: block; margin-top: 2px; font-size: .86em; color: #a7a7a7; }
+
+.focus__stream {
+  position: absolute; z-index: 2;
+  right: clamp(20px, 3.4vw, 48px); bottom: clamp(20px, 3.4vh, 40px);
+  display: flex; gap: 14px;
+  opacity: 0;
+  transition: opacity .5s var(--ease) .3s;
+}
+.focus.is-open .focus__stream { opacity: 1; }
+.focus__svc {
+  width: 22px; height: 22px;
+  color: rgba(255, 255, 255, .55);
+  transition: color .3s var(--ease), transform .3s var(--ease);
+}
+.focus__svc svg { display: block; width: 100%; height: 100%; }
+.focus__svc:hover { color: #fff; transform: scale(1.1); }
+
+.focus__credit {
+  margin: clamp(30px, 5vh, 52px) 0 0;
+  font-size: 9px; letter-spacing: .26em; text-transform: uppercase;
+  color: var(--w-30);
+}
+
+.focus__close {
+  position: absolute; z-index: 2;
+  top: clamp(20px, 3.4vh, 40px); right: clamp(20px, 3.4vw, 48px);
+  font-family: var(--display);
+  font-size: clamp(12px, 1.4vw, 16px);
+  letter-spacing: .04em; text-transform: uppercase;
+  color: #fff; cursor: pointer;
+  opacity: 0;
+  transition: opacity .5s var(--ease) .2s, text-shadow .7s var(--ease);
+}
+.focus.is-open .focus__close { opacity: 1; }
+.focus__close:hover { text-shadow: 0 0 16px rgba(255, 255, 255, .28); }
+
+.focus__nav {
+  position: absolute; z-index: 2; top: 50%;
+  width: 44px; height: 44px; margin-top: -22px;
+  display: grid; place-items: center;
+  color: #999; cursor: pointer;
+  opacity: 0;
+  transition: opacity .5s var(--ease) .3s, color .3s var(--ease);
+}
+.focus__nav svg { width: 26px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.focus__nav--prev { left: clamp(6px, 1.4vw, 22px); }
+.focus__nav--next { right: clamp(6px, 1.4vw, 22px); }
+.focus.is-open .focus__nav { opacity: 1; }
+.focus__nav:hover { color: #fff; }
+
+/* ---------- smaller screens ----------------------------------- */
+@media (max-width: 860px) {
+  .pf { --pad-top: 150px; }
+  .seg { top: 104px; }
+  .pf__bar .wordmark__main { font-size: clamp(15px, 4.2vw, 17px); white-space: nowrap; }
+  .pf__bar .wordmark__sub  { font-size: 7px; white-space: nowrap; letter-spacing: .3em; }
+
+  /* the cover on top, the info underneath, the whole thing scrolls if it must */
+  .focus {
+    --pad-y: 0px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-content: start;
+    row-gap: 24px;
+    padding: 76px clamp(20px, 6vw, 40px) 40px;
+    overflow-y: auto;
+  }
+  .focus__stage { width: min(100%, 52vh, 420px); }
+  .focus__info { max-width: none; }
+  .focus__nav { top: 36vh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd, .cd.is-leaving { transition-duration: .01s; }
+  .seg__thumb { transition-duration: .01s; }
+  .fl { transition-duration: .01s; }
+}
