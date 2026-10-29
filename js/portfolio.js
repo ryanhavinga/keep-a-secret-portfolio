@@ -55,9 +55,14 @@
       return best * 15 + 7.5;
     } catch (_) { return null; }     // a tainted canvas (file://) — the configured colour is used instead
   }
+  /* The spine colour comes from each track's own `color` in CONFIG, the same on every
+     device. (Sampling the artwork instead only works when the page is served over http(s):
+     opened from a file the canvas is blocked and the configured colours are used, so the live
+     site came out more vivid than a local copy. Set this to true to sample the artwork again.) */
+  const SAMPLE_ARTWORK = false;
   function tintOf(t, img) {
     const [fh, fs] = hexToHsl(t.color || '#444455');
-    const h = img ? dominant(img) : null;
+    const h = SAMPLE_ARTWORK && img ? dominant(img) : null;
     const hue = h ?? fh;
     const yellowish = hue > 30 && hue < 75;
     return { h: Math.round(hue), s: clamp(Math.round((h == null ? fs : .72) * 100), 45, 82), l: yellowish ? 44 : 38 };
@@ -131,16 +136,36 @@
      distance from the middle (k), which side of it that puts it on (the
      left ones face right, the right ones face left), and the row sizes
      itself from how many there are (--n → --w, --p in css/portfolio.css). */
+  /* a CSS length custom property (--w, --p), in pixels */
+  const probeEl = document.createElement('i');
+  probeEl.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;height:0;';
+  pfEl.appendChild(probeEl);
+  function probe(name) { probeEl.style.width = `var(${name})`; return probeEl.getBoundingClientRect().width; }
+
   function layout() {
     const vis = shown(), cnt = vis.length;
     pfEl.style.setProperty('--n', Math.max(1, cnt));
     pfEl.toggleAttribute('data-odd', cnt % 2 === 1);
-    /* How far the viewpoint swings with the pointer: a touch with a full row, much more
-       the fewer covers there are, so with only a few you can sweep the cursor out to
-       either side and turn them well open to look at. */
-    const sway = 2.6 + 30 * Math.pow(Math.max(0, (10 - Math.max(1, cnt)) / 9), 1.1);
+    /* How far the viewpoint swings with the pointer — the same on every page. (Where the viewpoint
+       is moved further back, below, the swing is scaled up with it so it turns the covers just as far.) */
+    const few = cnt <= 5;
+    pfEl.toggleAttribute('data-few', few);
+    const D = few ? 2.5 : 1.25;                                          // viewpoint distance, in cover widths (css/portfolio.css)
+    const sway = 2.6 * (D / 1.25);
     pfEl.style.setProperty('--sway', `${sway.toFixed(1)}%`);
-    pfEl.style.setProperty('--sway-y', `${(sway * .4).toFixed(1)}%`);
+    pfEl.style.setProperty('--sway-y', `${(sway * .5).toFixed(1)}%`);
+    /* An artist's own page (a handful of covers): every cover is turned the same way — face to
+       the right, like the outer ones of a full row — and at the same slant. The viewpoint sits
+       to the right of the row so every cover is seen from the same side, and each is rotated to
+       make up for where it stands, so none is left edge-on. A full row is left as it was. */
+    const SLANT = 36;                                                    // degrees between a cover's face and the line of sight
+    let w = 0, p = 0, shiftX = 0, xo = 0;
+    if (few) {
+      w = probe('--w'); p = probe('--p');
+      shiftX = w * .2;                                                   // the row is moved left by this, so it stays centred
+      xo = ((cnt - 1) / 2) * p - shiftX + w * .6;                        // the viewpoint: just right of the last cover
+    }
+    pfEl.style.setProperty('--ox', `${xo.toFixed(1)}px`);
     items.forEach(it => {
       it.pos = vis.indexOf(it);
       const on = it.pos >= 0;
@@ -149,7 +174,7 @@
       it.btn.tabIndex = on && !it.rep ? 0 : -1;
       if (!on) return;
       it.k = it.pos - (cnt - 1) / 2;
-      it.side = it.k < 0 ? 'l' : 'r';
+      it.side = few || it.k < 0 ? 'l' : 'r';
       it.li.classList.toggle('cd--l', it.side === 'l');
       it.li.classList.toggle('cd--r', it.side === 'r');
       it.li.classList.toggle('is-rim', cnt >= 3 && (it.pos === 0 || it.pos === cnt - 1));   // the outermost two are softened
@@ -157,11 +182,19 @@
       it.fl.classList.toggle('cd--r', it.side === 'r');
       it.fl.classList.toggle('is-rim', it.li.classList.contains('is-rim'));
       it.fl.style.setProperty('--k', it.k);
+      let rot = 90;
+      if (few && w) {
+        const phi = Math.atan((it.k * p - shiftX - xo) / (w * D)) * 180 / Math.PI;      // the angle to this cover from the viewpoint (negative: it is to its left)
+        rot = clamp(90 - SLANT - phi, 30, 90);
+      }
+      it.li.style.setProperty('--rot', `${rot.toFixed(1)}deg`);
+      it.fl.style.setProperty('--rot', `${rot.toFixed(1)}deg`);
       it.li.style.setProperty('--k', it.k);
       it.li.style.zIndex = String(20 - Math.round(Math.abs(it.k) * 2));   // nearer the middle is drawn on top
     });
   }
   layout();
+  addEventListener('resize', layout);            // the row's size (and so each cover's angle) follows the window
   /* the first layout places the covers, it doesn't fly them in from where they were created */
   items.forEach(it => { it.li.classList.add('no-tr'); it.fl.classList.add('no-tr'); });
   const settle = () => items.forEach(it => { it.li.classList.remove('no-tr'); it.fl.classList.remove('no-tr'); });
@@ -321,9 +354,21 @@
       }
       return best;
     }
+    /* Nothing reacts to the pointer until it has really moved on this page. After you click
+       a link on another page the pointer is still sitting where you clicked, and the browser
+       reports it again once this page appears — that must not set the wave (or the viewpoint)
+       off; only an actual movement of a few pixels from there does. */
+    let armed = false, ax = null, ay = 0;
+    addEventListener('pointermove', ev => {
+      if (armed || ev.pointerType === 'touch') return;
+      if (ax === null) { ax = ev.clientX; ay = ev.clientY; return; }
+      if (Math.abs(ev.clientX - ax) + Math.abs(ev.clientY - ay) > 12) armed = true;
+    }, { capture: true, passive: true });
+    addEventListener('pointerdown', () => { armed = true; }, { capture: true, passive: true });
+
     let px0 = 0, pt0 = 0;
     shelf.addEventListener('pointermove', ev => {
-      if (ev.pointerType === 'touch') return;
+      if (ev.pointerType === 'touch' || !armed) return;
       if (pt0) pSpeed = Math.abs(ev.clientX - px0) / Math.max(1, ev.timeStamp - pt0);
       px0 = ev.clientX; pt0 = ev.timeStamp;
       const li = ev.target.closest && ev.target.closest('.cd');
@@ -336,7 +381,7 @@
       }
     });
     addEventListener('pointermove', ev => {
-      if (ev.pointerType === 'touch') return;
+      if (ev.pointerType === 'touch' || !armed) return;
       tpx = clamp(ev.clientX / innerWidth * 2 - 1, -1, 1); tpy = clamp(ev.clientY / innerHeight * 2 - 1, -1, 1); wake();
     }, { passive: true });
     document.documentElement.addEventListener('mouseleave', () => { tpx = tpy = 0; wake(); });

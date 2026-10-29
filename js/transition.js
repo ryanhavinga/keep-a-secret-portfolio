@@ -21,7 +21,7 @@
   });
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const KEY = 'kas-fade';
-  const OUT = reduced ? 1 : 120, IN = reduced ? 1 : 200;   // ms: fading to black, and back up out of it — the same on every page
+  const OUT = reduced ? 1 : 120, IN = reduced ? 1 : 140;   // ms: fading to black, and back up out of it — the same on every page
   const EASE = 'cubic-bezier(.4, 0, .2, 1)';
   const root = document.documentElement;
 
@@ -43,10 +43,11 @@
   const rise = () => {
     if (up) return; up = true;
     let shown = false;
+    const settle = document.querySelector('[data-pf]') ? 220 : 40;   // only the portfolio's big 3D covers need a beat to be drawn
     const lift = () => { if (!shown) { shown = true; fade(0, IN); } };
     /* a beat after the first frames are painted — heavy layers (the 3D covers) are only drawn
        a moment after their images are decoded, and that must happen behind the black */
-    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(lift, 220)));
+    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(lift, settle)));
     setTimeout(lift, 700);                                      // …or regardless, if frames are being held back
   };
   const fonts = () => {

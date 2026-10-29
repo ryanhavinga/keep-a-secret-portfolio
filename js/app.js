@@ -538,6 +538,7 @@
     /* Which of the two .light-bank stacks (index.html) is lit right now.
        The other one is dark, and is where the next track's colours go. */
     let litBank = 'a';
+    let firstLight = true;   // the page's very first light is simply there — it only cross-fades on later track changes
 
     /* load() reaches applyLight twice for one track change — once with the
        track's configured fallback colour, then again the moment
@@ -589,6 +590,7 @@
        lag after a track change. */
     function commitLight({ ring, deep, b, c }) {
       const next = litBank === 'a' ? 'b' : 'a';
+      const instant = firstLight; firstLight = false;
       const incoming = document.querySelectorAll(`.light-bank--${next}`);
       const outgoing = document.querySelectorAll(`.light-bank--${litBank}`);
 
@@ -602,7 +604,7 @@
         el.style.transition = 'none';
         el.classList.remove('is-lit');
         void el.offsetWidth;              // land the jump before the transition comes back
-        el.style.transition = '';
+        el.style.transition = instant ? 'none' : '';
         el.style.setProperty('--ring', ring);
         el.style.setProperty('--ring-deep', deep);
         el.style.setProperty('--led-b', b);
@@ -612,6 +614,12 @@
       outgoing.forEach(el => el.classList.remove('is-lit'));
       incoming.forEach(el => el.classList.add('is-lit'));
       litBank = next;
+      if (instant) {                       // lit at once on load: no slow climb out of the dark, no surge
+        void incoming[0].offsetWidth;
+        incoming.forEach(el => { el.style.transition = ''; });
+        lightBusyUntil = 0;
+        return;
+      }
 
       /* Blocks the next commit until this crossfade has actually finished
          — read off the bank's own resolved transition-duration rather than
