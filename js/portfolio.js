@@ -135,6 +135,12 @@
     const vis = shown(), cnt = vis.length;
     pfEl.style.setProperty('--n', Math.max(1, cnt));
     pfEl.toggleAttribute('data-odd', cnt % 2 === 1);
+    /* How far the viewpoint swings with the pointer: a touch with a full row, much more
+       the fewer covers there are, so with only a few you can sweep the cursor out to
+       either side and turn them well open to look at. */
+    const sway = 2.6 + 30 * Math.pow(Math.max(0, (10 - Math.max(1, cnt)) / 9), 1.1);
+    pfEl.style.setProperty('--sway', `${sway.toFixed(1)}%`);
+    pfEl.style.setProperty('--sway-y', `${(sway * .4).toFixed(1)}%`);
     items.forEach(it => {
       it.pos = vis.indexOf(it);
       const on = it.pos >= 0;
