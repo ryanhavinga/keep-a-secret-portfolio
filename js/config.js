@@ -139,7 +139,6 @@ const CONFIG = {
     /* The credits on every track page, per artist (a track's own `credits` wins). */
     creditsByArtist: {
       'Gilles': [
-        { heading: 'Artist', people: [{ name: 'Gilles', role: 'Main Artist' }] },
         { heading: 'Composition & Lyrics', people: [
           { name: 'Ryan Havinga', role: 'Composer • Lyricist' },
           { name: 'Kelvin Pasman', role: 'Composer • Lyricist' },
@@ -148,7 +147,6 @@ const CONFIG = {
         { heading: 'Production & Engineering', people: [{ name: 'Keep A Secret', role: 'Producer' }] }
       ],
       'Tim Tiago': [
-        { heading: 'Artist', people: [{ name: 'Tim Tiago', role: 'Main Artist' }] },
         { heading: 'Composition & Lyrics', people: [
           { name: 'Tim Kurris', role: 'Lyricist • Composer' },
           { name: 'Ryan Havinga', role: 'Lyricist • Composer' },
@@ -157,7 +155,6 @@ const CONFIG = {
         { heading: 'Production & Engineering', people: [{ name: 'Keep A Secret', role: 'Studio Producer' }] }
       ],
       'Rosalie': [                                   // Incompleet and Liever Kwijt
-        { heading: 'Artist', people: [{ name: 'Rosalie', role: 'Main Artist' }] },
         { heading: 'Composition & Lyrics', people: [
           { name: 'Kelvin Pasman, Ryan Havinga, Rosalie Zieleman', role: 'Composer' },
           { name: 'Rosalie Zieleman', role: 'Lyricist' }

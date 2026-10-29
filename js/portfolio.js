@@ -286,7 +286,6 @@
     const vels = items.map(() => 0);
     let hover = null, running = false, last = 0;
     /* the viewpoint drifts with the pointer, so the whole row seems to turn a little towards it */
-    const root = html;
     let tpx = 0, tpy = 0, pxv = 0, pyv = 0;
     const REACH = [1, .36, .1];               // lift by distance from the pointer: the one under it, the pair beside it, the pair beyond — an arch of five
     /* The wave. Every cover follows its target with a spring that is a hair
@@ -327,8 +326,7 @@
       pxv += (tpx - pxv) * (1 - Math.exp(-5 * dt));
       pyv += (tpy - pyv) * (1 - Math.exp(-5 * dt));
       if (Math.abs(tpx - pxv) > .002 || Math.abs(tpy - pyv) > .002) busy = true; else { pxv = tpx; pyv = tpy; }
-      root.style.setProperty('--px', pxv.toFixed(4));
-      root.style.setProperty('--py', pyv.toFixed(4));
+      for (const el of [shelf, floor]) { el.style.setProperty('--px', pxv.toFixed(4)); el.style.setProperty('--py', pyv.toFixed(4)); }
 
       if (busy) requestAnimationFrame(frame); else running = false;
     };
@@ -455,7 +453,6 @@
         `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a>`).join('');
       /* credits for every track — its own when CONFIG gives them, otherwise the two we always know (and the one-line credit below is then redundant) */
       const cr = t.credits || (PF.creditsByArtist || {})[t.artist] || [
-        { heading: 'Artist', people: [{ name: t.artist, role: 'Main Artist' }] },
         { heading: 'Production & Engineering', people: [{ name: (CONFIG.brand && CONFIG.brand.logo) || 'Keep A Secret', role: 'Producer' }] }
       ];
       ui.credits.hidden = !cr.length;
