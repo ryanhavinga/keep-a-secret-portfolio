@@ -135,11 +135,6 @@
     const vis = shown(), cnt = vis.length;
     pfEl.style.setProperty('--n', Math.max(1, cnt));
     pfEl.toggleAttribute('data-odd', cnt % 2 === 1);
-    /* The fewer covers on show, the further each is turned open towards you (still slanted):
-       the full row stays edge-on as before, an artist's few turn open more, and a lone
-       cover most of all. */
-    const open = cnt <= 1 ? 36 : 34 * Math.pow(Math.max(0, 1 - cnt / 10), 1.5);
-    pfEl.style.setProperty('--open', `${open.toFixed(1)}deg`);
     items.forEach(it => {
       it.pos = vis.indexOf(it);
       const on = it.pos >= 0;
