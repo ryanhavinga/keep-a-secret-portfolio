@@ -180,6 +180,10 @@ html.fonts-wait .seg { visibility: hidden; }
 }
 /* the cover that is playing turns to face you: nothing tucked under a neighbour, nothing out of focus */
 .cd.is-front .cd__shade { opacity: 0; }
+/* a cover being put back fades out (and in again in its slot) — each plane on its own, since fading the whole cover
+   would flatten its 3D */
+.cd__face, .cd__edge { transition: opacity .3s var(--ease); }
+.cd.is-fading .cd__face, .cd.is-fading .cd__edge, .cd.is-fading .cd__shade { opacity: 0; transition: opacity .22s var(--ease); }
 .cd.is-front .cd__face { filter: none !important; transition: filter .35s var(--ease); }   /* an outermost cover loses its blur smoothly */
 .cd--l .cd__shade { background: linear-gradient(to right, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .3) 68%, rgba(0, 0, 0, .78) 100%); box-shadow: 0 1px 0 var(--edge-dark), inset 0 1px 0 var(--edge-lite); }
 .cd--r .cd__shade { background: linear-gradient(to left,  rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .3) 68%, rgba(0, 0, 0, .78) 100%); box-shadow: 0 1px 0 var(--edge-dark), inset 0 1px 0 var(--edge-lite); }

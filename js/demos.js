@@ -96,6 +96,13 @@
     });
 
     return {
+      /* the list is being rebuilt (another collection): stop what is playing and forget the old rows */
+      reset() {
+        current = null; dragging = false; entries.length = 0;
+        audio.pause();
+        audio.removeAttribute('src');
+        try { audio.load(); } catch (_) {}
+      },
       add(row, track) {
         const e = {
           row, track,
@@ -132,14 +139,17 @@
     };
   })();
 
-  function fill() {
-    const contact = V.contact || CONFIG.bio?.contact;
-    const top = $('[data-contact-link]');
-    if (contact) top.href = `mailto:${contact}`; else top.hidden = true;
+  const contact = V.contact || CONFIG.bio?.contact;
+  const collections = V.collections || {};
+  const groups = $('[data-groups]');
+  let active = null;                                          // the collection being shown (a key of CONFIG.demos.collections), or null for everything
 
+  function render() {
+    groups.innerHTML = '';
+    groups.classList.toggle('is-bare', !active);                // no list yet: just the line under the bar, close to it
+    const lists = new Map();
     /* one list per language, in the order each first appears; a song with
        no language goes in a list of its own above them, without a heading */
-    const groups = $('[data-groups]'), lists = new Map();
     const listFor = lang => {
       if (lists.has(lang)) return lists.get(lang);
       const sec = document.createElement('section');
@@ -152,14 +162,24 @@
       lists.set(lang, ol);
       return ol;
     };
-    const tracks = V.tracks || [];
+    /* nothing is listed until a code has been given: then only the tracks tagged with it */
+    if (!active) {
+      groups.innerHTML = '<p class="empty">Enter the code you were given to see your demos.</p>';
+      return;
+    }
+    const tracks = (V.tracks || []).filter(t => (t.collections || []).includes(active));
+    if (!tracks.length) {
+      groups.innerHTML = '<p class="empty">No demos in this collection yet.</p>';
+      return;
+    }
     [...new Set(tracks.filter(t => !t.language).concat(tracks).map(t => t.language || ''))].forEach(listFor);
 
     tracks.forEach((t, i) => {
       const meta = [t.year, t.genre, t.bpm && `${t.bpm} BPM`, t.key].filter(Boolean).join(' · ');
       const state = STATUS_LABEL[t.status];                       // on hold / cut: no Request link
+      const forWho = active ? `Collection: ${collections[active].name || active}\n` : '';
       const mail = contact && !state
-        ? `mailto:${contact}?subject=${encodeURIComponent(`Demo request: ${t.title}`)}&body=${encodeURIComponent(`Hi,\n\nI'd like to request the demo of "${t.title}".\n\n`)}`
+        ? `mailto:${contact}?subject=${encodeURIComponent(`Demo request: ${t.title}`)}&body=${encodeURIComponent(`Hi,\n\nI'd like to request the demo of "${t.title}".\n${forWho}\n`)}`
         : null;
       const li = document.createElement('li');
       li.className = 'row';
@@ -187,5 +207,44 @@
     });
   }
 
-  fill();
+  /* ==========================================================
+     THE CODE BAR — a code shows one collection, nothing in it hides the rest of the page behind a lock
+     ========================================================== */
+  const form = $('[data-code-form]'), input = $('[data-code-input]'), note = $('[data-code-note]');
+  const activeBox = $('[data-code-active]'), activeName = $('[data-code-name]');
+  const keyOf = raw => Object.keys(collections).find(k => k.toLowerCase() === String(raw || '').trim().toLowerCase()) || null;
+
+  function show(key) {
+    active = key;
+    Player.reset();
+    render();
+    activeBox.hidden = !key;
+    if (key) activeName.textContent = collections[key].name || key;
+    note.textContent = '';
+    try { if (key) sessionStorage.setItem('kas-code', key); else sessionStorage.removeItem('kas-code'); } catch (_) {}   // coming back from the portfolio, the collection is still open
+    /* the address carries the code, so a link ending in ?code=HAP opens the collection straight away */
+    try {
+      const u = new URL(location.href);
+      if (key) u.searchParams.set('code', key); else u.searchParams.delete('code');
+      history.replaceState(null, '', u);
+    } catch (_) {}
+  }
+
+  form.addEventListener('submit', ev => {
+    ev.preventDefault();
+    const raw = input.value.trim();
+    if (!raw) { if (active) show(null); return; }              // an empty bar shows everything again
+    const key = keyOf(raw);
+    if (key) { show(key); input.value = ''; input.blur(); return; }
+    note.textContent = 'That code isn’t recognised.';
+    form.classList.remove('is-wrong'); void form.offsetWidth; form.classList.add('is-wrong');
+  });
+  input.addEventListener('input', () => { note.textContent = ''; });
+  $('[data-code-clear]').addEventListener('click', () => { show(null); input.value = ''; });
+
+  const top = $('[data-contact-link]');
+  if (contact) top.href = `mailto:${contact}`; else top.hidden = true;
+  let saved = null;
+  try { saved = sessionStorage.getItem('kas-code'); } catch (_) {}
+  show(keyOf(new URLSearchParams(location.search).get('code')) || keyOf(saved));
 })();

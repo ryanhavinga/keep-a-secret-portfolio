@@ -198,7 +198,15 @@ const CONFIG = {
        note     : optional one-liner, e.g. 'Female vocal' */
   demos: {
     contact: 'contact@keepasecret.nl',
+    /* Collections: the Demos page lists nothing until a code is typed into the bar at the top; then it shows only the
+       demos tagged with that code (collections: ['HAP'] on a track) — e.g. a shortlist for one publisher. A demo with no
+       collection is not shown anywhere. It is not a password: a link ending in ?code=HAP opens a collection straight
+       away, and the files themselves are still on the server for anyone who goes looking. */
+    collections: {
+      HAP: { name: 'Holland America Publishing' }
+    },
     tracks: [
+      /* Nederlandstalig is switched off for now — take the comment marks away to bring it back (the heading comes with it):
       {
         title: 'Alles Waar Je Spijt Van Hebt',
         language: 'Nederlandstalig',
@@ -210,8 +218,10 @@ const CONFIG = {
         status: 'available',
         note: null
       },
-      { title: 'Give Ya What U Like', language: 'Engelstalig', audio: 'audio/demo - Give Ya What U Like.mp3', duration: 180, year: 2021, status: 'available' },
-      { title: 'Fast Life',           language: 'Engelstalig', audio: 'audio/demo - Fast Life.mp3',           duration: 154, year: 2021, status: 'available' }
+      */
+      { title: 'Give Ya What U Like', language: 'Engelstalig', audio: 'audio/demo - Give Ya What U Like.mp3', duration: 180, year: 2021, collections: ['HAP'], status: 'available' },
+      { title: 'Fast Life',           language: 'Engelstalig', audio: 'audio/demo - Fast Life.mp3',           duration: 154, year: 2021, collections: ['HAP'], status: 'available' },
+      { title: 'No Safe Flights',     language: 'Engelstalig', audio: 'audio/demo - No Safe Flights.m4a',     duration: 43,  year: 2021, collections: ['HAP'], status: 'available' }
     ]
   },
 

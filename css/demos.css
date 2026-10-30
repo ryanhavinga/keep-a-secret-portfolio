@@ -21,6 +21,7 @@ html.fonts-wait .vlt__bar,
 html.fonts-wait .vlt { visibility: hidden; }
 
 .page-demos {
+  --inset: 22px;                                          /* where all the text starts, the same as the text in the code bar */
   --ui: Helvetica, 'Helvetica Neue', Arial, sans-serif;     /* the credit line's lettering — used for everything on the page below the bar */
   background:
     radial-gradient(120% 70% at 50% 0%, #121215 0%, #08080a 46%, #030304 78%, #000 100%) fixed,
@@ -62,7 +63,7 @@ html.fonts-wait .vlt { visibility: hidden; }
 }
 .group + .group { margin-top: clamp(40px, 7vh, 72px); }
 .group__title {                       /* a quiet label over each list, not a heading to read first */
-  margin: 0;
+  margin: 0 0 0 var(--inset);
   font-family: var(--ui);
   font-weight: 500;
   font-size: 13px;
@@ -70,6 +71,56 @@ html.fonts-wait .vlt { visibility: hidden; }
   letter-spacing: .06em;
   color: var(--w-48);
 }
+/* ---------- the code bar --------------------------------------- */
+/* a slim glass bar like the page pill: type a code (HAP) and the list shows only that collection */
+.code {
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  height: 48px; padding: 0 8px 0 var(--inset);
+  margin-bottom: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .06);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14);
+  transition: background-color .4s var(--ease), box-shadow .4s var(--ease);
+}
+.code:focus-within { background: rgba(255, 255, 255, .09); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .42); }
+.code__label {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+.code__input {
+  flex: 1 1 auto; min-width: 0; height: 100%;
+  background: none; border: 0; outline: 0;
+  font: 500 15px/1 var(--ui); letter-spacing: .04em; color: #fff;
+}
+.code__input::placeholder { color: rgba(255, 255, 255, .42); letter-spacing: .02em; }
+.code__go {
+  flex: 0 0 auto;
+  width: 32px; height: 32px; display: grid; place-items: center;
+  border-radius: 50%; color: #fff; cursor: pointer;
+  background: rgba(255, 255, 255, .14);
+  transition: background-color .3s var(--ease), transform .3s var(--ease);
+}
+.code__go svg { width: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (hover: hover) and (pointer: fine) { .code__go:hover { background: rgba(255, 255, 255, .28); transform: scale(1.06); } }
+.code.is-wrong { animation: code-shake .4s var(--ease); }
+@keyframes code-shake { 20% { transform: translateX(-6px); } 50% { transform: translateX(5px); } 80% { transform: translateX(-2px); } }
+.code__note { margin: 0 0 0 var(--inset); font: 12px/1.4 var(--ui); letter-spacing: .03em; color: rgba(255, 255, 255, .62); }
+.code__note:empty { display: none; }
+.code__active {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 16px;
+  margin: 2px 0 0 var(--inset);
+  font: 13px/1.4 var(--ui); letter-spacing: .02em; color: rgba(255, 255, 255, .7);
+}
+.code__active[hidden] { display: none; }
+.code__active b { font-weight: 600; color: #fff; }
+.code__clear { font: inherit; color: rgba(255, 255, 255, .55); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; transition: color .3s var(--ease); }
+.code__clear:hover { color: #fff; }
+[data-groups] { margin-top: clamp(30px, 5vh, 48px); }
+.empty { margin: 0 0 0 var(--inset); padding: 4px 0 0; font: 14px/1.5 var(--ui); letter-spacing: .01em; color: #fff; }
+[data-groups].is-bare { margin-top: 0; }
+
 /* ---------- the list ------------------------------------------ */
 .rows {
   list-style: none;
@@ -86,7 +137,7 @@ html.fonts-wait .vlt { visibility: hidden; }
   grid-template-areas: 'no info player ask';
   align-items: center;
   column-gap: clamp(14px, 2vw, 26px);
-  padding: var(--pad) clamp(0px, .6vw, 8px);
+  padding: var(--pad) clamp(0px, .6vw, 8px) var(--pad) var(--inset);
   border-top: 1px solid var(--hairline);
   transition: background-color .7s var(--ease);
 }

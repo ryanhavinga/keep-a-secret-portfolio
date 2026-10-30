@@ -169,7 +169,6 @@
       if (it.pose === 'pull') { z = w * OUT; }                // sliding out: it keeps its place in the paint order, so its neighbours still cover it
       else if (it.pose === 'flat') { x = it.side === 'l' ? -w / 2 : w / 2; rot = 0; z = w * .05; zi = 40; }
       else if (it.pose === 'turn') { z = w * OUT; zi = 40; }   // going back: turns edge-on where it stands, still in front of the stack
-      /* 'return': slides home into its slot with its own place in the paint order, so its neighbours cover it as it goes in */
       if (!hoverOn && (it.pose === 'flat' || it.pose === 'turn')) ly = -w * LIFT;   // (with a mouse the rise is eased in JS, in step with the hover lift going — see the frame loop)
       for (const el of both(it)) {
         el.style.setProperty('--x', `${x.toFixed(1)}px`);
@@ -185,16 +184,21 @@
   }
   place();
   addEventListener('resize', place);
-  /* Putting a cover back is the pull-out played backwards: it turns edge-on where it stands (in front of the
-     stack), and from the moment it starts sliding in it is back in the stack's paint order, so its neighbours
-     cover it as it goes in and it is never drawn through them. */
+  /* Putting a cover back never slides it through its neighbours: it turns edge-on where it stands (in front of the
+     stack) and fades out while it does, then — unseen — is in its slot again, and fades back in there. Quick and soft. */
   function sendHome(it) {
     clearTimeout(it.homeT); clearTimeout(it.seatT);
     it.pose = 'turn'; place();
     it.homeT = setTimeout(() => {
-      it.pose = 'return'; place();
-      it.seatT = setTimeout(() => { it.pose = 'slot'; place(); }, 450);
-    }, 400);                                               // (when the turn has all but finished)
+      it.li.classList.add('is-fading');                    // fades out as the turn finishes
+      it.seatT = setTimeout(() => {
+        for (const el of both(it)) el.classList.add('no-tr');
+        it.pose = 'slot'; it.lf = 0; it.li.style.setProperty('--lf', '0'); place();      // back in its slot, unseen, at its own height
+        void it.li.offsetWidth;
+        for (const el of both(it)) el.classList.remove('no-tr');
+        requestAnimationFrame(() => it.li.classList.remove('is-fading'));                 // …and fades in there
+      }, 240);
+    }, 300);
   }
   function setFront(f) {
     timers.splice(0).forEach(clearTimeout);
@@ -204,12 +208,12 @@
     if (prev && prev !== f) sendHome(prev);
     html.classList.remove('bg-soft');                      // the background sharpens again…
     if (f) {
-      clearTimeout(f.homeT); clearTimeout(f.seatT);
+      clearTimeout(f.homeT); clearTimeout(f.seatT); f.li.classList.remove('is-fading');
       f.pose = 'pull';                                     // spine first, out of the stack — still covered by its neighbours
       place();
       later(340, () => { f.pose = 'flat'; place(); html.classList.add('bg-soft'); });   // once it is clear of its neighbours it comes in front, rises and turns to face you in one go — and the rest of the row goes slowly soft behind it
     }
-    items.forEach(it => { if (it !== f && it !== prev && it.pose !== 'turn' && it.pose !== 'return') it.pose = 'slot'; });
+    items.forEach(it => { if (it !== f && it !== prev && it.pose !== 'turn') it.pose = 'slot'; });
     wakeHover();
   }
   /* of a track's copies in the row, the one nearest the middle comes out */

@@ -55,6 +55,21 @@
   <!-- no visible title — the pill already says where you are; the page keeps one for screen readers -->
   <h1 class="vlt__title">Demos</h1>
 
+  <!-- the code bar: nothing is listed until a code (e.g. HAP) is given; then only that collection. Not a lock — see CONFIG.demos.collections -->
+  <form class="code" data-code-form autocomplete="off" novalidate>
+    <label class="code__label" for="code">Collection code</label>
+    <input class="code__input" id="code" data-code-input type="text" autocapitalize="characters" autocomplete="off"
+           spellcheck="false" placeholder="Enter your code" aria-describedby="code-note">
+    <button class="code__go" type="submit" aria-label="Show my demos">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+    </button>
+  </form>
+  <p class="code__note" id="code-note" data-code-note role="status" aria-live="polite"></p>
+  <div class="code__active" data-code-active hidden>
+    <span>Showing <b data-code-name></b></span>
+    <button class="code__clear" type="button" data-code-clear>Clear</button>
+  </div>
+
   <!-- one heading and one list per language, one row per song, built from CONFIG.demos.tracks -->
   <div data-groups></div>
 
