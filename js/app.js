@@ -1932,4 +1932,17 @@
      light animations run at all. Nothing stands in front of the room any
      more, so they may as well start immediately. */
   document.body.classList.add('is-unlocked');
+
+  /* The page pill at the top goes out of the way while the mouse is on the artwork, and comes back down when
+     the mouse goes above it. (Only where there is a mouse to hover with.) */
+  (function pillAway() {
+    const pill = $('[data-seg]'), covers = $('[data-covers]');
+    if (!pill || !covers || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    let away = false;
+    addEventListener('pointermove', ev => {
+      if (ev.pointerType !== 'mouse') return;
+      const want = ev.clientY >= covers.getBoundingClientRect().top;
+      if (want !== away) { away = want; pill.classList.toggle('is-away', away); }
+    }, { passive: true });
+  })();
 })();

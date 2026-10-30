@@ -632,6 +632,14 @@ body.is-unlocked .leds {
 /* until js/nav.js has measured the slider, the current page's own segment is
    dark, so the pill never shows without one */
 .seg:not(.is-ready) .seg__btn[aria-current='page'] { background: #0a0a0b; }
+/* While a track is playing and the pointer is on the artwork (the covers), the pill steps up out of sight;
+   with the pointer above the artwork it comes back down (js/app.js, js/portfolio.js). */
+.seg { transition: transform .55s var(--ease), opacity .4s var(--ease), visibility 0s; }
+.seg.is-away {
+  transform: translate(-50%, calc(-100% - 50px)); opacity: 0;
+  pointer-events: none; visibility: hidden;
+  transition: transform .55s var(--ease), opacity .4s var(--ease), visibility 0s linear .55s;
+}
 @media (max-width: 860px) {
   .seg { top: 104px; }              /* under the wordmark and the links, not between them */
 }

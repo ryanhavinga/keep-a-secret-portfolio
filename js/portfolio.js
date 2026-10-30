@@ -381,7 +381,8 @@
     const next = () => load(i + 1, !audio.paused);
 
     /* The bar steps down out of the way as soon as the mouse is below the covers — anywhere under them, not
-       only under the bar itself — and comes back up when the mouse is on the covers again. Straight above the
+       only under the bar itself — or above them (where the page pill comes down in its place), and comes back
+       up when the mouse is on the covers again. Straight above the
        bar, on the way down to it, it stays put. */
     let tucked = false;
     const sync = () => {
@@ -389,7 +390,9 @@
     };
     document.addEventListener('pointermove', ev => {
       if (ev.pointerType !== 'mouse' || tucked) return;
-      if (ev.clientY < shelf.getBoundingClientRect().bottom) return;     // still on the covers' rows
+      const rows = shelf.getBoundingClientRect();
+      if (ev.clientY < rows.top) { tucked = true; sync(); return; }     // above the covers the page pill comes down, and the bar goes
+      if (ev.clientY < rows.bottom) return;                             // still on the covers' rows
       /* where the bar rests, not where it happens to be mid-slide */
       const rest = { l: (innerWidth - el.offsetWidth) / 2, b: innerHeight - (parseFloat(getComputedStyle(el).bottom) || 0) };
       const overBar = ev.clientX >= rest.l && ev.clientX <= rest.l + el.offsetWidth && ev.clientY <= rest.b;
@@ -482,6 +485,19 @@
   });
   document.addEventListener('np:change', markNow);
   markNow();
+
+  /* The page pill at the top goes out of the way as soon as the mouse is on the covers — and comes back down
+     when the mouse goes above them. (Only where there is a mouse to hover with.) */
+  (function pillAway() {
+    const pill = $('[data-seg]');
+    if (!pill || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    let lastY = -1, away = false;                    // until the mouse has moved, the pill is there
+    const apply = () => {
+      const want = lastY >= shelf.getBoundingClientRect().top;
+      if (want !== away) { away = want; pill.classList.toggle('is-away', away); }
+    };
+    addEventListener('pointermove', ev => { if (ev.pointerType === 'mouse') { lastY = ev.clientY; apply(); } }, { passive: true });
+  })();
 
   /* ==========================================================
      THE FOCUS VIEW — a cover pulled out of the shelf
