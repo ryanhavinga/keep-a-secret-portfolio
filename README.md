@@ -8,6 +8,8 @@ index.html
 css/styles.css      all styling
 js/config.js        ← everything you normally edit lives here
 js/app.js           carousel, player, grain
+js/nav.js           the Portfolio · Player · The Vault pill, and the Vault's password
+archive/            switched-off things kept for later (the Vault's 3D door)
 img/                artwork
 audio/              your audio files
 fonts/              Monument Extended
@@ -34,9 +36,9 @@ Everything below is in **`js/config.js`**.
 
 ### Logo
 ```js
-brand: { logo: 'Keep A Secret', sublogo: 'Portfolio', logoImage: null, tagline: 'Private Session' }
+brand: { logo: 'Keep A Secret', sublogo: 'Player', logoImage: null, tagline: 'Private Session' }
 ```
-`sublogo` is the smaller line underneath — set it to `null` to hide it.
+`sublogo` is the smaller line underneath, the player's page name (Portfolio and The Vault have their own in their HTML) — set it to `null` to hide it.
 Set `logoImage: 'img/logo.svg'` to swap the whole wordmark for an image.
 
 ### Tracks
@@ -77,51 +79,34 @@ Set `logoImage: 'img/logo.svg'` to swap the whole wordmark for an image.
 > produces. For true `.mp3` output, encode with `ffmpeg` or a DAW's export instead.)
 
 ### The Vault (`vault.html`)
-A second page for finished songs that are still available for an artist to cut, kept apart
-from the portfolio above (released records). Linked as "The Vault" top-right on the portfolio.
-Its content is `vault` in `js/config.js`: one entry per song (`title`, `audio`, `duration`,
-optional `genre`/`bpm`/`key`/`note`, and `status`: `'available'`, `'on hold'` or `'cut'`), plus
-`sealed`, the number of locked, empty boxes shown after the real ones.
+A plain page for finished songs that are still available for an artist to cut, kept apart from the portfolio
+(released records). Reached with "The Vault" on the pill at the top of every page (see below), which asks for its
+password. No title of its own; the songs are listed under a heading per language (Nederlandstalig, Engelstalig),
+each a list: a number, the title with a small line of genre · BPM · key (and a note, if
+there is one), the same play button and timeline as the player, and a "Request" link that opens an email about
+that song. Playing one stops the last; when one ends the next starts. The pill and the wordmark sit above it,
+as everywhere.
 
-Visitors first see a closed vault door, a real 3D model (see below). Opening it runs
-a short sequence timed in `js/vault.js`: the dial turns, the wheel spins, the bolts pull back, the door
-swings open and light floods in from inside, then you walk through into the wall of boxes. The
-lock sounds are synthesised in the browser, so there are no audio files for them. The door only
-plays once per browser session; after that the page opens straight onto the boxes. The page uses
-the same password gate as the portfolio, and one entry covers both pages.
+Its content is `vault` in `js/config.js`: `contact` (where "Request" mails to) and `tracks` — one
+entry per song (`title`, `language` (the heading it sits under), `audio`, `duration`, optional `genre`/`bpm`/`key`/`note`, and `status`: `'available'`,
+`'on hold'` or `'cut'`; the last two replace the Request link with their label). A song with `audio: null` shows
+"Audio to follow". The page is `vault.html`, `css/vault.css` and `js/vault.js`.
 
-#### The Vault door in 3D
-The door is a three.js scene: a lathe-turned steel door with 120 raised ribs, a wheel, a combination
-dial and a hinge, set in a brushed-panel wall with a stone floor, lit with real shadows, with a
-cage gate and a room of deposit boxes behind it. The shadows of the cage bars falling across the floor
-as the door swings are computed, not painted. Everything (textures included) is generated in code, so
-there are no image files.
+The earlier version — a 3D safe door that opens onto a wall of boxes — is switched off and saved in
+`archive/vault-door/`, with its own README on how to put it back.
 
-* `js/vault3d.src.js` is the source and **isn't loaded by the page**; `js/vault3d.bundle.js` (≈610 kB, three.js
-  included) is what the page loads. Edit the source, rebuild, and commit both.
-* To rebuild, with Node installed, from any scratch folder *outside* the repo:
-  ```bash
-  npm install three esbuild
-  NODE_PATH=./node_modules ./node_modules/.bin/esbuild "/path/to/repo/js/vault3d.src.js" \
-    --bundle --minify --format=iife --target=es2020 --legal-comments=none \
-    --outfile="/path/to/repo/js/vault3d.bundle.js"
-  ```
-  Keep `package.json` and `node_modules` out of the repo: Cloudflare would see a `package.json` and try to
-  run an install/build step on every push, and this site is deliberately build-free.
-* The timeline (dial, wheel, bolts, door, camera) runs off the same `T` table in `js/vault.js` as the sounds,
-  so changing a timing there moves the picture and the sound together.
-* If WebGL isn't available, the visitor has *reduce motion* on, or the bundle fails to load, there is no
-  door: the page opens straight onto the boxes. Nothing else on the page depends on it.
-* **Posters.** `img/vault-poster-portrait.jpg` and `img/vault-poster-landscape.jpg` are stills of the closed door.
-  They are the page's background from the very first frame, so there is never a blank screen while the scene
-  starts up; the live scene then fades in over them. If you change how the door looks, re-make them:
-  open `vault.html` at the shape you want (a phone-shaped window for the portrait one, ≈16:9 for the landscape
-  one), run `copy(__vault.snapshot())` in the console, and save the pasted `data:image/jpeg;base64,…` as the JPEG.
-* The pages also cross-fade into each other (`@view-transition` in `css/styles.css`), and the portfolio quietly
-  prefetches the Vault's files so the door is up the moment it's opened.
-* Handy while tuning: open the page with `?dpr=1` to render at 1× resolution, and in the console
-  `__vault.seek(5200)` freezes the scene at 5.2 s into the opening (`__vault.debug` holds the lights and
-  materials).
+### The page pill and the Vault's password
+Every page (Player, Portfolio, The Vault) has the same pill at the top: `Portfolio · Player · The Vault`. The dark
+slider sits under the page you are on; choosing another page glides it across, then the page fades over. It is
+markup in each HTML page (`<nav class="seg" data-seg>`) driven by `js/nav.js`, styled in `css/styles.css`.
+
+Choosing **The Vault** asks for a password first: a prompt fades up over the page you are on, with Back / Esc / a tap
+beside it to put it away again. A wrong one is a shake and nothing else. Once let in, that browser tab stays in for
+as long as it is open. `vault.html` has the same door on itself, so a direct link to it is no way round the password.
+The password is `gate.passwordHash` in `js/config.js` (a SHA-256 hash, not the password itself — the comment there shows
+how to make a new one). It is a doorman, not a lock: nothing server-side is checking, so it stops a link being
+passed around, not anyone determined. The old front-door password (SEP26 / OKT26) and the publishers' page (HAP)
+are gone; HAP is now the Vault's password.
 
 ### Portfolio (`portfolio.html`)
 Everything we've made, on its own page: the covers stand upright in a row, each turned toward the middle, so
@@ -139,18 +124,16 @@ Covers are deliberately *not* in one shared 3D space: each is drawn on its own, 
 middle on top, the hovered one above all), so two covers can never intersect or flicker against each other.
 Don't put `transform-style: preserve-3d` on `.shelf` — that is what would bring the glitching back.
 
-**Filling the row out.** With "All" chosen the set runs round again from the start until the row holds
+**Filling the row out.** The set runs round again from the start until the row holds
 `CONFIG.portfolio.fill` covers (default 10: 7 tracks → the first 3 appear a second time; it never cuts real
 tracks). The extras are the same releases, so any of them opens that release, and only the first run is exposed to
-screen readers and the keyboard. The pill at the top (`All · Gilles · Rosalie · Tim Tiago`, built from the artists
-in the list, most releases first) filters the row: the covers on show sink out of the bottom and the artist's own
-releases, once each, rise back in across the full width. Set `fill` to the number of tracks to show each exactly
-once.
+screen readers and the keyboard. Set `fill` to the number of tracks to show each exactly once. (There used to be a
+filter by artist at the top; the top of the page is now the page pill.)
 
 The player on the front page is for what we *feature*; this page is the whole catalogue. It's
 `CONFIG.portfolio` in `js/config.js` — one line per track: `title`, `artist`, `artwork`, a fallback `color`,
-optional `audio`, `year`, `note`, `links`. The tint of each sleeve edge is sampled from its artwork. Linked
-from "Portfolio" top-right on the player page; same password as the player.
+optional `audio`, `year`, `note`, `links`. The tint of each sleeve edge is sampled from its artwork. Reached with
+"Portfolio" on the page pill; open to everyone.
 
 **Artwork wants to be big:** the cover is shown up to ≈700 px wide and the screens it's seen on are mostly
 2×, so aim for **1400–2000 px square** JPEGs (under ≈500 KB each). Replace a file in `img/` under the same name
@@ -158,16 +141,6 @@ and the page picks it up. Apple Music is a good source: take the cover's image U
 end (`…/600x600bb.jpg`) for `3000x3000bb.jpg`. (Spotify tops out at 640 px.) The link-preview image for the
 front page (`img/og-preview.jpg`, ≈300 KB) is kept separate and light on purpose, because some apps drop
 previews over ≈300 KB.
-
-### For publishers (`publishing.html`)
-A plain, scrolling list of English-language demos for the publishing team, under one "Demos" heading, in the
-player's own type, play button and timeline. It has its own password: typing **HAP** at the door on the portfolio (or on the Vault)
-sends you straight here instead, and doesn't open either of those. The door on this page accepts only HAP,
-and HAP opens only this page. Everything is in `js/config.js`: the password is `gate.redirects`, the songs
-are `publishing.tracks` (title, artist, genre, a note, `audio`). A row with
-`audio: null` shows "Audio to follow". Playing one stops the last; when one ends the next starts.
-
-> The four rows in `publishing.tracks` are **placeholders**. Swap in the real demos before sharing it.
 
 ### Footer credit
 "© Keep A Secret. All Rights Reserved" and "Written & produced by Keep A Secret" sit fixed,

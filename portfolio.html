@@ -1,16 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" class="pf-html">
 <head>
-<script>
-/* The same pre-paint trick as index.html's first script: a session that has
-   already typed the password never sees the door. Shares the portfolio's
-   own flag, so one entry covers the player, this page and the Vault. */
-try {
-  if (sessionStorage.getItem('kas-entered') === '1') {
-    document.documentElement.classList.add('is-remembered');
-  }
-} catch (_) {}
-</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Portfolio — Keep A Secret</title>
@@ -38,37 +28,24 @@ try {
 </head>
 <body class="page-pf">
 
-<div class="gate" data-gate>
-  <div class="gate__inner">
-    <p class="gate__mark">Keep A Secret</p>
-    <p class="gate__eyebrow">By invitation</p>
-    <form class="gate__form" data-gate-form>
-      <input class="gate__input" data-gate-input type="password" placeholder="Password"
-             aria-label="Password" autocomplete="off" autocapitalize="characters"
-             autocorrect="off" spellcheck="false" autofocus>
-      <button class="gate__btn" type="submit">Enter</button>
-    </form>
-  </div>
-</div>
-
 <header class="pf__bar">
   <a class="wordmark" href="index.html">
     <span class="wordmark__main">Keep A Secret</span>
     <span class="wordmark__sub">Portfolio</span>
   </a>
   <nav class="topbar__links">
-    <a class="tag" href="index.html">Player</a>
-    <!-- The Vault is switched off for now: <a class="tag" href="vault.html">The Vault</a> -->
     <a class="tag" href="contact.html">Contact</a>
   </nav>
 </header>
 
-<!-- the filter: a pill at the top with a slider that glides to whichever
-     artist is chosen. The buttons are built from CONFIG.portfolio by
-     js/portfolio.js. -->
-<div class="seg" data-seg role="group" aria-label="Show">
+<!-- the way between the pages: the slider sits under the one you are on (js/nav.js).
+     "The Vault" asks for its password first (CONFIG.gate). -->
+<nav class="seg" data-seg aria-label="Pages">
   <span class="seg__thumb" aria-hidden="true"></span>
-</div>
+  <a class="seg__btn" href="portfolio.html" aria-current="page">Portfolio</a>
+  <a class="seg__btn" href="index.html">Player</a>
+  <a class="seg__btn" href="vault.html" data-vault>The Vault</a>
+</nav>
 
 <main class="pf" data-pf>
   <h1 class="pf__title" data-pf-heading>Portfolio</h1>
@@ -76,6 +53,24 @@ try {
   <!-- one cover per track, built from CONFIG.portfolio.tracks -->
   <div class="floor" data-floor aria-hidden="true"></div>
   <ol class="shelf" data-shelf></ol>
+
+  <!-- bottom left, level with the credit line: Instagram and the Spotify playlist
+       (hrefs set from CONFIG.instagram / CONFIG.spotify by js/portfolio.js) -->
+  <div class="socials">
+    <a data-instagram href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.5" y="3.5" width="17" height="17" rx="5"/>
+        <circle cx="12" cy="12" r="4.2"/>
+        <circle cx="17.1" cy="6.9" r="1"/>
+      </svg>
+    </a>
+    <a data-spotify-playlist href="#" target="_blank" rel="noopener noreferrer" aria-label="Spotify playlist" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9.5"/>
+        <path d="M6.9 9.2c3.6-1 7.6-.7 10.6 1.1M7.4 12.3c3-.8 6.2-.5 8.7 1M7.9 15.2c2.4-.6 4.7-.3 6.7.8"/>
+      </svg>
+    </a>
+  </div>
 
   <footer class="pf__foot">
     <p>&copy; Keep A Secret. All Rights Reserved</p>
@@ -140,6 +135,7 @@ try {
 <audio data-audio preload="none"></audio>
 
 <script src="js/config.js"></script>
+<script src="js/nav.js"></script>
 <script src="js/portfolio.js"></script>
 </body>
 </html>

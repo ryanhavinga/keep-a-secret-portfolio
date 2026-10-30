@@ -1,6 +1,6 @@
 /* ============================================================
    KEEP A SECRET — PORTFOLIO (portfolio.html)
-   The door · the shelf · a cover pulled out into full view
+   The shelf · a cover pulled out into full view
    Content lives in js/config.js, under CONFIG.portfolio.
    ============================================================ */
 (() => {
@@ -90,11 +90,10 @@
   const shelf = $('[data-shelf]');
   const pfEl = $('[data-pf]');
   const floor = $('[data-floor]');
-  /* One cover per track, and — for "All" — the set runs round again from
-     the start until the row holds CONFIG.portfolio.fill covers. The extras
-     are the same releases, so a click on any copy opens that release; only
-     the first run (rep 0) is exposed to screen readers and the keyboard,
-     and it's the only run an artist filter shows. */
+  /* One cover per track, and the set runs round again from the start until
+     the row holds CONFIG.portfolio.fill covers. The extras are the same
+     releases, so a click on any copy opens that release; only the first run
+     (rep 0) is exposed to screen readers and the keyboard. */
   const TOTAL = Math.max(tracks.length, Math.floor(PF.fill || tracks.length));
   const items = [];
   for (let i = 0; i < TOTAL; i++) {
@@ -118,8 +117,8 @@
     fl.className = 'fl';
     fl.innerHTML = `<div class="fl__glow"></div><div class="fl__edge"></div>`;
     floor.appendChild(fl);
-    /* visible: on show under the current filter. pos: its place among the visible ones. */
-    const it = { li, fl, t, n, ti, rep, visible: true, pos: n, k: 0, side: 'r', btn: $('.cd__btn', li), face: $('.cd__face', li), tint: tintOf(t, null) };
+    /* pos: its place along the row */
+    const it = { li, fl, t, n, ti, rep, pos: n, k: 0, side: 'r', btn: $('.cd__btn', li), face: $('.cd__face', li), tint: tintOf(t, null) };
     paintTint(li, it.tint); paintTint(fl, it.tint); li.classList.toggle('is-ink-dark', darkInk(t, it.tint));
     /* swap the configured colour for the real one as soon as the artwork has loaded */
     const real = () => { it.tint = tintOf(t, it.face); paintTint(li, it.tint); paintTint(fl, it.tint); li.classList.toggle('is-ink-dark', darkInk(t, it.tint)); };
@@ -130,51 +129,21 @@
   }
   if (PF.heading) $('[data-pf-heading]').textContent = PF.heading;
 
-  const shown = () => items.filter(it => it.visible);
+  /* the two small icons bottom left: shown only when CONFIG has a link for them */
+  [['[data-instagram]', CONFIG.instagram && CONFIG.instagram.url], ['[data-spotify-playlist]', CONFIG.spotify && CONFIG.spotify.url]]
+    .forEach(([sel, url]) => { const a = $(sel); if (a && url) { a.href = url; a.hidden = false; } });
 
-  /* Lay the visible covers out along the row, centred: each gets its signed
-     distance from the middle (k), which side of it that puts it on (the
-     left ones face right, the right ones face left), and the row sizes
-     itself from how many there are (--n → --w, --p in css/portfolio.css). */
-  /* a CSS length custom property (--w, --p), in pixels */
-  const probeEl = document.createElement('i');
-  probeEl.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;height:0;';
-  pfEl.appendChild(probeEl);
-  function probe(name) { probeEl.style.width = `var(${name})`; return probeEl.getBoundingClientRect().width; }
-
+  /* Lay the covers out along the row, centred: each gets its signed distance
+     from the middle (k), which side of it that puts it on (the left ones face
+     right, the right ones face left), and the row sizes itself from how many
+     there are (--n → --w, --p in css/portfolio.css). */
   function layout() {
-    const vis = shown(), cnt = vis.length;
+    const cnt = items.length;
     pfEl.style.setProperty('--n', Math.max(1, cnt));
     pfEl.toggleAttribute('data-odd', cnt % 2 === 1);
-    /* How far the viewpoint swings with the pointer — the same on every page. (Where the viewpoint
-       is moved further back, below, the swing is scaled up with it so it turns the covers just as far.) */
-    const few = cnt <= 5;
-    pfEl.toggleAttribute('data-few', few);
-    const D = few ? 2.5 : 1.25;                                          // viewpoint distance, in cover widths (css/portfolio.css)
-    const sway = 2.6 * (D / 1.25);
-    pfEl.style.setProperty('--sway', `${sway.toFixed(1)}%`);
-    pfEl.style.setProperty('--sway-y', `${(sway * .5).toFixed(1)}%`);
-    /* An artist's own page (a handful of covers): every cover is turned the same way — face to
-       the right, like the outer ones of a full row — and at the same slant. The viewpoint sits
-       to the right of the row so every cover is seen from the same side, and each is rotated to
-       make up for where it stands, so none is left edge-on. A full row is left as it was. */
-    const SLANT = 36;                                                    // degrees between a cover's face and the line of sight
-    let w = 0, p = 0, shiftX = 0, xo = 0;
-    if (few) {
-      w = probe('--w'); p = probe('--p');
-      shiftX = w * .2;                                                   // the row is moved left by this, so it stays centred
-      xo = ((cnt - 1) / 2) * p - shiftX + w * .6;                        // the viewpoint: just right of the last cover
-    }
-    pfEl.style.setProperty('--ox', `${xo.toFixed(1)}px`);
     items.forEach(it => {
-      it.pos = vis.indexOf(it);
-      const on = it.pos >= 0;
-      it.li.classList.toggle('is-filtered', !on);
-      it.fl.classList.toggle('is-filtered', !on);
-      it.btn.tabIndex = on && !it.rep ? 0 : -1;
-      if (!on) return;
       it.k = it.pos - (cnt - 1) / 2;
-      it.side = few || it.k < 0 ? 'l' : 'r';
+      it.side = it.k < 0 ? 'l' : 'r';
       it.li.classList.toggle('cd--l', it.side === 'l');
       it.li.classList.toggle('cd--r', it.side === 'r');
       it.li.classList.toggle('is-rim', cnt >= 3 && (it.pos === 0 || it.pos === cnt - 1));   // the outermost two are softened
@@ -182,96 +151,16 @@
       it.fl.classList.toggle('cd--r', it.side === 'r');
       it.fl.classList.toggle('is-rim', it.li.classList.contains('is-rim'));
       it.fl.style.setProperty('--k', it.k);
-      let rot = 90;
-      if (few && w) {
-        const phi = Math.atan((it.k * p - shiftX - xo) / (w * D)) * 180 / Math.PI;      // the angle to this cover from the viewpoint (negative: it is to its left)
-        rot = clamp(90 - SLANT - phi, 30, 90);
-      }
-      it.li.style.setProperty('--rot', `${rot.toFixed(1)}deg`);
-      it.fl.style.setProperty('--rot', `${rot.toFixed(1)}deg`);
       it.li.style.setProperty('--k', it.k);
       it.li.style.zIndex = String(20 - Math.round(Math.abs(it.k) * 2));   // nearer the middle is drawn on top
     });
   }
   layout();
-  addEventListener('resize', layout);            // the row's size (and so each cover's angle) follows the window
   /* the first layout places the covers, it doesn't fly them in from where they were created */
   items.forEach(it => { it.li.classList.add('no-tr'); it.fl.classList.add('no-tr'); });
   const settle = () => items.forEach(it => { it.li.classList.remove('no-tr'); it.fl.classList.remove('no-tr'); });
   requestAnimationFrame(() => requestAnimationFrame(settle));
   setTimeout(settle, 150);
-
-  /* ----------------------------------------------------------
-     The filter pill. "All", then each artist, most releases first. Choosing
-     one sinks the covers on show out of the bottom of the row, left to
-     right, then lays the new set out across the full width and raises them
-     back in the same way. The covers are re-laid out while they are out of
-     sight, with transitions off, so nothing ever jumps or flips in view —
-     a cover that changes sides (which way its face turns) does so
-     underneath the floor.
-     ---------------------------------------------------------- */
-  const seg = $('[data-seg]');
-  const thumb = $('.seg__thumb', seg);
-  const counts = new Map();
-  tracks.forEach(t => counts.set(t.artist, (counts.get(t.artist) || 0) + 1));
-  const artists = [...counts.keys()].sort((a, b) => counts.get(b) - counts.get(a));
-  const names = ['All', ...artists];
-  let filter = 'All', filtering = false, hoverReset = () => {};
-
-  const segBtns = names.map(name => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'seg__btn';
-    b.textContent = name;
-    b.setAttribute('aria-pressed', String(name === filter));
-    b.addEventListener('click', () => setFilter(name));
-    seg.appendChild(b);
-    return b;
-  });
-  /* hide the pill when there is only one thing to choose */
-  if (artists.length < 2) seg.hidden = true;
-
-  function moveThumb() {
-    const b = segBtns[names.indexOf(filter)];
-    if (!b) return;
-    thumb.style.setProperty('--tx', `${b.offsetLeft}px`);
-    thumb.style.setProperty('--tw', `${b.offsetWidth}px`);
-  }
-  /* measure once the lettering is in (its widths depend on the font) */
-  const measure = () => {
-    thumb.style.transition = 'none';
-    moveThumb();
-    void thumb.offsetWidth;
-    thumb.style.transition = '';
-  };
-  requestAnimationFrame(measure);
-  if (document.fonts?.ready) document.fonts.ready.then(measure);
-  addEventListener('resize', measure);
-
-  function setFilter(name) {
-    if (filtering || name === filter) return;
-    filter = name; filtering = true; hoverReset();
-    segBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(names[i] === name)));
-    moveThumb();
-
-    const leaving = shown();
-    leaving.forEach((it, i) => { it.li.style.transitionDelay = it.fl.style.transitionDelay = `${reduced ? 0 : i * 14}ms`; it.li.classList.add('is-leaving'); it.fl.classList.add('is-leaving'); });
-    const outMs = reduced ? 20 : 370 + leaving.length * 14;     // the last one has fully gone before the new set starts
-
-    setTimeout(() => {
-      /* an artist's own releases, once each; "All" is the whole run, repeats included */
-      items.forEach(it => { it.visible = name === 'All' || (it.rep === 0 && it.t.artist === name); it.li.classList.add('no-tr'); it.fl.classList.add('no-tr'); });
-      layout();
-      void shelf.offsetWidth;                              // land the new layout while nothing can be seen
-      items.forEach(it => { it.li.classList.remove('no-tr'); it.fl.classList.remove('no-tr'); });
-      const entering = shown();
-      entering.forEach((it, i) => { it.li.style.transitionDelay = it.fl.style.transitionDelay = `${reduced ? 0 : i * 22}ms`; it.li.classList.remove('is-leaving'); it.fl.classList.remove('is-leaving'); });
-      setTimeout(() => {
-        items.forEach(it => { it.li.style.transitionDelay = it.fl.style.transitionDelay = ''; });
-        filtering = false;
-      }, reduced ? 20 : 600 + entering.length * 22);
-    }, outMs);
-  }
 
   /* ----------------------------------------------------------
      Hovering: the cover under the pointer lifts to the full height, the one
@@ -299,15 +188,15 @@
 
     const frame = now => {
       const dt = Math.min(.05, (now - last) / 1000 || .016); last = now;
-      const off = html.classList.contains('is-focused') || filtering;
-      const hp = hover && hover.visible && !off ? hover.pos : -1;
+      const off = html.classList.contains('is-focused');
+      const hp = hover && !off ? hover.pos : -1;
       pSpeed *= Math.exp(-7 * dt);
       spd += (Math.min(1, pSpeed / 2.2) - spd) * (1 - Math.exp(-8 * dt));
       const gain = 1 - HASTE * spd;
       const steps = Math.max(1, Math.ceil(dt / .004)), h = dt / steps;
       let busy = spd > .01 || pSpeed > .01;
       items.forEach((it, n) => {
-        const dist = hp < 0 || it.pos < 0 ? 9 : Math.abs(it.pos - hp);
+        const dist = hp < 0 ? 9 : Math.abs(it.pos - hp);
         const target = (REACH[dist] || 0) * gain;
         const w0 = target < mags[n] - .0005 ? DOWN : UP;
         let x = mags[n], v = vels[n];
@@ -331,7 +220,6 @@
       if (busy) requestAnimationFrame(frame); else running = false;
     };
     const wake = () => { if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); } };
-    hoverReset = () => { hover = null; wake(); };
 
     /* Any part of a cover — its artwork or its spine — lifts it, and the
        gaps between covers belong to the nearest one, so sliding along the row
@@ -344,7 +232,7 @@
       const row = shelf.getBoundingClientRect();
       if (ev.clientY < row.top - 100 || ev.clientY > row.bottom) return null;
       let best = null, bd = Infinity;                        // however far out: the outermost cover keeps the lift
-      for (const x of shown()) {
+      for (const x of items) {
         const a = x.face.getBoundingClientRect(), b = $('.cd__edge', x.li).getBoundingClientRect();
         const l = Math.min(a.left, b.left), r = Math.max(a.right, b.right);
         const d = ev.clientX < l ? l - ev.clientX : ev.clientX > r ? ev.clientX - r : 0;
@@ -529,10 +417,10 @@
       if (busy || cur === -1) return;
       /* on to the next release; of its copies on show, the one nearest to
          where we are, so closing lands on a slot close by */
-      const uniq = items.filter(x => x.rep === 0 && x.visible);
+      const uniq = items.filter(x => x.rep === 0);
       const here = items[cur];
       const nextTi = uniq[(uniq.findIndex(x => x.ti === here.ti) + dir + uniq.length) % uniq.length].ti;
-      const n = shown().filter(x => x.ti === nextTi).sort((a, b) => Math.abs(a.pos - here.pos) - Math.abs(b.pos - here.pos))[0].n;
+      const n = items.filter(x => x.ti === nextTi).sort((a, b) => Math.abs(a.pos - here.pos) - Math.abs(b.pos - here.pos))[0].n;
       busy = true;
       items[cur].li.classList.remove('is-out');
       items[n].li.classList.add('is-out');
@@ -604,54 +492,5 @@
     addEventListener('resize', () => { if (cur !== -1 && !busy) close(); });
 
     return { open };
-  })();
-
-  /* ==========================================================
-     THE DOOR — the player's own password (CONFIG.gate)
-     ========================================================== */
-  (function door() {
-    const el = $('[data-gate]');
-    const cfg = CONFIG.gate || {};
-    const KEY = 'kas-entered';
-    if (!el || !cfg.passwordHash) return el?.remove();
-    let seen = false;
-    if (cfg.remember !== false) { try { seen = sessionStorage.getItem(KEY) === '1'; } catch (_) {} }
-    if (seen) return el.remove();
-
-    const sha256Hex = async str => {
-      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-    };
-    const form = $('[data-gate-form]', el), input = $('[data-gate-input]', el);
-    const want = [].concat(cfg.passwordHash).map(h => String(h).trim().toLowerCase());
-
-    form.addEventListener('submit', async ev => {
-      ev.preventDefault();
-      const got = await sha256Hex(input.value.trim().toUpperCase());
-
-      /* a password with its own page (CONFIG.gate.redirects) */
-      const hop = (cfg.redirects || []).find(r => String(r.passwordHash).trim().toLowerCase() === got);
-      if (hop) {
-        try { sessionStorage.setItem(hop.key, '1'); } catch (_) {}
-        el.classList.remove('is-wrong');
-        el.classList.add('is-leaving');
-        if (window.kasGo) window.kasGo(hop.to); else setTimeout(() => { location.href = hop.to; }, 450);
-        return;
-      }
-      if (!want.includes(got)) {
-        el.classList.remove('is-wrong');
-        void el.offsetWidth;
-        el.classList.add('is-wrong');
-        input.value = '';
-        input.focus();
-        return;
-      }
-      el.classList.remove('is-wrong');
-      el.classList.add('is-open');
-      if (cfg.remember !== false) { try { sessionStorage.setItem(KEY, '1'); } catch (_) {} }
-      setTimeout(() => el.remove(), 3600);   // past .gate's own 3.4s fade
-    });
-    input.addEventListener('input', () => el.classList.remove('is-wrong'));
-    input.focus();
   })();
 })();

@@ -1,0 +1,424 @@
+/* ============================================================
+   KEEP A SECRET — THE VAULT (vault.html)
+   Loaded after css/styles.css, which it borrows the fonts, tokens,
+   topbar and gate from. Two parts: the door (.vault-intro — a full-screen
+   scene, every piece of it drawn in CSS) and the room behind it
+   (.vault-room — the wall of safe-deposit boxes, one per song).
+   ============================================================ */
+
+/* styles.css locks <html>/<body> to the viewport for the portfolio's
+   single fixed room. The vault's room is a page that scrolls, so that's
+   undone here — and put back only while the door is still shut
+   (html.is-sealed, set and cleared by js/vault.js). */
+html.vault-html,
+html.vault-html body {
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+html.vault-html.is-sealed,
+html.vault-html.is-sealed body {
+  height: 100%;
+  overflow: hidden;
+}
+.page-vault { background: #050506; }
+
+/* the header scrolls away with the room rather than floating over the
+   boxes — there's no backdrop behind it to keep it legible over them */
+.page-vault .topbar { position: absolute; }
+.page-vault .wordmark { display: block; }
+
+/* while Monument Extended is still arriving (see the script in vault.html's
+   head) its lettering stays invisible rather than flashing in the fallback face */
+html.fonts-wait .topbar,
+html.fonts-wait .gate__inner,
+html.fonts-wait .vault-intro__ui,
+html.fonts-wait .vault-room { visibility: hidden; }
+
+/* ============================================================
+   THE DOOR — the 3D scene itself is in js/vault3d.src.js; this is the
+   screen it plays on, and the call to open
+   ============================================================ */
+.vault-intro {
+  --unit-y: 48%;
+
+  position: fixed; inset: 0; z-index: 30;
+  overflow: hidden;
+  /* A still of the closed door, there from the very first frame. The live
+     scene takes a few hundred milliseconds to start up, and without this
+     the page shows nothing but black until it does; the scene then fades
+     in over the still (.vault-gl below). Made from the scene itself —
+     see `snapshot` in js/vault3d.src.js. */
+  background: #020203 url('../img/vault-poster-portrait.jpg') 50% 50% / cover no-repeat;
+  transition: opacity 1.2s var(--ease), visibility 0s linear 1.2s;
+}
+html.is-vault-opened .vault-intro { display: none; }
+body.is-inside .vault-intro { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* the last of it: the light filling the screen as you step through */
+.vault-flood {
+  position: absolute; inset: 0;
+  background: radial-gradient(70% 70% at 50% var(--unit-y),
+    #ffe3b0 0%, #f4bd6e 30%, #b9782e 66%, #4a2c10 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.3s cubic-bezier(.5, 0, .5, 1) .45s;
+}
+
+/* ---------- the 3D door --------------------------------------- */
+.vault-gl {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  opacity: 0;
+  transition: opacity .7s var(--ease);
+}
+.vault-intro.is-ready .vault-gl { opacity: 1; }
+@media (min-aspect-ratio: 1/1) {
+  .vault-intro { background-image: url('../img/vault-poster-landscape.jpg'); }
+}
+
+/* ---------- the call to open --------------------------------- */
+.vault-intro__ui {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(26px, 6.5vh, 64px);
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center;
+  gap: clamp(14px, 2.2vh, 20px);
+  text-align: center;
+  /* held back until the scene is up, so there is never a button on an
+     empty screen */
+  opacity: 0; pointer-events: none;
+  transition: opacity .9s var(--ease);
+}
+.vault-intro.is-ready .vault-intro__ui { opacity: 1; pointer-events: auto; }
+.vault-intro__eyebrow {
+  margin: 0;
+  font-size: 9px;
+  letter-spacing: .42em; text-indent: .42em;
+  text-transform: uppercase;
+  color: var(--w-72);
+}
+.vault-intro__btn {
+  padding: 13px 30px;
+  white-space: nowrap;
+  border: 1px solid var(--white);
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 10px; letter-spacing: .34em; text-indent: .34em;
+  text-transform: uppercase;
+  color: var(--white);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color .7s var(--ease), box-shadow .7s var(--ease);
+}
+.vault-intro__btn:hover {
+  background: rgba(255, 255, 255, .1);
+  box-shadow: 0 0 30px rgba(255, 226, 170, .18);
+}
+
+/* ---------- the sequence ------------------------------------- */
+/* working the lock — the call to open steps aside */
+.vault-intro.is-working .vault-intro__ui { opacity: 0; pointer-events: none; }
+/* walking in: the camera does the moving, this is only the light that
+   fills the screen at the end of it */
+.vault-intro.is-entering .vault-flood { opacity: 1; }
+
+/* ============================================================
+   THE ROOM
+   ============================================================ */
+.vault-room {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: clamp(128px, 19vh, 190px) clamp(16px, 4vw, 48px) clamp(28px, 4vh, 40px);
+  display: flex; flex-direction: column;
+  /* the light from the doorway, still hanging over the wall of boxes */
+  background:
+    radial-gradient(60% 46% at 50% 0%, rgba(255, 222, 165, .13), rgba(255, 210, 150, .04) 50%, transparent 78%),
+    linear-gradient(180deg, #0b0b0c, #060607 60%, #040405);
+}
+/* eyes adjusting: the room starts washed in the light you just walked
+   through and settles down to its own */
+.vault-room::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 20;
+  pointer-events: none;
+  background: radial-gradient(80% 80% at 50% 40%, rgba(255, 214, 150, .62), rgba(214, 150, 70, .4) 70%, rgba(80, 46, 18, .35));
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 2.6s cubic-bezier(.3, .1, .3, 1), visibility 0s linear 2.6s;
+}
+body.is-inside .vault-room::before { opacity: 0; visibility: hidden; }
+/* a revisit in the same session skips the door — and the wash with it */
+html.is-vault-opened .vault-room::before { display: none; }
+
+.vault-room__light {
+  position: absolute;
+  left: 50%; top: 0;
+  width: min(1100px, 100%); height: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, rgba(255, 226, 170, .35), transparent);
+  filter: blur(1px);
+}
+
+.vault-room__head {
+  max-width: 620px;
+  margin: 0 auto;
+  text-align: center;
+}
+.vault-room__eyebrow {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: .42em; text-indent: .42em;
+  text-transform: uppercase;
+  color: var(--w-48);
+}
+.vault-room__title {
+  margin: clamp(10px, 1.6vh, 16px) 0 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(26px, 4.6vw, 52px);
+  line-height: 1.05;
+  letter-spacing: .015em;
+  word-spacing: -.2em;
+  text-transform: uppercase;
+}
+.vault-room__intro {
+  margin: clamp(14px, 2.2vh, 22px) auto 0;
+  max-width: 470px;
+  font-size: clamp(13px, 1.2vw, 15px);
+  line-height: 1.65;
+  color: var(--w-72);
+}
+.vault-room__intro:empty { display: none; }
+
+/* ---------- the boxes ---------------------------------------- */
+.boxes {
+  list-style: none;
+  margin: clamp(40px, 7vh, 72px) auto 0;
+  padding: 0;
+  width: min(1100px, 100%);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr));
+  gap: clamp(12px, 1.6vw, 20px);
+}
+
+/* a safe-deposit door: brushed steel gone dark, a screw in each corner */
+.box {
+  --i: 0;
+  position: relative;
+  display: flex; flex-direction: column;
+  min-height: clamp(220px, 26vh, 250px);
+  padding: 18px 20px 20px;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .012) 38%, rgba(0, 0, 0, .2)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .016) 0 1px, rgba(0, 0, 0, .025) 1px 2px, transparent 2px 4px),
+    #141619;
+  border: 1px solid rgba(255, 255, 255, .075);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 22px 44px -26px rgba(0, 0, 0, .95);
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity .9s var(--ease) calc(.5s + var(--i) * 90ms),
+    transform .9s var(--ease) calc(.5s + var(--i) * 90ms),
+    border-color .6s var(--ease), box-shadow .6s var(--ease);
+}
+body.is-inside .box { opacity: 1; transform: none; }
+.box::before {
+  content: '';
+  position: absolute; inset: 7px;
+  pointer-events: none;
+  --screw: radial-gradient(circle, #6b7279 0 1.4px, #2a2d31 2px, transparent 2.6px);
+  background: var(--screw) 0 0, var(--screw) 100% 0, var(--screw) 0 100%, var(--screw) 100% 100%;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.box__plate {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+/* the engraved number plate */
+.box__no {
+  padding: 5px 8px 4px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(0, 0, 0, .28);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6);
+  font-family: var(--display);
+  font-size: 9px;
+  letter-spacing: .18em;
+  color: rgba(255, 255, 255, .62);
+}
+.box__status {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 9px;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  color: var(--w-72);
+}
+.box__status::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #f0c47e;
+  box-shadow: 0 0 8px rgba(240, 196, 126, .8);
+}
+.box[data-status='on hold'] .box__status::before { background: #8d8f94; box-shadow: none; }
+.box[data-status='cut'] .box__status { color: var(--w-30); }
+.box[data-status='cut'] .box__status::before { background: transparent; box-shadow: inset 0 0 0 1px var(--w-30); }
+
+.box__title {
+  margin: clamp(22px, 3vh, 30px) 0 0;
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: clamp(18px, 1.7vw, 22px);
+  line-height: 1.2;
+  letter-spacing: .01em;
+}
+.box__meta {
+  margin: 6px 0 0;
+  font-size: 12px;
+  letter-spacing: .04em;
+  color: var(--w-48);
+}
+.box__meta:empty { display: none; }
+
+.box__player {
+  margin-top: auto;
+  padding-top: 22px;
+  display: flex; align-items: center; gap: 12px;
+}
+.box__play {
+  flex: 0 0 auto;
+  display: grid; place-items: center;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .28);
+  color: #fff;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color .4s var(--ease), border-color .4s var(--ease), color .4s var(--ease), transform .32s var(--ease);
+}
+.box__play svg { width: 15px; height: 15px; fill: currentColor; }
+.box__play .i-pause { display: none; }
+.box.is-playing .box__play .i-play { display: none; }
+.box.is-playing .box__play .i-pause { display: block; }
+.box__play .i-play { transform: translateX(1px); }
+@media (hover: hover) and (pointer: fine) {
+  .box__play:hover { border-color: #fff; transform: scale(1.06); }
+}
+.box__play:active { transform: scale(.94); }
+
+.box__scrub {
+  position: relative;
+  flex: 1 1 auto;
+  padding: 10px 0;
+  cursor: pointer;
+  touch-action: none;
+}
+.box__track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .14);
+  overflow: hidden;
+}
+.box__fill {
+  height: 100%; width: 0;
+  background: #fff;
+}
+.box__time {
+  flex: 0 0 auto;
+  min-width: 3.4em;
+  text-align: right;
+  font-size: 11px;
+  letter-spacing: .1em;
+  font-variant-numeric: tabular-nums;
+  color: var(--w-48);
+}
+
+.box__request {
+  align-self: flex-start;
+  margin-top: 16px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  color: var(--w-72);
+  transition: color .5s var(--ease), text-shadow .5s var(--ease);
+}
+.box__request::after { content: ' \2192'; letter-spacing: 0; }
+.box__request:hover { color: #fff; text-shadow: 0 0 16px rgba(255, 226, 170, .4); }
+
+/* the one that's playing catches the light from the door */
+.box.is-playing {
+  border-color: rgba(255, 214, 150, .32);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 236, 200, .14),
+    0 0 46px -12px rgba(255, 200, 120, .28),
+    0 22px 44px -26px rgba(0, 0, 0, .95);
+}
+.box.is-playing .box__play { background: #fff; border-color: #fff; color: #0b0b0c; }
+.box.is-playing .box__fill { background: #ffe7bf; box-shadow: 0 0 8px rgba(255, 220, 160, .7); }
+
+/* still locked: no song yet, just the keyhole */
+.box--sealed .box__no { color: var(--w-30); }
+.box--sealed .box__status { color: var(--w-30); }
+.box--sealed .box__status::before { background: transparent; box-shadow: inset 0 0 0 1px var(--w-30); }
+.box__keyhole {
+  margin: auto;
+  position: relative;
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #222529, #111315);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .8), 0 1px 0 rgba(255, 255, 255, .06), 0 0 0 1px rgba(255, 255, 255, .06);
+}
+.box__keyhole::before,
+.box__keyhole::after {
+  content: '';
+  position: absolute; left: 50%;
+  background: #030303;
+}
+.box__keyhole::before {
+  top: 12px; width: 10px; height: 10px; margin-left: -5px;
+  border-radius: 50%;
+}
+.box__keyhole::after {
+  top: 19px; width: 6px; height: 14px; margin-left: -3px;
+  clip-path: polygon(20% 0, 80% 0, 100% 100%, 0 100%);
+}
+
+.vault-room__foot {
+  margin-top: clamp(64px, 10vh, 110px);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  text-align: center;
+}
+.vault-room__foot p {
+  margin: 0;
+  font-family: Helvetica, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 9.5px;
+  line-height: 1.16;
+  letter-spacing: .1em;
+  color: #cecece;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 760px) {
+  .vault-intro {
+    --d: min(64vw, 44vh);
+    --unit-y: 47%;
+  }
+  .vault-room { padding-top: clamp(118px, 17vh, 150px); }
+  .box { min-height: 0; }
+  .box__title { margin-top: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .box { opacity: 1; transform: none; }
+}

@@ -10,7 +10,6 @@
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const SOUND_ENABLED = true;   // the gate woosh — set false to mute it again
   /* Off by request: real Vibration-API haptics (Android and everything
      else that isn't iOS) were never verifiable from here — no Android
      device to actually feel the result on, and shipping an untested
@@ -898,9 +897,15 @@
         lastD[j] = d;
         const a = Math.abs(d);
         const side = a === 1;
-        c.classList.toggle('cover--side', side);
-        paintCover(c, d);
-        c.style.zIndex = String(10 - a);
+        /* Never more than one cover showing behind the playing one on each
+           side. Every cover further out than that is drawn exactly where
+           its side's visible neighbour is — same slot, same shape (so it
+           carries .cover--side too), one layer lower — which is as good as
+           not being there, however many tracks there are. */
+        c.classList.toggle('cover--side', a >= 1);
+        paintCover(c, Math.max(-1, Math.min(1, d)));
+        c.style.zIndex = String(10 - Math.min(a, 9));
+        c.style.boxShadow = a >= 2 ? 'none' : '';   // …and no second shadow stacked under the visible one
         /* the playing cover takes the pointer too, so it can lift on hover
            like its neighbours — its click handler is a no-op. Only the
            fully hidden ones stay out of the way. */
@@ -1914,262 +1919,8 @@
       if (b.sublogo) { sub.textContent = b.sublogo; sub.hidden = false; } else { sub.hidden = true; }
     }
     $('[data-tagline]').textContent = b.tagline || '';
-
-    const ig = CONFIG.instagram;
-    const igLink = $('[data-instagram]');
-    if (ig?.url) igLink.href = ig.url; else igLink.hidden = true;
     document.title = `${b.logo} — Private Listening`;
   }
-
-  /* A one-off "decrypting" reveal for a single line of text. Left to
-     right, each letter cycles through random characters for a moment and
-     then settles on the real one, with only a couple of letters ever in
-     flux at once — a tight moving window rather than the whole line
-     buzzing, which is the difference between a terminal resolving a
-     readout and a wall of Matrix rain.
-
-     Every letter is two overlapping copies of itself (see .decrypt-char in
-     styles.css): a hidden one holding the real character, which reserves
-     its exact final width from the first frame, and a visible one on top,
-     absolutely positioned, which is the only thing that changes. Nothing
-     about the line's width, position or spacing moves at any point.
-
-     Returns nothing — it is the last thing on screen to settle and has
-     nothing to hand off to. */
-  function decryptReveal(el, { stagger = 55, window: WINDOW = 130, tick = 34 } = {}) {
-    if (!el || reduced) return;   // reduced motion keeps the plain text fillContent() already set
-    const text = el.textContent;
-    if (!text) return;
-
-    const CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const letters = [...text];
-    el.textContent = '';
-    el.setAttribute('aria-label', text);   // the real words, for the whole time the glyphs are in flux
-
-    letters.forEach((ch, idx) => {
-      if (ch === ' ') { el.append(' '); return; }   // nothing to decrypt in a space
-
-      const cell = document.createElement('span');
-      cell.className = 'decrypt-char';
-      cell.setAttribute('aria-hidden', 'true');
-      const final = document.createElement('span');
-      final.className = 'decrypt-char__final';
-      final.textContent = ch;
-      const glyph = document.createElement('span');
-      glyph.className = 'decrypt-char__glyph';
-      cell.append(final, glyph);
-      el.appendChild(cell);
-
-      setTimeout(() => {
-        cell.classList.add('is-active');
-        const iv = setInterval(() => {
-          glyph.textContent = CHARSET[(Math.random() * CHARSET.length) | 0];
-        }, tick);
-        setTimeout(() => {
-          clearInterval(iv);
-          glyph.textContent = ch;
-          cell.classList.add('is-locked');
-        }, WINDOW);
-      }, idx * stagger);
-    });
-
-    /* Once every letter has landed, hand the line back to the real
-       characters — by revealing the hidden copy that was already holding
-       each letter's box, and dropping the animated one on top of it.
-
-       Deliberately NOT a collapse back to one plain text node: an
-       inline-block cell per letter rounds its own width, and those
-       roundings accumulate left-to-right (measured: ~8px by the end of
-       this line), so swapping the scaffolding for plain text re-flowed
-       every character a few pixels to the left in one visible jump at
-       the very end. Reusing the boxes that are already there keeps the
-       glyphs exactly where they have been since the first frame, and
-       still leaves real, selectable text behind. */
-    setTimeout(() => {
-      el.removeAttribute('aria-label');
-      $$('.decrypt-char', el).forEach(cell => {
-        cell.removeAttribute('aria-hidden');
-        cell.classList.add('is-settled');
-        cell.querySelector('.decrypt-char__glyph')?.remove();
-      });
-    }, (letters.length - 1) * stagger + WINDOW + 220);
-  }
-
-  /* The sub-line only. The main wordmark is plain text from the first
-     frame — one line resolving under a name that is already there reads as
-     a system coming up; both of them doing it reads as an effect.
-
-     Gate.init calls this as `enter()` on *every* successful entry, remembered
-     ones included — so navigating to contact.html and back (a real page
-     load, gate already unlocked this session) was replaying the reveal
-     each time. Gated the same way the gate's own remember flag is: once
-     sessionStorage has seen it, later calls just leave fillContent()'s
-     plain text in place, same as decryptReveal already does for reduced
-     motion. */
-  const SUB_INTRO_KEY = 'kas-sub-intro-played';
-  function playSubIntro() {
-    const sub = $('[data-logo-sub]');
-    if (!sub || sub.hidden) return;
-    try {
-      if (sessionStorage.getItem(SUB_INTRO_KEY) === '1') return;
-      sessionStorage.setItem(SUB_INTRO_KEY, '1');
-    } catch (_) {}
-    decryptReveal(sub);
-  }
-
-  /* The entrance lamp — see `intro-lamp` in styles.css, which is where the
-     shape of it lives. Only ever called from the gate's successful submit,
-     so it is tied to the act of entering the password rather than to the
-     page appearing: a reload, or a second visit inside a session that has
-     already been let in, goes straight to a lit room. */
-  const ENTRANCE_MS = 4600;   // must match `intro-lamp`'s duration in styles.css
-  function playEntranceLamp() {
-    if (reduced) return;      // reduced motion: the room is simply lit, no theatrics
-    document.body.classList.add('is-entering');
-    setTimeout(() => document.body.classList.remove('is-entering'), ENTRANCE_MS);
-  }
-
-  /* ==========================================================
-     THE GATE — a doorman, not a lock. See CONFIG.gate.
-     ========================================================== */
-  const Gate = (() => {
-    const el = $('[data-gate]');
-    const cfg = CONFIG.gate || {};
-    const KEY = 'kas-entered';
-
-    /* The woosh, synthesised rather than shipped as a file — nothing to
-       download, nothing to license. Filtered noise sweeping up through the
-       middle and away again, with a sub underneath for the weight you feel
-       rather than hear. Built on the submit, which is the user gesture the
-       browser wants before it will let a page make any sound at all. */
-    function woosh() {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      let ctx;
-      try { ctx = new AC(); } catch (_) { return; }
-
-      const t = ctx.currentTime, dur = 2.7;
-
-      const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let n = 0; n < data.length; n++) data[n] = Math.random() * 2 - 1;
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-
-      /* the sweep — the whole character of the sound is in this curve */
-      const band = ctx.createBiquadFilter();
-      band.type = 'bandpass';
-      band.Q.value = .9;
-      band.frequency.setValueAtTime(150, t);
-      band.frequency.exponentialRampToValueAtTime(1700, t + dur * .44);
-      band.frequency.exponentialRampToValueAtTime(105, t + dur);
-
-      /* takes the top off so it reads as moving air, not static */
-      const tame = ctx.createBiquadFilter();
-      tame.type = 'lowpass';
-      tame.frequency.value = 5000;
-
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(.0001, t);
-      gain.gain.exponentialRampToValueAtTime(.4, t + dur * .4);
-      gain.gain.exponentialRampToValueAtTime(.0001, t + dur);
-
-      const sub = ctx.createOscillator();
-      sub.type = 'sine';
-      sub.frequency.setValueAtTime(72, t);
-      sub.frequency.exponentialRampToValueAtTime(33, t + dur);
-      const subGain = ctx.createGain();
-      subGain.gain.setValueAtTime(.0001, t);
-      subGain.gain.exponentialRampToValueAtTime(.15, t + dur * .3);
-      subGain.gain.exponentialRampToValueAtTime(.0001, t + dur);
-
-      src.connect(band).connect(tame).connect(gain).connect(ctx.destination);
-      sub.connect(subGain).connect(ctx.destination);
-
-      src.start(t); src.stop(t + dur);
-      sub.start(t); sub.stop(t + dur);
-      src.onended = () => ctx.close();
-    }
-
-    const remembers = () => cfg.remember !== false;
-
-    /* SHA-256 of the (trimmed, uppercased) candidate, hex-encoded — what
-       actually gets compared against js/config.js's passwordHash below,
-       instead of the real password sitting there in plain text for
-       anyone who opens the file to just read straight off. Doesn't turn
-       this into real security (see the note on CONFIG.gate in
-       config.js) — a short password's hash is still crackable by anyone
-       determined enough — but it does stop the one attack this was
-       actually worried about: a link forwarded around, and whoever it
-       lands on peeking at the page source for the password itself
-       rather than asking whoever sent it. */
-    async function sha256Hex(str) {
-      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    return {
-      /* `enter` runs on both paths — it is whatever should happen once the
-         room is on screen. `unlocked` runs only when a password was
-         actually just accepted, and is where anything tied to the act of
-         entering belongs: crossing the threshold is not the same event as
-         arriving, and a reload is an arrival, not a crossing. */
-      init(enter, unlocked) {
-        /* no gate configured, or they are already inside — straight through,
-           and the element goes rather than lingering as a dead overlay.
-           `is-unlocked` (see .ring/.leds in styles.css) is what lets the
-           ambient light animations run at all — there is no gate here to
-           hide behind, so they may as well start immediately. */
-        const straightIn = () => { document.body.classList.add('is-unlocked'); el?.remove(); enter(); };
-        if (!el || !cfg.passwordHash) return straightIn();
-
-        let seen = false;
-        if (remembers()) { try { seen = sessionStorage.getItem(KEY) === '1'; } catch (_) {} }
-        if (seen) return straightIn();
-
-        const form = $('[data-gate-form]', el);
-        const input = $('[data-gate-input]', el);
-        const wantHashes = [].concat(cfg.passwordHash).map(h => String(h).trim().toLowerCase());
-
-        form.addEventListener('submit', async e => {
-          e.preventDefault();
-          const gotHash = await sha256Hex(input.value.trim().toUpperCase());
-
-          /* a password that goes to its own page (cfg.redirects) — it sets
-             that page's flag and leaves, without opening this one */
-          const hop = (cfg.redirects || []).find(r => String(r.passwordHash).trim().toLowerCase() === gotHash);
-          if (hop) {
-            try { sessionStorage.setItem(hop.key, '1'); } catch (_) {}
-            el.classList.remove('is-wrong');
-            el.classList.add('is-leaving');
-            if (window.kasGo) window.kasGo(hop.to); else setTimeout(() => { location.href = hop.to; }, 450);
-            return;
-          }
-
-          if (!wantHashes.includes(gotHash)) {
-            el.classList.remove('is-wrong');
-            void el.offsetWidth;                 // restart the shake
-            el.classList.add('is-wrong');
-            input.value = '';
-            input.focus();
-            return;
-          }
-          if (SOUND_ENABLED) woosh();
-          el.classList.remove('is-wrong');
-          el.classList.add('is-open');
-          document.body.classList.add('is-unlocked');
-          if (remembers()) { try { sessionStorage.setItem(KEY, '1'); } catch (_) {} }
-          setTimeout(() => el.remove(), 3600);   // past the fade (.gate's own 3.4s opacity transition)
-          unlocked();
-          enter();
-        });
-
-        /* clear the refusal the moment they start again */
-        input.addEventListener('input', () => el.classList.remove('is-wrong'));
-        input.focus();
-      }
-    };
-  })();
 
   /* ==========================================================
      BOOT
@@ -2179,11 +1930,8 @@
   Player.init(CONFIG.tracks);
   Env.init();
 
-  /* Everything behind the gate is already on screen, at full opacity, the
-     instant it opens — the only thing left to run is the sub-line
-     resolving, which starts immediately either way, and re-arming the
-     cursor so it waits for a fresh move inside the room rather than
-     showing up already wherever the gate's Enter button was clicked. The
-     lamp is the one thing reserved for an actual password entry. */
-  Gate.init(playSubIntro, playEntranceLamp);
+  /* `is-unlocked` (see .ring/.leds in styles.css) is what lets the ambient
+     light animations run at all. Nothing stands in front of the room any
+     more, so they may as well start immediately. */
+  document.body.classList.add('is-unlocked');
 })();

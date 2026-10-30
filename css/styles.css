@@ -253,34 +253,6 @@ body.is-surging .light-surge {
 .light-bank:not(.is-lit) .ring,
 .light-bank:not(.is-lit) .leds { animation-play-state: paused; }
 
-/* ---------- THE ENTRANCE LAMP ---------------------------------
-   A studio spotlight powering on, once, at the moment the password is
-   accepted — and only then. js/app.js's playEntranceLamp() is called from
-   the gate's own submit handler, never from the already-inside path, so a
-   refresh or a second visit inside the same session walks straight into a
-   room that is simply lit (see the note on Gate.init).
-
-   Dead black, a two-second climb onto the filament, a brief push past its
-   resting output as it settles — the overshoot a real lamp gives you when
-   it first strikes — then two seconds easing back down to normal. The
-   curve is deliberately slow off the bottom and slow into the top: a lamp
-   gathers light, it does not ramp linearly.
-
-   This is an animation rather than a transition so it takes priority over
-   the per-track surge on the same property for its one run, then hands
-   control straight back when the class is dropped. It ends on exactly the
-   resting filter, so removing it is seamless. */
-@keyframes intro-lamp {
-  0%   { filter: brightness(0) saturate(.55); animation-timing-function: cubic-bezier(.4, 0, .5, 1); }
-  43%  { filter: brightness(1.2) saturate(1.16); animation-timing-function: cubic-bezier(.3, 0, .3, 1); }
-  57%  { filter: brightness(1.46) saturate(1.3); animation-timing-function: cubic-bezier(.25, .1, .25, 1); }
-  100% { filter: brightness(1) saturate(1); }
-}
-body.is-entering .light-surge {
-  /* must match ENTRANCE_MS in js/app.js */
-  animation: intro-lamp 4.6s linear both;
-}
-
 /* ---------- THE RING ----------------------------------------
    A narrow lit band, centred on the panel, larger than the window so it
    runs off the bottom edge. The lit line itself is the LED field further
@@ -428,9 +400,9 @@ body.is-entering .light-surge {
    changes it, which is real, ongoing cost. All of it sits behind the
    gate's opaque black the entire time a visitor is looking at the
    password field, so it was spending that cost on frames nobody could
-   see. js/app.js adds `is-unlocked` the instant the gate is gone (see
-   Gate.init) — a paused CSS animation resumes exactly where it left off,
-   so there is no jump or restart when it does.
+   see. js/app.js adds `is-unlocked` as soon as the page is up — a paused
+   CSS animation resumes exactly where it left off, so there is no jump or
+   restart when it does.
 
    This has to come after both `.ring` and `.leds` above, not before —
    each sets `animation-play-state` implicitly via the `animation:`
@@ -527,47 +499,6 @@ body.is-unlocked .leds {
   gap: 20px;
 }
 
-/* small, quiet, bottom-left — matches the rest of the icon system
-   (thin white stroke, no fill) rather than the usual filled glyph.
-   Sized a step up from the other small glyphs on the page (the vol-toggle
-   icon, the corner ticks) — this is the one social link on the whole
-   site, so it earns slightly more presence than a UI icon would. */
-.social {
-  position: fixed; z-index: 40;
-  left: clamp(20px, 3.4vw, 48px);
-  /* shares its bottom offset with .footer-credit below on purpose — see
-     the note there. */
-  bottom: clamp(14px, 2.6vh, 28px);
-  display: block;
-  /* sized to the footer text's own two-line block (2 × line-height +
-     the 1px gap between them — .footer-credit p below), not to its own
-     scale, so with a shared bottom this square icon's top edge lands
-     exactly on the first line's top and its bottom edge on the second
-     line's bottom, instead of towering over both. */
-  width: calc(2 * 9.5px * 1.16 + 1px);
-  opacity: .7;
-  transition: opacity .8s var(--ease);
-}
-/* A step up from the exact text-height match above, desktop only (by
-   request — a phone's own corner is already tighter, and the topbar
-   logo/footer text it needs to keep pace with don't grow there either).
-   Still shares .social's own bottom offset with .footer-credit, so the
-   baseline the two actually align on holds — only the top edge now
-   rises a little past the footer text's own, rather than matching it
-   exactly. Raised again (29px -> 34px). */
-@media (min-width: 761px) {
-  .social { width: 34px; }
-}
-.social svg {
-  /* block, not the default inline — an inline replaced element leaves a
-     few px of baseline gap below itself that a solid width:height 1:1
-     square can't account for, which is exactly what was throwing off
-     the top-edge match with .footer-credit's text above */
-  display: block;
-  width: 100%; fill: none; stroke: #fff; stroke-width: 1.5;
-}
-.social:hover { opacity: 1; }
-
 /* centred at the very bottom of the page, both lines the same size and
    colour — the copyright line sits above the production credit, same
    layout as the reference site's own footer */
@@ -583,9 +514,7 @@ body.is-unlocked .leds {
   margin: 0;
   font-family: Helvetica, 'Helvetica Neue', Arial, sans-serif;
   font-size: 9.5px;
-  /* pinned rather than left at the browser default "normal" — .social's
-     width above measures itself against this exact number, so it has to
-     stay fixed for the two to actually line up */
+  /* pinned rather than left at the browser default "normal" */
   line-height: 1.16;
   letter-spacing: .1em;
   color: #cecece;
@@ -603,7 +532,7 @@ body.is-unlocked .leds {
 }
 .wordmark {
   font-family: var(--display);
-  text-transform: uppercase;
+
   line-height: 1;
   transition: text-shadow .9s var(--ease);
 }
@@ -620,56 +549,13 @@ body.is-unlocked .leds {
 }
 .wordmark__sub {
   display: block;
-  margin-top: clamp(6px, .7vw, 11px);
+  margin-top: clamp(3px, .3vw, 5px);   /* tucked up under the wordmark */
   font-weight: 400;
   font-size: clamp(8px, .78vw, 11px);
-  letter-spacing: .42em;
+  letter-spacing: .14em;
   color: var(--w-72);
 }
 .wordmark img { height: clamp(22px, 2.6vw, 38px); width: auto; }
-
-/* ---------- SUB-LINE DECRYPT ---------------------------------
-   The one piece of motion left on arrival, on "Private Demo Portal"
-   alone (js/app.js, playSubIntro). Every letter cell holds two
-   overlapping copies of itself: `__final` is the real character at
-   visibility:hidden, reserving the exact width that letter will occupy —
-   which matters more here than anywhere, since this line carries .42em of
-   letter-spacing and any width wobble would shift the whole row. `__glyph`
-   is absolutely positioned on top of it, so whatever it happens to be
-   showing can never affect that width, and is the only part that changes.
-   A plain space stays a plain space. */
-.decrypt-char {
-  position: relative;
-  display: inline-block;
-}
-.decrypt-char__final { visibility: hidden; }
-/* the reveal is over: the copy that has been reserving this letter's box
-   all along simply becomes the visible one, in the exact place it has
-   occupied since the first frame — see the note in decryptReveal() on why
-   this replaces collapsing the line back to plain text */
-.decrypt-char.is-settled .decrypt-char__final { visibility: visible; }
-.decrypt-char__glyph {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-}
-/* mid-scramble: visible, and swapping character on a timer from JS. Held
-   dimmer than the settled text — the noise should read as something
-   resolving underneath the line rather than as the line itself flashing */
-.decrypt-char.is-active .decrypt-char__glyph {
-  opacity: .55;
-  color: var(--w-30);
-}
-/* landed: the true character, easing up to the line's own colour */
-.decrypt-char.is-locked .decrypt-char__glyph {
-  opacity: 1;
-  color: inherit;
-  animation: decrypt-settle .42s var(--ease);
-}
-@keyframes decrypt-settle {
-  from { opacity: .5; }
-  to   { opacity: 1; }
-}
 
 /* Deliberately a fraction of the wordmark's size now — matching it stride
    for stride made "Contact" compete with "Keep A Secret" for the same
@@ -680,7 +566,7 @@ body.is-unlocked .leds {
   font-weight: 400;
   font-size: clamp(12px, 1.4vw, 16px);
   letter-spacing: .04em;
-  text-transform: uppercase;
+
   color: var(--white);
   white-space: nowrap;
   /* it links to contact.html now — same restraint as the wordmark
@@ -698,6 +584,61 @@ body.is-unlocked .leds {
   .topbar__links { flex-direction: column; align-items: flex-end; gap: 9px; }
 }
 
+/* ---------- the page pill ------------------------------------- */
+/* The way between the three pages — Portfolio · Player · The Vault — at the
+   top of each of them (js/nav.js). Same lettering as the credit line at the
+   foot of a page. A light glass track with a dark slider that sits under the
+   page you are on and glides to the one you choose before the page changes.
+   z-index above .topbar (40), so it stays clickable over the Vault's door;
+   below the password prompt (.gate, 100). */
+.seg {
+  position: absolute; z-index: 45;
+  top: clamp(18px, 3vh, 36px);
+  left: 50%; transform: translateX(-50%);
+  display: flex;
+  padding: 2px;                     /* a thin rim of the grey pill shows round the slider */
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2); backdrop-filter: blur(16px) saturate(1.2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12), 0 14px 34px -16px rgba(0, 0, 0, .9);
+}
+.seg__thumb {
+  position: absolute; top: 2px; bottom: 2px; left: 0;
+  width: var(--tw, 0px);
+  border-radius: 999px;
+  background: #0a0a0b;
+  transform: translateX(var(--tx, 0px));
+  /* a little overshoot, the way a real switch settles */
+  transition: transform .4s cubic-bezier(.3, 1.2, .45, 1), width .4s cubic-bezier(.3, 1.2, .45, 1);
+}
+.seg__btn {
+  position: relative; z-index: 1;
+  padding: 9px clamp(12px, 1.3vw, 17px);
+  font-family: Helvetica, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;                 /* the same weight in every state, so the segments never change width */
+  line-height: 1;
+  letter-spacing: .08em;
+  color: rgba(255, 255, 255, .76);   /* the ones not chosen sit back; the chosen one is pure white */
+  white-space: nowrap;
+  cursor: pointer;
+  border-radius: 999px;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .4s var(--ease);
+}
+.seg__btn:hover { color: rgba(255, 255, 255, .92); }
+.seg__btn[aria-current='page'] { color: #fff; }
+.seg__btn:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+/* until js/nav.js has measured the slider, the current page's own segment is
+   dark, so the pill never shows without one */
+.seg:not(.is-ready) .seg__btn[aria-current='page'] { background: #0a0a0b; }
+@media (max-width: 860px) {
+  .seg { top: 104px; }              /* under the wordmark and the links, not between them */
+}
+@media (prefers-reduced-motion: reduce) {
+  .seg__thumb { transition-duration: .01s; }
+}
+
 /* ============================================================
    STAGE + CAROUSEL
    ============================================================ */
@@ -710,8 +651,14 @@ body.is-unlocked .leds {
   /* Deliberately asymmetric now — more top than bottom — to nudge the
      panel down off dead centre, clear of the topbar logo sitting above
      it — any gap between top and bottom shifts the panel down by half
-     that gap. */
-  padding: clamp(92px, 12vh, 124px) 0 clamp(56px, 7.5vh, 84px);   /* trimmed so the player can take more of the screen */
+     that gap. More top than it was (was 92-124px) now that the page pill
+     sits above the player and wants air under it. */
+  padding: clamp(112px, 15vh, 148px) 0 clamp(56px, 7.5vh, 84px);   /* trimmed so the player can take more of the screen */
+}
+/* the pill drops below the wordmark at this width (see .seg), so the player
+   goes down with it; the phone rule further down takes over under 761px */
+@media (max-width: 860px) {
+  .stage { padding-top: clamp(132px, 17vh, 150px); }
 }
 
 .carousel {
@@ -1009,7 +956,7 @@ body.is-unlocked .leds {
   font-weight: 400;
   font-size: 19cqw;
   letter-spacing: .06em;
-  text-transform: uppercase;
+
   line-height: 1;
   color: #fff;
 }
@@ -1488,7 +1435,7 @@ body.is-unlocked .leds {
   text-align: center;
   font-size: 7.5px;
   letter-spacing: .26em;
-  text-transform: uppercase;
+
   color: rgba(255, 255, 255, .28);
 }
 
@@ -1499,13 +1446,12 @@ body.is-unlocked .leds {
 /* ============================================================
    THE GATE
    ============================================================ */
-/* Set synchronously by the very first thing in index.html's <head> —
-   see the note there — if an already-remembered session's own flag is
-   already in sessionStorage. This rule is what actually keeps the gate
-   invisible for the already-remembered case: css/styles.css is itself
-   render-blocking, so it's in effect before there's anything on the
-   page to paint at all, regardless of how the rest of the document
-   streams in after it. */
+/* Set synchronously by the very first thing in vault.html's <head> — see
+   the note there — if this session has already typed the Vault's password.
+   This rule is what actually keeps vault.html's door invisible for that
+   case: css/styles.css is itself render-blocking, so it's in effect before
+   there's anything on the page to paint at all, regardless of how the rest
+   of the document streams in after it. */
 html.is-remembered .gate { display: none; }
 .gate {
   position: fixed; inset: 0; z-index: 100;
@@ -1515,16 +1461,11 @@ html.is-remembered .gate { display: none; }
      #000 — the same soft vignette both places now. */
   background:
     radial-gradient(120% 90% at 50% 30%, #0e0e11 0%, #08080a 44%, #030304 70%, #000 100%);
-  /* Everything behind this — topbar, player, artwork — is already on
-     screen at full opacity the instant the gate starts to go (see the
-     note on Gate.init in js/app.js), so this one transition is the whole
-     room's entrance, all of it revealed at the same rate together.
-     Slowed again, 2.2s -> 3.4s (was 1.6s before that) — the light itself
-     has its own separate, longer entrance still (is-entering/
-     playEntranceLamp, 4.6s) and isn't tied to this number at all, so
-     there's still room under it. js/app.js's setTimeout removing the
-     gate element outright is timed off this same number — keep the two
-     matched if this changes again. */
+  /* This door now only stands in front of vault.html (a direct link to it
+     without the password). Everything behind it is already on screen, so
+     this one transition is the room's entrance, revealed all at once.
+     js/vault.js's setTimeout removing the gate element outright is timed
+     off this same number — keep the two matched if this changes. */
   transition: opacity 3.4s var(--ease);
 }
 /* the gate dissolving and the room coming up are the same move — both are
@@ -1546,7 +1487,7 @@ html.is-remembered .gate { display: none; }
   font-family: var(--display); font-weight: 800;
   font-size: clamp(20px, 2.3vw, 28px);
   letter-spacing: .015em; word-spacing: -.3em;
-  text-transform: uppercase;
+
 }
 /* was 14px, back when this sat below .gate__sub ("Demo Portal", removed)
    — closer to the mark now that it's the very next line, and brighter
@@ -1554,7 +1495,7 @@ html.is-remembered .gate { display: none; }
 .gate__eyebrow {
   margin: 6px 0 0;
   font-size: 9px; letter-spacing: .42em; text-indent: .42em;
-  text-transform: uppercase;
+
   color: var(--w-72);
 }
 
@@ -1580,7 +1521,7 @@ html.is-remembered .gate { display: none; }
      zoomed-in state just carries straight into the unlocked room. 16px is
      the threshold where it stops happening at all. */
   font-size: 16px; letter-spacing: .32em; text-indent: .32em;
-  text-align: center; text-transform: uppercase;
+  text-align: center;
   color: var(--white);
   caret-color: var(--w-48);
   transition: border-color .7s var(--ease);
@@ -1588,7 +1529,7 @@ html.is-remembered .gate { display: none; }
 .gate__input:focus { outline: none; border-bottom-color: var(--w-48); }
 .gate__input::placeholder {
   font-size: 10px; letter-spacing: .34em;
-  text-transform: uppercase;
+
   color: rgba(255, 255, 255, .18);
 }
 .gate__btn {
@@ -1597,12 +1538,32 @@ html.is-remembered .gate { display: none; }
   border-radius: 999px;
   font-weight: 700;
   font-size: 10px; letter-spacing: .34em; text-indent: .34em;
-  text-transform: uppercase;
+
   color: var(--white);
   touch-action: manipulation;
   transition: background-color .7s var(--ease);
 }
 .gate__btn:hover { background: rgba(255, 255, 255, .1); }
+
+/* The same door, asked for from the page pill (js/nav.js): it fades up over
+   whatever page you are on when "The Vault" is chosen, and goes again on
+   Back, Esc, or a tap beside the form. */
+.gate--ask {
+  opacity: 0; visibility: hidden; pointer-events: none;
+  background: rgba(4, 4, 5, .9);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  transition: opacity .35s var(--ease), visibility 0s linear .35s;
+}
+.gate--ask.is-shown { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .35s var(--ease); }
+.gate__cancel {
+  padding: 6px 10px;
+  font-size: 10px; letter-spacing: .34em; text-indent: .34em;
+
+  color: var(--w-48);
+  touch-action: manipulation;
+  transition: color .4s var(--ease);
+}
+.gate__cancel:hover { color: var(--white); }
 
 /* a wrong password is answered with a shake and nothing else — no red, no
    copy, in keeping with a door that isn't explaining itself */
@@ -1644,7 +1605,7 @@ html.is-remembered .gate { display: none; }
   font-weight: 800;
   font-size: clamp(13px, 1.35vw, 19px);
   letter-spacing: .01em;
-  text-transform: uppercase;
+
   color: var(--white);
   transition: text-shadow .7s var(--ease);
 }
@@ -1654,7 +1615,7 @@ html.is-remembered .gate { display: none; }
   font-weight: 400;
   font-size: clamp(12px, 1.4vw, 16px);
   letter-spacing: .04em;
-  text-transform: uppercase;
+
   color: var(--white);
   white-space: nowrap;
   transition: text-shadow .7s var(--ease);
@@ -1688,7 +1649,7 @@ html.is-remembered .gate { display: none; }
   font-size: 12px;
   letter-spacing: .42em;
   text-indent: .42em;
-  text-transform: uppercase;
+
   color: var(--w-48);
 }
 /* Wraps .contact__mail and .contact__social so the two rows share a
@@ -1789,11 +1750,7 @@ html.is-remembered .gate { display: none; }
   }
   .wordmark__sub {
     white-space: nowrap;
-    /* the sub-line's own .42em tracking is what was pushing it onto a
-       second line even once the line above stopped wrapping — cut back
-       just enough to fit under the narrower wordmark, still visibly
-       spaced out */
-    letter-spacing: .26em;
+    letter-spacing: .12em;
   }
 }
 @media (max-height: 620px) {

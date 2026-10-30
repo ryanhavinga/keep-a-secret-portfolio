@@ -4,62 +4,43 @@
    ============================================================ */
 
 const CONFIG = {
-  /* ---------- THE GATE ----------
-     A doorman for an invite-only link, not real security. The portfolio
+  /* ---------- THE VAULT'S PASSWORD ----------
+     Asked when someone chooses "The Vault" on the page pill at the top
+     (js/nav.js), and again at vault.html itself if it is opened by a direct
+     link. A doorman for an invite-only page, not real security: the Vault's
      markup is already in the page whether someone types the password or
      not, and this only ever runs in the visitor's own browser — nothing
-     server-side is checking anything. It stops the link being casually
-     passed around; it does not stop anyone determined. If the material
-     behind it ever needs actually protecting, put the site behind your
-     host's own password (Netlify and Cloudflare both do this
-     server-side) instead of this.
+     server-side is checking anything. If the material behind it ever needs
+     actually protecting, put the site behind your host's own password
+     (Netlify and Cloudflare both do this server-side) instead of this.
 
      passwordHash : a SHA-256 hash of the real password, not the password
                     itself — so it isn't just sitting here in plain text
                     for anyone who opens this file to read straight off.
-                    Set to null to remove the gate entirely.
+                    A single hash string, or a list — any one of them opens
+                    the door. Set to null to take the password away.
 
                     To set or change the password: open this page in any
                     browser, open its JavaScript console, and run —
 
                       await crypto.subtle.digest('SHA-256',
-                        new TextEncoder().encode('yournewpassword'))
+                        new TextEncoder().encode('YOURNEWPASSWORD'))
                         .then(b => [...new Uint8Array(b)]
                         .map(x => x.toString(16).padStart(2, '0')).join(''))
 
-                    — typing the password in capitals (the gate compares
+                    — typing the password in capitals (the door compares
                     case-insensitively, always against the uppercase
                     form), then paste the hex string it prints below.
 
-     remember : stay in for the rest of this browser tab. false asks again
-                on every reload.
-  ------------------------------------------------------------ */
+     Once let in, a browser tab stays in for as long as it is open. */
   gate: {
-    // A single hash string, or a list — any one of them opens the gate.
-    passwordHash: [
-      'd324ca2db4d1e8d85c21cb35336fc96de500e4e5ce0aa38823ff205a95369efe', // "SEP26"
-      '1f4b417790666d9e24d108e598ab1b1eceeb923c7025d4b3c41c205c025a112f'  // "OKT26"
-    ],
-    remember: true,
-
-    /* A password that sends the visitor somewhere else, instead of into the
-       portfolio. Same hashing as above (type it in capitals when making the
-       hash). `to` is the page they land on; `key` is the session flag that
-       page checks, so typing this password does NOT also open the portfolio
-       and the Vault, and the other passwords don't open this page. */
-    redirects: [
-      {
-        passwordHash: 'f6a3783cdc8378be169ca627487ad0b245e0bf4e9a65e8e7057896532ea02241',   // "HAP"
-        to: 'publishing.html',
-        key: 'kas-publishing'
-      }
-    ]
+    passwordHash: 'f6a3783cdc8378be169ca627487ad0b245e0bf4e9a65e8e7057896532ea02241'   // "HAP"
   },
 
   /* ---------- BRANDING ---------- */
   brand: {
     logo: 'Keep A Secret',       // top-left wordmark (rendered uppercase)
-    sublogo: null,               // smaller line under it (was 'Demo Portal') — set to text to show
+    sublogo: 'Player',           // smaller line under it — the page's name (the portfolio and the Vault have their own); null hides it
     logoImage: null,             // optional: 'img/logo.svg' — replaces the text wordmark
     tagline: 'Contact'           // small top-right label
   },
@@ -96,6 +77,39 @@ const CONFIG = {
       audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',
       color: '#022137',
       duration: 167
+    },
+    // …and the rest of the portfolio's releases, so the player holds all of them.
+    {
+      title: 'Beter dan ooit',
+      artist: 'Gilles',
+      artwork: 'img/Beter dan ooit - Gilles.jpg',
+      audio: 'audio/track 5 - Beter dan ooit.m4a',
+      color: '#e8a100',
+      duration: 172
+    },
+    {
+      title: 'Boemerang',
+      artist: 'Gilles',
+      artwork: 'img/Boemerang - Gilles.jpg',
+      audio: 'audio/track 2 - Boemerang.m4a',
+      color: '#a54de0',
+      duration: 190
+    },
+    {
+      title: 'Incompleet',
+      artist: 'Rosalie',
+      artwork: 'img/Incompleet - Rosalie.jpg',
+      audio: 'audio/track 6 - Incompleet.m4a',
+      color: '#a8553a',
+      duration: 229
+    },
+    {
+      title: 'Liever Kwijt',
+      artist: 'Rosalie',
+      artwork: 'img/Liever Kwijt - Rosalie.jpg',
+      audio: 'audio/track 7 - Liever Kwijt.m4a',
+      color: '#8a3fb0',
+      duration: 176
     }
   ],
 
@@ -164,12 +178,12 @@ const CONFIG = {
     },
     tracks: [
       { title: 'Nergens Liever',              artist: 'Gilles',     artwork: 'img/track-1.jpg',                 audio: 'audio/track 1 - Nergens Liever.m4a',                       color: '#9d386f', duration: 197 },
-      { title: 'Beter dan ooit',              artist: 'Gilles',     artwork: 'img/Beter dan ooit - Gilles.jpg', audio: null,                                                      color: '#e8a100' },
+      { title: 'Beter dan ooit',              artist: 'Gilles',     artwork: 'img/Beter dan ooit - Gilles.jpg', audio: 'audio/track 5 - Beter dan ooit.m4a',                       color: '#e8a100', duration: 172 },
       { title: 'Beter dan ooit - Akoestisch', artist: 'Gilles',     artwork: 'img/track-3.jpg',                 audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',          color: '#0a3a63', duration: 167 },
       { title: 'Boemerang',                   artist: 'Gilles',     artwork: 'img/Boemerang - Gilles.jpg',      audio: 'audio/track 2 - Boemerang.m4a',                            color: '#a54de0', duration: 190 },
       { title: 'Hoogtes',                     artist: 'Tim Tiago',  artwork: 'img/Hoogtes - Tim Tiago.jpg',     audio: 'audio/track 3 - Hoogtes.m4a',                              color: '#7a5a44', duration: 200, ink: 'dark' },
-      { title: 'Incompleet',                  artist: 'Rosalie',    artwork: 'img/Incompleet - Rosalie.jpg',    audio: null,                                                      color: '#a8553a' },
-      { title: 'Liever Kwijt',                artist: 'Rosalie',    artwork: 'img/Liever Kwijt - Rosalie.jpg',  audio: null,                                                      color: '#8a3fb0' }
+      { title: 'Incompleet',                  artist: 'Rosalie',    artwork: 'img/Incompleet - Rosalie.jpg',    audio: 'audio/track 6 - Incompleet.m4a',                            color: '#a8553a', duration: 229 },
+      { title: 'Liever Kwijt',                artist: 'Rosalie',    artwork: 'img/Liever Kwijt - Rosalie.jpg',  audio: 'audio/track 7 - Liever Kwijt.m4a',                          color: '#8a3fb0', duration: 176 }
     ]
   },
 
@@ -201,22 +215,29 @@ const CONFIG = {
      Finished songs that aren't anyone's yet — written, produced and ready
      for an artist to cut. Kept apart from `tracks` above on purpose: those
      are the portfolio (records that are already out), these are what's
-     available.
+     available. A plain list, one row per song, in groups by language, each
+     under its own heading. Behind the password (CONFIG.gate).
 
-     Each entry is one safe-deposit box:
+       contact  : where each row's "Request" link sends its email
+
+     Each entry in `tracks` is one row:
        title    : song title
+       language : the heading it is listed under, e.g. 'Nederlandstalig' or
+                  'Engelstalig'. The groups come in the order they first
+                  appear here; a song with no language sits above them all.
        audio    : path to the .m4a (same rules as the tracks above —
-                  under 25MB, see CLAUDE.md for the afconvert line)
+                  under 25MB, see CLAUDE.md for the afconvert line).
+                  Leave null and the row shows "Audio to follow".
        duration : fallback length in seconds, shown until the audio loads
        genre, bpm, key : optional — shown as one small line under the
                   title, and any you leave out are simply skipped
        status   : 'available' (default) | 'on hold' | 'cut'
-                  'cut' keeps the box on the wall but takes the request
-                  link away — a song that's been placed.
-       note     : optional one-liner, e.g. 'Female vocal · Dutch'
+                  the last two swap the Request link for their label —
+                  'cut' is a song that's been placed.
+       note     : optional one-liner, e.g. 'Female vocal'
 
-     sealed : how many locked, empty boxes to show after the real ones —
-              a wall with something still behind it. 0 for none. */
+     eyebrow, heading, intro, sealed are only read by the switched-off 3D
+     door version, saved in archive/vault-door/ — see the README there. */
   vault: {
     eyebrow: 'The Vault',
     heading: 'Ready to cut',
@@ -226,6 +247,7 @@ const CONFIG = {
     tracks: [
       {
         title: 'Alles Waar Je Spijt Van Hebt',
+        language: 'Nederlandstalig',
         audio: 'audio/track 4 - Alles Waar Je Spijt Van Hebt.m4a',
         duration: 133,
         genre: null,
@@ -233,33 +255,9 @@ const CONFIG = {
         key: null,
         status: 'available',
         note: null
-      }
-    ]
-  },
-
-  /* ---------- FOR PUBLISHERS (publishing.html) ----------
-     English-language demos for the publishing team, reached by typing the
-     HAP password at the door. A plain list, one row per song, top to bottom,
-     under a single "Demos" heading.
-
-       title, artist : shown on the row. artist is whoever sings the demo.
-       genre         : optional, one small line under the artist
-       note          : optional one-liner under that
-       audio         : path to the .m4a (same rules as the tracks above —
-                       under 25MB, see CLAUDE.md for the afconvert line).
-                       Leave null and the row shows "Audio to follow".
-       duration      : fallback length in seconds, shown until the audio loads
-
-     ⚠ THE FOUR ROWS BELOW ARE PLACEHOLDERS so the layout has something to
-     show. Replace them with the real demos before this goes anywhere.   */
-  publishing: {
-    heading: 'Demos',
-    contact: 'contact@keepasecret.nl',
-    tracks: [
-      { title: 'Song Title One',   artist: 'Vocalist', genre: 'Pop',       note: null, audio: null, duration: 198 },
-      { title: 'Song Title Two',   artist: 'Vocalist', genre: 'Alt-pop',   note: null, audio: null, duration: 187 },
-      { title: 'Song Title Three', artist: 'Vocalist', genre: 'Pop / R&B', note: null, audio: null, duration: 204 },
-      { title: 'Song Title Four',  artist: 'Vocalist', genre: 'Indie',     note: null, audio: null, duration: 176 }
+      },
+      { title: 'Give Me What U Like', language: 'Engelstalig', audio: null, status: 'available' },
+      { title: 'Fast Life',           language: 'Engelstalig', audio: null, status: 'available' }
     ]
   },
 
@@ -278,9 +276,13 @@ const CONFIG = {
   },
 
   /* ---------- SOCIAL ----------
-     Small icon link, bottom-left of the page. Set url to null to hide it. */
+     Two small icon links, bottom-left of the portfolio page. Set a url to
+     null to hide its icon. */
   instagram: {
     url: 'https://www.instagram.com/keepasecretsshh/'
+  },
+  spotify: {
+    url: 'https://open.spotify.com/playlist/3aHcZPExAEuciBcZjU3cUL?si=1bcb96a9274a4811'
   },
 
   /* ---------- BIO ---------- */

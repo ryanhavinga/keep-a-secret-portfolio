@@ -18,7 +18,7 @@ html.pf-html body {
 /* (the shelf is deliberately not hidden here: its big 3D covers have to be drawn while the page
    is still behind js/transition.js's black, not only once they become visible) */
 html.fonts-wait .pf__bar,
-html.fonts-wait .gate__inner { visibility: hidden; }
+html.fonts-wait .seg { visibility: hidden; }
 
 .page-pf {
   background:
@@ -44,55 +44,8 @@ html.fonts-wait .gate__inner { visibility: hidden; }
   gap: 20px;
 }
 .pf__bar .wordmark { display: block; }
-/* a small masthead, the same proportions as on the publishing page */
-.pf__bar .wordmark__main { font-size: clamp(16px, 1.9vw, 22px); }
-.pf__bar .wordmark__sub {
-  margin-top: clamp(5px, .5vw, 7px);
-  font-size: clamp(7px, .62vw, 9px);
-  letter-spacing: .4em;
-}
-
-/* ---------- the filter pill ------------------------------------ */
-/* Same lettering as the credit line at the foot of the page. A light glass
-   track with a dark slider that glides to the chosen artist. */
-.seg {
-  position: absolute; z-index: 25;
-  top: clamp(18px, 3vh, 36px);
-  left: 50%; transform: translateX(-50%);
-  display: flex;
-  padding: 2px;                     /* a thin rim of the grey pill shows round the slider */
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .15);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2); backdrop-filter: blur(16px) saturate(1.2);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12), 0 14px 34px -16px rgba(0, 0, 0, .9);
-}
-.seg__thumb {
-  position: absolute; top: 2px; bottom: 2px; left: 0;
-  width: var(--tw, 0px);
-  border-radius: 999px;
-  background: #0a0a0b;
-  transform: translateX(var(--tx, 0px));
-  /* a little overshoot, the way a real switch settles */
-  transition: transform .4s cubic-bezier(.3, 1.2, .45, 1), width .4s cubic-bezier(.3, 1.2, .45, 1);
-}
-.seg__btn {
-  position: relative; z-index: 1;
-  padding: 9px clamp(12px, 1.3vw, 17px);
-  font-family: Helvetica, 'Helvetica Neue', Arial, sans-serif;
-  font-size: 12px;
-  font-weight: 700;                 /* the same weight in every state, so the segments never change width */
-  line-height: 1;
-  letter-spacing: .08em;
-  color: rgba(255, 255, 255, .76);   /* the ones not chosen sit back; the chosen one is pure white */
-  white-space: nowrap;
-  cursor: pointer;
-  border-radius: 999px;
-  -webkit-tap-highlight-color: transparent;
-  transition: color .4s var(--ease);
-}
-.seg__btn:hover { color: rgba(255, 255, 255, .92); }
-.seg__btn[aria-pressed='true'] { color: #fff; }
-.seg__btn:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+/* the wordmark and the page's name under it are the shared ones from css/styles.css —
+   the same on the player and the Vault */
 
 /* ---------- the shelf ------------------------------------------ */
 .pf {
@@ -101,7 +54,7 @@ html.fonts-wait .gate__inner { visibility: hidden; }
      height of the window (what's left under the header, over the credit),
      and the spacing from its width. */
   --n: 7;                                          /* set from the track count by portfolio.js */
-  --pad-top: calc(clamp(100px, 14vh, 150px) + 18px);   /* clear of the header and the filter pill above the row */
+  --pad-top: calc(clamp(100px, 14vh, 150px) + 18px);   /* clear of the header and the page pill above the row */
   --head: 6px;                                     /* the breath between the header and the row */
   --sink: clamp(8px, 2vh, 22px);                  /* the whole row sits lower, so a lifted cover keeps clear of the top */
   --pad-bot: 58px;                                 /* room for the credit line under the row */
@@ -146,25 +99,11 @@ html.fonts-wait .gate__inner { visibility: hidden; }
   z-index: 1;
   perspective: calc(var(--w) * 1.25);
   perspective-origin: calc(50% - var(--shift, 0px) + var(--ox, 0px) + var(--px, 0) * var(--sway, 2.6%)) calc(50% + var(--py, 0) * var(--sway-y, 1.3%));
-  /* (When the filter changes the covers sink straight off the bottom of the screen and the new
-     ones rise in from there — nothing clips them, which also spares the browser drawing the whole
-     shelf into an off-screen surface every frame.) */
 }
 /* with an odd number the middle cover would be exactly edge-on and
    invisible, so the viewpoint sits a hair to the left of the middle */
 .pf[data-odd] .shelf,
 .pf[data-odd] .floor { --shift: calc(var(--p) * .42); }
-
-/* ---- an artist's own page: all covers turned the same way, at the same slant ----
-   Each is hinged at its left edge with its face to the right (js/portfolio.js turns each by
-   its own amount); the viewpoint is moved a little further back and to the right of the row
-   (--ox), and the row shifted left to stay centred. */
-.pf[data-few] .shelf,
-.pf[data-few] .floor { perspective: calc(var(--w) * 2.5); --shift: 0px; }
-.pf[data-few] { --p: calc(var(--w) * .56); }
-.pf[data-few] .cd,
-.pf[data-few] .fl { --x: calc(var(--k, 0) * var(--p) - var(--w) * .2); }
-
 
 .cd {
   --h: 280; --s: 60; --l: 38;       /* the spine's tint, set from the artwork by portfolio.js */
@@ -172,25 +111,17 @@ html.fonts-wait .gate__inner { visibility: hidden; }
   /* all the pointer does is lift a cover a little (--mag is 0..1, eased
      in JS), so it never moves into its neighbours */
   --y: calc(var(--mag, 0) * var(--w) * -.1);
-  --drop: 0px;                       /* how far it has sunk below the row (the filter) */
   position: absolute; top: 0; left: 50%;
   width: var(--w); height: var(--w);
   transform-style: preserve-3d;      /* inside one cover: its face and its spine */
   will-change: transform;
-  /* Its place along the row and its sinking are the individual `translate`
-     property, kept apart from `transform` (the hover lift, written every
-     frame by JS) so each can animate without disturbing the other. Rising
-     back in settles with a touch of overshoot, like it's dropped into place. */
-  translate: var(--x) var(--drop);
+  /* Its place along the row is the individual `translate` property, kept
+     apart from `transform` (the hover lift, written every frame by JS) so
+     each can animate without disturbing the other. */
+  translate: var(--x) 0;
   transition: translate .6s cubic-bezier(.22, 1.04, .3, 1);
 }
-.cd.is-leaving {
-  --drop: 100vh;                     /* all the way down and off the bottom of the screen */
-  transition-duration: .36s;
-  transition-timing-function: cubic-bezier(.5, 0, .85, .45);
-}
 .cd.no-tr { transition: none !important; }
-.cd.is-filtered { visibility: hidden; pointer-events: none; }
 /* left of the middle: hinged on its left edge, face turned to the right;
    right of it: hinged on its right edge, face turned to the left */
 .cd--l {
@@ -313,9 +244,7 @@ html.fonts-wait .gate__inner { visibility: hidden; }
   translate: var(--x) 0;
   transition: translate .52s cubic-bezier(.22, 1.04, .3, 1), opacity .25s var(--ease);
 }
-.fl.is-leaving { opacity: 0; transition-duration: .3s, .2s; }
 .fl.no-tr { transition: none !important; }
-.fl.is-filtered { visibility: hidden; }
 .fl.cd--l { transform-origin: 0 50%;    transform: rotateY(var(--rot, 90deg)); }
 .fl.cd--r { transform-origin: 100% 50%; transform: rotateY(calc(var(--rot, 90deg) * -1)); margin-left: calc(var(--w) * -1); }
 
@@ -360,6 +289,26 @@ html.fonts-wait .gate__inner { visibility: hidden; }
   font-size: 9.5px; line-height: 1.16; letter-spacing: .1em;
   color: #cecece;
 }
+
+/* Instagram and the Spotify playlist, bottom left, level with the credit line:
+   the same bottom offset and the same two-line height as .pf__foot, the icons
+   centred in it. Thin strokes in pure white. */
+.socials {
+  position: fixed; z-index: 5;
+  left: clamp(20px, 3.4vw, 48px);
+  bottom: clamp(10px, 2vh, 20px);
+  height: calc(2 * 9.5px * 1.16 + 1px);
+  display: flex; align-items: center; gap: 14px;
+}
+.socials a { display: block; line-height: 0; }
+.socials a[hidden] { display: none; }
+.socials svg {
+  display: block;
+  width: 17px; height: 17px;
+  fill: none; stroke: #fff; stroke-width: 1.5; stroke-linecap: round;
+  transition: stroke .4s var(--ease);
+}
+.socials a:hover svg { stroke: #8c8c8c; }
 
 /* ============================================================
    THE FOCUS VIEW
@@ -446,7 +395,7 @@ html.fonts-wait .gate__inner { visibility: hidden; }
 }
 .focus__line {
   margin: clamp(18px, 2.6vh, 28px) 0 0;
-  font-size: 10px; letter-spacing: .3em; text-transform: uppercase;
+  font-size: 10px; letter-spacing: .3em;
   color: var(--w-48);
 }
 .focus__note {
@@ -512,7 +461,7 @@ html.fonts-wait .gate__inner { visibility: hidden; }
 
 .focus__links { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 10px 26px; }
 .focus__links a {
-  font-size: 9.5px; font-weight: 600; letter-spacing: .3em; text-transform: uppercase;
+  font-size: 9.5px; font-weight: 600; letter-spacing: .3em;
   color: var(--w-72);
   transition: color .5s var(--ease), text-shadow .5s var(--ease);
 }
@@ -554,7 +503,7 @@ html.fonts-wait .gate__inner { visibility: hidden; }
 
 .focus__credit {
   margin: clamp(30px, 5vh, 52px) 0 0;
-  font-size: 9px; letter-spacing: .26em; text-transform: uppercase;
+  font-size: 9px; letter-spacing: .26em;
   color: var(--w-30);
 }
 
@@ -563,7 +512,7 @@ html.fonts-wait .gate__inner { visibility: hidden; }
   top: clamp(20px, 3.4vh, 40px); right: clamp(20px, 3.4vw, 48px);
   font-family: var(--display);
   font-size: clamp(12px, 1.4vw, 16px);
-  letter-spacing: .04em; text-transform: uppercase;
+  letter-spacing: .04em;
   color: #fff; cursor: pointer;
   opacity: 0;
   transition: opacity .5s var(--ease) .2s, text-shadow .7s var(--ease);
@@ -588,9 +537,6 @@ html.fonts-wait .gate__inner { visibility: hidden; }
 /* ---------- smaller screens ----------------------------------- */
 @media (max-width: 860px) {
   .pf { --pad-top: 150px; }
-  .seg { top: 104px; }
-  .pf__bar .wordmark__main { font-size: clamp(15px, 4.2vw, 17px); white-space: nowrap; }
-  .pf__bar .wordmark__sub  { font-size: 7px; white-space: nowrap; letter-spacing: .3em; }
 
   /* the cover on top, the info underneath, the whole thing scrolls if it must */
   .focus {
@@ -608,7 +554,6 @@ html.fonts-wait .gate__inner { visibility: hidden; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cd, .cd.is-leaving { transition-duration: .01s; }
-  .seg__thumb { transition-duration: .01s; }
+  .cd { transition-duration: .01s; }
   .fl { transition-duration: .01s; }
 }

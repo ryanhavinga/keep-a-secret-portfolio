@@ -59,13 +59,13 @@ Even with a go-ahead, ask separately before anything destructive or hard to reve
   plays natively in every modern browser. Don't try `-f MPG3` for output, it fails.) Then point
   the track's `audio:` field in `js/config.js` at the new `.m4a`, and commit only the `.m4a`.
 - **Never add a `package.json`, `node_modules` or a build step to the repo.** Cloudflare would start
-  running an install/build on every push. `js/vault3d.bundle.js` is a prebuilt bundle of
-  `js/vault3d.src.js` + three.js, built outside the repo — see README, "The Vault door in 3D".
+  running an install/build on every push. The Vault's old 3D door (`archive/vault-door/`, switched off) has a prebuilt
+  three.js bundle, built outside the repo — see `archive/vault-door/README.md`.
 - `.claude/` (this tool's local session/permission state) is gitignored — never commit it.
 - `.DS_Store` is gitignored too.
 
 ## Repo layout reminder
 
 Plain static site, no build step: `index.html`, `css/styles.css`, `js/app.js` (behavior),
-`js/config.js` (the file you edit for content — tracks, branding, gate password). See
+`js/config.js` (the file you edit for content — tracks, branding, the Vault's password). See
 `README.md` for the full editing guide and the site's design rationale.
