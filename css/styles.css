@@ -1598,6 +1598,12 @@ body.is-unlocked .leds {
      desktop rule above, kept modest here since a phone's own vertical
      budget is already tight. */
   .stage { padding: clamp(88px, 13.5vh, 118px) 0 clamp(64px, 9.5vh, 86px); }
+  /* The player is as tall as the screen allows, not a square the width of the phone: the artwork was held to ~half the width by
+     the height left over after the title and controls, so the block now stands taller and the artwork fills the width. */
+  .carousel { height: clamp(380px, calc(100dvh - 250px), 540px); }
+  /* the time labels sit just outside the timeline's ends; with the artwork now the full width of the player the timeline
+     leaves room for them rather than matching the artwork */
+  .timeline { width: calc(100% - 112px); }
   /* Narrower inset than the shared desktop one (was 20-46px, tightened
      to 12-28px) — --panel itself is already pinned to 100vw on every
      portrait phone (width, not height, is always the binding term in
