@@ -540,7 +540,7 @@ body.is-unlocked .leds {
 .wordmark__main {
   display: block;
   font-weight: 800;
-  font-size: clamp(23px, 2.7vw, 40px);
+  font-size: clamp(16px, 1.9vw, 24px);
   letter-spacing: .015em;
   /* the lone "A" reads as an oversized gap either side of it at normal
      word-spacing — tighten just the word gaps, not the letters within
@@ -549,9 +549,9 @@ body.is-unlocked .leds {
 }
 .wordmark__sub {
   display: block;
-  margin-top: clamp(3px, .3vw, 5px);   /* tucked up under the wordmark */
+  margin-top: clamp(3px, .3vw, 4px);   /* tucked up under the wordmark */
   font-weight: 400;
-  font-size: clamp(8px, .78vw, 11px);
+  font-size: clamp(7px, .62vw, 9px);
   letter-spacing: .14em;
   color: var(--w-72);
 }
@@ -1745,10 +1745,11 @@ html.is-remembered .gate { display: none; }
      against the narrowest common width (375px, iPhone SE/mini) with room
      to spare. */
   .wordmark__main {
-    font-size: clamp(18px, 5vw, 21px);
+    font-size: clamp(15px, 4.2vw, 17px);
     white-space: nowrap;
   }
   .wordmark__sub {
+    font-size: 7px;
     white-space: nowrap;
     letter-spacing: .12em;
   }
