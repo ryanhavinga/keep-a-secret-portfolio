@@ -117,14 +117,21 @@
        playing it opens the credits instead. */
     it.btn.addEventListener('click', () => {
       if (NP.has(it.ti) && !NP.isPlaying(it.ti)) {
+        if (starting === it) return;                         // it is on its way out already
         pick = it;                                           // the copy that was clicked is the one that opens
-        NP.playTrack(it.ti);
-        if (NP.live() && front !== it) setFront(it);
+        if (front === it) { NP.playTrack(it.ti); return; }   // already standing there (paused): just play
+        setFront(it);
+        starting = it;                                       // the music waits until the cover stands flat in front of you
+        NP.hold(it.ti);                                      // started silently inside the click (browsers only allow audio from a click)…
+        later(SETTLED, () => { if (starting !== it) return; starting = null; NP.release(); });   // …and heard from its start once the cover is flat
       } else Focus.open(it.n);
     });
     it.btn.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); it.btn.click(); } });
     items.push(it);
   }
+  const veil = document.createElement('div');             // the soft-focus veil over the background (css: .shelf__veil)
+  veil.className = 'shelf__veil'; veil.setAttribute('aria-hidden', 'true');
+  shelf.appendChild(veil);
   if (PF.heading) $('[data-pf-heading]').textContent = PF.heading;
   pfEl.style.setProperty('--n', N);
   pfEl.toggleAttribute('data-odd', N % 2 === 1);
@@ -150,9 +157,10 @@
   const LIFT = .09;                                        // the cover that is out stands this much higher (a share of its width)
   let front = null;
   let wakeHover = () => {};                                // set below, where the hover spring lives
+  let starting = null;                                     // the cover that has been clicked and is still coming out: its audio starts once it is flat
+  const SETTLED = 900;                                     // ms from the click until it is flat (the slide out, then the turn)
   let pick = null;                                         // the copy of a release that was clicked (a release can be in the row twice)
   const timers = [];
-  let softT = 0;
   const later = (ms, fn) => { const id = setTimeout(fn, ms); timers.push(id); };
   function place() {
     const w = px('--w'), p = px('--p');
@@ -190,16 +198,16 @@
   }
   function setFront(f) {
     timers.splice(0).forEach(clearTimeout);
+    starting = null;
     const prev = front;
     front = f;
     if (prev && prev !== f) sendHome(prev);
     html.classList.remove('bg-soft');                      // the background sharpens again…
-    clearTimeout(softT); softT = setTimeout(() => html.classList.remove('has-flat'), 1700);   // …and the blur is taken off once it has
     if (f) {
       clearTimeout(f.homeT); clearTimeout(f.seatT);
       f.pose = 'pull';                                     // spine first, out of the stack — still covered by its neighbours
       place();
-      later(340, () => { f.pose = 'flat'; place(); clearTimeout(softT); html.classList.add('has-flat', 'bg-soft'); });   // once it is clear of its neighbours it comes in front, rises and turns to face you in one go — and the rest of the row goes slowly soft behind it
+      later(340, () => { f.pose = 'flat'; place(); html.classList.add('bg-soft'); });   // once it is clear of its neighbours it comes in front, rises and turns to face you in one go — and the rest of the row goes slowly soft behind it
     }
     items.forEach(it => { if (it !== f && it !== prev && it.pose !== 'turn' && it.pose !== 'return') it.pose = 'slot'; });
     wakeHover();
@@ -349,7 +357,7 @@
   const NP = (() => {
     const el = $('[data-np]'), audio = $('[data-np-audio]');
     const queue = tracks.map((t, ti) => ({ t, ti })).filter(q => q.t.audio);
-    const idle = { has: () => false, playTrack() {}, stop() {}, isPlaying: () => false, current: () => -1, live: () => false, onOpen: null };
+    const idle = { has: () => false, playTrack() {}, hold() {}, release() {}, stop() {}, isPlaying: () => false, current: () => -1, live: () => false, onOpen: null };
     if (!el || !audio || !queue.length) { if (el) el.hidden = true; return idle; }
 
     const ui = {
@@ -528,7 +536,7 @@
       live: () => el.classList.contains('is-live'),
       /* stop altogether: back to the start, and the bar goes */
       stop() {
-        audio.pause();
+        audio.pause(); audio.muted = false;
         try { audio.currentTime = 0; } catch (_) {}
         el.classList.remove('is-live', 'is-playing');
         paint(); changed();
@@ -538,7 +546,19 @@
       playTrack(ti) {
         const n = queue.findIndex(q => q.ti === ti);
         if (n < 0) return;
+        audio.muted = false;
         if (n === i && loaded === i) toggle(); else load(n, true);
+      },
+      hold(ti) {
+        const n = queue.findIndex(q => q.ti === ti);
+        if (n < 0) return;
+        audio.muted = true;
+        load(n, true);
+      },
+      release() {
+        try { audio.currentTime = 0; } catch (_) {}
+        audio.muted = false;
+        if (audio.paused) audio.play().catch(() => {});
       }
     });
   })();
@@ -566,7 +586,7 @@
   document.addEventListener('click', ev => {
     if (!front && !NP.live()) return;
     if (html.classList.contains('is-focused')) return;
-    if (ev.target.closest('.np, .seg, .socials, a, button, input, [role=slider], .focus')) return;
+    if (ev.target.closest('.cd, .np, .seg, .socials, a, button, input, [role=slider], .focus')) return;      // (a click on a cover, by mouse or keyboard, is never "outside")
     const rows = shelf.getBoundingClientRect();
     if (ev.clientY < rows.top || ev.clientY > rows.bottom) putBack();
   });
@@ -574,6 +594,7 @@
   /* the track the bar is on comes to the front once something has been played */
   document.addEventListener('np:change', () => {
     html.classList.toggle('np-live', NP.live());
+    if (starting) return;                                    // the bar can wait: the cover that was clicked is still on its way out
     if (!NP.live()) return;
     if (pick && pick.ti !== NP.current()) pick = null;       // the bar moved on to another release by itself
     const want = pick || nearest(NP.current());

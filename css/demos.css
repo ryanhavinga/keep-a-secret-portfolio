@@ -82,7 +82,7 @@ html.fonts-wait .vlt { visibility: hidden; }
   --pad: clamp(16px, 2.2vh, 22px);
   position: relative;
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1.5fr) 104px;
+  grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1.5fr) 104px;
   grid-template-areas: 'no info player ask';
   align-items: center;
   column-gap: clamp(14px, 2vw, 26px);
@@ -104,13 +104,12 @@ html.fonts-wait .vlt { visibility: hidden; }
 
 .row__no {
   grid-area: no;
-  font-size: 11px;
-  letter-spacing: .08em;
+  font-size: clamp(16px, 1.55vw, 20px);        /* as big as the song's name, and white like it */
+  line-height: 1.15;
+  letter-spacing: .02em;
   font-variant-numeric: tabular-nums;
-  color: var(--w-30);
-  transition: color .5s var(--ease);
+  color: #fff;
 }
-.row.is-playing .row__no { color: var(--white); }
 
 /* the player's title and artist: plain sans, bold over medium */
 .row__info { grid-area: info; min-width: 0; }
