@@ -190,8 +190,8 @@ const CONFIG = {
                   under 25MB, see CLAUDE.md for the afconvert line).
                   Leave null and the row shows "Audio to follow".
        duration : fallback length in seconds, shown until the audio loads
-       genre, bpm, key : optional — shown as one small line under the
-                  title, and any you leave out are simply skipped
+       year, genre, bpm, key : optional — shown as one small line under the
+                  title (year first), and any you leave out are simply skipped
        status   : 'available' (default) | 'on hold' | 'cut'
                   the last two swap the Request link for their label —
                   'cut' is a song that's been placed.
@@ -210,8 +210,8 @@ const CONFIG = {
         status: 'available',
         note: null
       },
-      { title: 'Give Me What U Like', language: 'Engelstalig', audio: null, status: 'available' },
-      { title: 'Fast Life',           language: 'Engelstalig', audio: null, status: 'available' }
+      { title: 'Give Ya What U Like', language: 'Engelstalig', audio: 'audio/demo - Give Ya What U Like.mp3', duration: 180, year: 2021, status: 'available' },
+      { title: 'Fast Life',           language: 'Engelstalig', audio: 'audio/demo - Fast Life.mp3',           duration: 154, year: 2021, status: 'available' }
     ]
   },
 

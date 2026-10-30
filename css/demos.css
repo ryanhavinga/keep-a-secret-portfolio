@@ -21,6 +21,7 @@ html.fonts-wait .vlt__bar,
 html.fonts-wait .vlt { visibility: hidden; }
 
 .page-demos {
+  --ui: Helvetica, 'Helvetica Neue', Arial, sans-serif;     /* the credit line's lettering — used for everything on the page below the bar */
   background:
     radial-gradient(120% 70% at 50% 0%, #121215 0%, #08080a 46%, #030304 78%, #000 100%) fixed,
     #040405;
@@ -47,7 +48,8 @@ html.fonts-wait .vlt { visibility: hidden; }
   --gutter: clamp(20px, 5vw, 48px);
   width: min(1040px, 100% - 2 * var(--gutter));
   margin: 0 auto;
-  padding: clamp(120px, 19vh, 190px) 0 clamp(36px, 6vh, 56px);
+  padding: clamp(120px, 19vh, 190px) 0 clamp(96px, 14vh, 130px);      /* room for the credit line fixed under it */
+  font-family: var(--ui);
 }
 
 .vlt__title {
@@ -59,18 +61,19 @@ html.fonts-wait .vlt { visibility: hidden; }
   white-space: nowrap;
 }
 .group + .group { margin-top: clamp(40px, 7vh, 72px); }
-.group__title {
+.group__title {                       /* a quiet label over each list, not a heading to read first */
   margin: 0;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: clamp(24px, 3.6vw, 44px);
-  line-height: 1.05;
-  letter-spacing: .015em;
+  font-family: var(--ui);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.2;
+  letter-spacing: .06em;
+  color: var(--w-48);
 }
 /* ---------- the list ------------------------------------------ */
 .rows {
   list-style: none;
-  margin: clamp(22px, 3.6vh, 36px) 0 0;
+  margin: clamp(12px, 1.8vh, 18px) 0 0;
   padding: 0;
   border-bottom: 1px solid var(--hairline);
 }
@@ -102,7 +105,7 @@ html.fonts-wait .vlt { visibility: hidden; }
 .row__no {
   grid-area: no;
   font-size: 11px;
-  letter-spacing: .14em;
+  letter-spacing: .08em;
   font-variant-numeric: tabular-nums;
   color: var(--w-30);
   transition: color .5s var(--ease);
@@ -113,7 +116,7 @@ html.fonts-wait .vlt { visibility: hidden; }
 .row__info { grid-area: info; min-width: 0; }
 .row__title {
   margin: 0;
-  font-family: var(--sans);
+  font-family: var(--ui);
   font-weight: 700;
   font-size: clamp(16px, 1.55vw, 20px);
   letter-spacing: .01em;
@@ -124,7 +127,7 @@ html.fonts-wait .vlt { visibility: hidden; }
 .row.is-playing .row__title { color: #fff; }
 .row__artist {
   margin: 5px 0 0;
-  font-family: var(--sans);
+  font-family: var(--ui);
   font-weight: 500;
   font-size: clamp(12px, 1.1vw, 14px);
   letter-spacing: .01em;
@@ -132,9 +135,8 @@ html.fonts-wait .vlt { visibility: hidden; }
 }
 .row__meta {
   margin: 9px 0 0;
-  font-size: 10px;
-  letter-spacing: .2em;
-
+  font-size: 11px;
+  letter-spacing: .06em;
   color: var(--w-48);
 }
 .row__meta:empty { display: none; }
@@ -222,7 +224,7 @@ html.fonts-wait .vlt { visibility: hidden; }
   min-width: 3.3em;
   text-align: right;
   font-size: 12px;
-  letter-spacing: .14em;
+  letter-spacing: .06em;
   font-variant-numeric: tabular-nums;
   color: rgba(255, 255, 255, .75);
 }
@@ -230,10 +232,9 @@ html.fonts-wait .vlt { visibility: hidden; }
 .row__ask {
   grid-area: ask;
   justify-self: end;
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: .3em;
-
+  letter-spacing: .1em;
   white-space: nowrap;
   color: var(--w-72);
   transition: color .5s var(--ease), text-shadow .5s var(--ease);
@@ -244,17 +245,20 @@ html.fonts-wait .vlt { visibility: hidden; }
 .row__pending {
   grid-area: ask; justify-self: end;
   margin: 0;
-  font-size: 9px;
-  letter-spacing: .26em;
-
+  font-size: 10.5px;
+  letter-spacing: .08em;
   color: var(--w-30);
 }
 
 /* ---------- foot ---------------------------------------------- */
+/* exactly where it is on the portfolio: fixed to the foot of the window, in the middle (see .pf__foot in portfolio.css) */
 .vlt__foot {
-  margin-top: clamp(56px, 9vh, 96px);
+  position: fixed; z-index: 5;
+  left: 50%; bottom: clamp(18px, 3vh, 36px);
+  transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 1px;
-  text-align: center;
+  text-align: center; white-space: nowrap;
+  pointer-events: none;
 }
 .vlt__foot p {
   margin: 0;

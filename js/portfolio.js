@@ -108,7 +108,7 @@
     fl.className = `fl cd--${side}`;
     fl.innerHTML = `<div class="fl__glow"></div><div class="fl__edge"></div>`;
     floor.appendChild(fl);
-    const it = { ym: 0, zm: 0, li, fl, t, n: i, ti, rep, row, pos: i, side, pose: 'slot', btn: $('.cd__btn', li), face: $('.cd__face', li), tint: tintOf(t, null) };
+    const it = { ym: 0, zm: 0, lf: 0, li, fl, t, n: i, ti, rep, row, pos: i, side, pose: 'slot', btn: $('.cd__btn', li), face: $('.cd__face', li), tint: tintOf(t, null) };
     paintTint(li, it.tint); paintTint(fl, it.tint);
     /* swap the configured colour for the real one as soon as the artwork has loaded */
     const real = () => { it.tint = tintOf(t, it.face); paintTint(li, it.tint); paintTint(fl, it.tint); };
@@ -142,30 +142,32 @@
 
   /* ---- the cover that is playing is pulled out of the stack ----
      The stack stays where it is, just stepping back a little, with a gap where the cover was. The cover
-     slides straight out towards you with its spine first (pose 'out'), then turns smoothly and quickly to face
+     slides straight out towards you with its spine first (pose 'pull'), then rises and turns smoothly and quickly to face
      you in the middle (pose 'flat'). The one it replaces turns back and slides home into its place. */
   const BACK = .28;                                        // how far the stack steps back, as a share of a cover's width
   const OUT = .2;                                          // how far a cover is slid out, spine first
+  const hoverOn = matchMedia('(hover: hover) and (pointer: fine)').matches && !reduced;
   const LIFT = .09;                                        // the cover that is out stands this much higher (a share of its width)
   let front = null;
   let wakeHover = () => {};                                // set below, where the hover spring lives
   let pick = null;                                         // the copy of a release that was clicked (a release can be in the row twice)
   const timers = [];
+  let softT = 0;
   const later = (ms, fn) => { const id = setTimeout(fn, ms); timers.push(id); };
   function place() {
     const w = px('--w'), p = px('--p');
     items.forEach(it => {
       let x = it.row * p, rot = 90, z = front ? -w * BACK : 0, zi = 20 - Math.round(Math.abs(it.row) * 2), ly = 0;
       if (it.pose === 'pull') { z = w * OUT; }                // sliding out: it keeps its place in the paint order, so its neighbours still cover it
-      else if (it.pose === 'out') { z = w * OUT; zi = 40; ly = -w * LIFT; }
-      else if (it.pose === 'flat') { x = it.side === 'l' ? -w / 2 : w / 2; rot = 0; z = w * .05; zi = 40; ly = -w * LIFT; }
-      else if (it.pose === 'turn') { z = w * OUT; zi = 40; ly = -w * LIFT; }   // going back: turns edge-on where it stands, still in front of the stack
-      else if (it.pose === 'return') { zi = 40; }          // …then slides home into its slot, still in front until it has all but arrived
+      else if (it.pose === 'flat') { x = it.side === 'l' ? -w / 2 : w / 2; rot = 0; z = w * .05; zi = 40; }
+      else if (it.pose === 'turn') { z = w * OUT; zi = 40; }   // going back: turns edge-on where it stands, still in front of the stack
+      /* 'return': slides home into its slot with its own place in the paint order, so its neighbours cover it as it goes in */
+      if (!hoverOn && (it.pose === 'flat' || it.pose === 'turn')) ly = -w * LIFT;   // (with a mouse the rise is eased in JS, in step with the hover lift going — see the frame loop)
       for (const el of both(it)) {
         el.style.setProperty('--x', `${x.toFixed(1)}px`);
         el.style.setProperty('--rot', `${rot}deg`);
         el.style.setProperty('--z', `${z.toFixed(1)}px`);
-        el.classList.toggle('is-front', it.pose === 'out' || it.pose === 'flat');
+        el.classList.toggle('is-front', it.pose === 'flat');
         el.classList.toggle('is-rim', it.n === 0 || it.n === N - 1);         // the outermost two are softened
       }
       it.li.style.zIndex = String(zi);
@@ -175,28 +177,29 @@
   }
   place();
   addEventListener('resize', place);
-  /* Putting a cover back is the pull-out played backwards: it turns edge-on where it stands, slides in
-     into its slot, and only when it has all but arrived does it drop back into the stack's paint order
-     (the same threshold as on the way out), so it is never drawn through its neighbours on the way. */
+  /* Putting a cover back is the pull-out played backwards: it turns edge-on where it stands (in front of the
+     stack), and from the moment it starts sliding in it is back in the stack's paint order, so its neighbours
+     cover it as it goes in and it is never drawn through them. */
   function sendHome(it) {
     clearTimeout(it.homeT); clearTimeout(it.seatT);
     it.pose = 'turn'; place();
     it.homeT = setTimeout(() => {
       it.pose = 'return'; place();
-      it.seatT = setTimeout(() => { it.pose = 'slot'; place(); }, 400);
-    }, 280);
+      it.seatT = setTimeout(() => { it.pose = 'slot'; place(); }, 450);
+    }, 400);                                               // (when the turn has all but finished)
   }
   function setFront(f) {
     timers.splice(0).forEach(clearTimeout);
     const prev = front;
     front = f;
     if (prev && prev !== f) sendHome(prev);
+    html.classList.remove('bg-soft');                      // the background sharpens again…
+    clearTimeout(softT); softT = setTimeout(() => html.classList.remove('has-flat'), 1700);   // …and the blur is taken off once it has
     if (f) {
       clearTimeout(f.homeT); clearTimeout(f.seatT);
       f.pose = 'pull';                                     // spine first, out of the stack — still covered by its neighbours
       place();
-      later(340, () => { f.pose = 'out'; place(); });      // once it is clear of them it comes in front and rises a little
-      later(560, () => { f.pose = 'flat'; place(); });     // then round to face you, in the middle
+      later(340, () => { f.pose = 'flat'; place(); clearTimeout(softT); html.classList.add('has-flat', 'bg-soft'); });   // once it is clear of its neighbours it comes in front, rises and turns to face you in one go — and the rest of the row goes slowly soft behind it
     }
     items.forEach(it => { if (it !== f && it !== prev && it.pose !== 'turn' && it.pose !== 'return') it.pose = 'slot'; });
     wakeHover();
@@ -259,12 +262,16 @@
         it.li.style.setProperty('--mag', m); it.fl.style.setProperty('--mag', m);
         /* the cover that is pulled out gives up its hover lift and takes up the little zoom instead — eased,
            so nothing jumps at the moment it changes over */
-        const pulled = it.pose === 'pull' || it.pose === 'out' || it.pose === 'flat';
-        const k = 1 - Math.exp(-11 * dt);
+        const pulled = it.pose === 'flat';                 // (until it turns, the hover lift stays, so it neither dips nor hops on its way out)
+        const up = it.pose === 'flat' || it.pose === 'turn' ? 1 : 0;   // the pulled-out cover stands higher
+        const k = 1 - Math.exp(-9 * dt);
+        /* the hover lift fades out while the standing height fades in, by the same curve, so a cover that was
+           under the pointer when it was clicked keeps its height all the way — no dip, no hop */
         it.ym += ((pulled ? 0 : lift) - it.ym) * k;
+        it.lf += (up - it.lf) * k;
         it.zm += ((pulled ? lift : 0) - it.zm) * k;
-        if (Math.abs(it.ym - (pulled ? 0 : lift)) > .002 || Math.abs(it.zm - (pulled ? lift : 0)) > .002) busy = true;
-        it.li.style.setProperty('--ym', it.ym.toFixed(4)); it.li.style.setProperty('--zm', it.zm.toFixed(4));
+        if (Math.abs(it.ym - (pulled ? 0 : lift)) > .002 || Math.abs(it.zm - (pulled ? lift : 0)) > .002 || Math.abs(it.lf - up) > .002) busy = true;
+        it.li.style.setProperty('--ym', it.ym.toFixed(4)); it.li.style.setProperty('--zm', it.zm.toFixed(4)); it.li.style.setProperty('--lf', it.lf.toFixed(4));
       });
 
       /* with a cover pulled out and playing the viewpoint stays still (it would turn the big cover with the pointer) */
@@ -537,17 +544,20 @@
   })();
 
   /* The page pill at the top goes out of the way as soon as the mouse is on the covers — and is there again
-     when the mouse is above them or below them. (Only where there is a mouse to hover with.) */
+     when the mouse is above or below them, unless a track is selected: then it stays away until the track is put
+     back. (Only where there is a mouse to hover with.) */
   (function pillAway() {
     const pill = $('[data-seg]');
     if (!pill || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     let lastY = -1, away = false;                    // until the mouse has moved, the pill is there
     const apply = () => {
       const rows = shelf.getBoundingClientRect();
-      const want = lastY >= rows.top && lastY <= rows.bottom;
+      /* while a track is selected the pill stays away wherever the mouse is; it is only there again once the track is put back */
+      const want = NP.live() || (lastY >= rows.top && lastY <= rows.bottom);
       if (want !== away) { away = want; pill.classList.toggle('is-away', away); }
     };
     addEventListener('pointermove', ev => { if (ev.pointerType === 'mouse') { lastY = ev.clientY; apply(); } }, { passive: true });
+    document.addEventListener('np:change', apply);
   })();
 
   /* Put it back: the cover goes home into the stack, the music stops and the bar goes. A click on the empty
@@ -563,6 +573,7 @@
 
   /* the track the bar is on comes to the front once something has been played */
   document.addEventListener('np:change', () => {
+    html.classList.toggle('np-live', NP.live());
     if (!NP.live()) return;
     if (pick && pick.ti !== NP.current()) pick = null;       // the bar moved on to another release by itself
     const want = pick || nearest(NP.current());

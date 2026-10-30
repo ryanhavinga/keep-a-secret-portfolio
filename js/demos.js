@@ -156,7 +156,7 @@
     [...new Set(tracks.filter(t => !t.language).concat(tracks).map(t => t.language || ''))].forEach(listFor);
 
     tracks.forEach((t, i) => {
-      const meta = [t.genre, t.bpm && `${t.bpm} BPM`, t.key].filter(Boolean).join(' · ');
+      const meta = [t.year, t.genre, t.bpm && `${t.bpm} BPM`, t.key].filter(Boolean).join(' · ');
       const state = STATUS_LABEL[t.status];                       // on hold / cut: no Request link
       const mail = contact && !state
         ? `mailto:${contact}?subject=${encodeURIComponent(`Demo request: ${t.title}`)}&body=${encodeURIComponent(`Hi,\n\nI'd like to request the demo of "${t.title}".\n\n`)}`

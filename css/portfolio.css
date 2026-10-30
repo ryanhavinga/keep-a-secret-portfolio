@@ -106,12 +106,15 @@ html.fonts-wait .seg { visibility: hidden; }
 .pf[data-odd] .shelf,
 .pf[data-odd] .floor { --shift: calc(var(--p) * .42); }
 
+/* how soft the covers behind the one that is pulled out are (0 until one is standing flat) — a real length, so it eases */
+@property --bgb { syntax: '<length>'; inherits: true; initial-value: 0px; }
+html.bg-soft .cd:not(.is-front) { --bgb: 2.5px; }
 .cd {
   --h: 280; --s: 60; --l: 38;       /* the spine's tint, set from the artwork by portfolio.js */
   --x: calc(var(--k, 0) * var(--p) + var(--dx, 0px));     /* --dx: the shift that makes room for the cover that is playing */
   /* all the pointer does is lift a cover a little (--mag is 0..1, eased
      in JS), so it never moves into its neighbours */
-  --y: calc(var(--ym, var(--mag, 0)) * var(--w) * -.1);      /* --ym: the same lift, eased away by JS once the cover is pulled out */
+  --y: calc(var(--ym, var(--mag, 0)) * var(--w) * -.1 + var(--lf, 0) * var(--w) * -.09);      /* --ym: the hover lift, eased away by JS once the cover is pulled out; --lf: the height it stands at then (.09 = LIFT in portfolio.js) */
   position: absolute; top: 0; left: 50%;
   width: var(--w); height: var(--w);
   transform-style: preserve-3d;      /* inside one cover: its face and its spine */
@@ -120,7 +123,7 @@ html.fonts-wait .seg { visibility: hidden; }
      property, and its turn is the individual `rotate`, both kept apart from `transform` (the hover
      lift, written every frame by JS) so each can animate without disturbing the others. */
   translate: var(--x) var(--ly, 0px) var(--z, 0px);
-  transition: translate .7s cubic-bezier(.3, .6, .2, 1), rotate .55s cubic-bezier(.45, 0, .25, 1);
+  transition: translate .7s cubic-bezier(.3, .6, .2, 1), rotate .55s cubic-bezier(.45, 0, .25, 1), --bgb 1.6s var(--ease);                                   /* the background softens (and sharpens) slowly */
 }
 /* The cover pulled out stands higher (--ly) where it used to rise to on hover, and stays put: pointing at it
    only zooms it in a touch (--zm, eased in by JS as the hover lift is eased out, so nothing jumps when the
@@ -180,6 +183,7 @@ html.fonts-wait .seg { visibility: hidden; }
 }
 /* the cover that is playing turns to face you: nothing tucked under a neighbour, nothing out of focus */
 .cd.is-front .cd__shade { opacity: 0; }
+html.has-flat .cd__face { filter: blur(var(--bgb, 0px)); }
 .cd.is-front .cd__face { filter: none !important; transition: filter .35s var(--ease); }   /* an outermost cover loses its blur smoothly */
 .cd--l .cd__shade { background: linear-gradient(to right, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .3) 68%, rgba(0, 0, 0, .78) 100%); box-shadow: 0 1px 0 var(--edge-dark), inset 0 1px 0 var(--edge-lite); }
 .cd--r .cd__shade { background: linear-gradient(to left,  rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .3) 68%, rgba(0, 0, 0, .78) 100%); box-shadow: 0 1px 0 var(--edge-dark), inset 0 1px 0 var(--edge-lite); }
@@ -187,7 +191,7 @@ html.fonts-wait .seg { visibility: hidden; }
 /* the outermost two covers sit slightly out of focus, as if at the edge of the
    field; the one under the pointer sharpens as it lifts (--mag) */
 .cd.is-rim .cd__face {
-  filter: blur(calc(max(2px, var(--w) * .0055) * (1 - var(--mag, 0))));
+  filter: blur(calc(max(2px, var(--w) * .0055) * (1 - var(--mag, 0)) + var(--bgb, 0px)));
 }
 
 /* the spine: the sleeve's thickness, on the end nearest you, carrying the
@@ -199,7 +203,7 @@ html.fonts-wait .seg { visibility: hidden; }
   background:
     linear-gradient(90deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 60%),
     hsl(var(--h) calc(var(--s) * 1%) calc(var(--l) * 1%));
-  filter: brightness(calc(1 + var(--mag, 0) * .22));
+  filter: brightness(calc(1 + var(--mag, 0) * .22)) blur(var(--bgb, 0px));
 }
 /* soft edges, lit from one side and shaded on the other, like a real sleeve's corners.
    The dark edges are a dark shade of the artwork's own colour (not black) and are drawn
@@ -302,7 +306,10 @@ html.fonts-wait .seg { visibility: hidden; }
   display: flex; flex-direction: column; align-items: center; gap: 1px;
   text-align: center; white-space: nowrap;
   pointer-events: none;
+  transition: filter .5s var(--ease), opacity .5s var(--ease);
 }
+/* the credit line goes soft as soon as the player bar comes up over it, and sharpens when the bar goes */
+html.np-live .pf__foot { filter: blur(5px); opacity: .6; }
 .pf__foot p {
   margin: 0;
   font-family: Helvetica, 'Helvetica Neue', Arial, sans-serif;
@@ -363,6 +370,7 @@ html.fonts-wait .seg { visibility: hidden; }
   width: 316px; height: 100%;
   margin-right: 0;                   /* the hairline under it stops here; the speaker's spacing is set in .np's padding */
 }
+.np { -webkit-user-select: none; user-select: none; }      /* nothing in the bar gets selected, however it is pressed or dragged over */
 .np__who {
   position: absolute; inset: 0;
   display: flex; align-items: center; gap: 11px;
@@ -427,7 +435,6 @@ html.fonts-wait .seg { visibility: hidden; }
 .np:not(.is-playing) .np__btn--play .i-pause { opacity: 0; transform: scale(0); }
 @media (hover: hover) and (pointer: fine) {
   .np__btn:hover { transform: scale(1.1); }
-  .np__who:hover .np__text b { text-shadow: 0 0 14px rgba(255, 255, 255, .35); }
 }
 .np__btn:focus-visible, .np__who:focus-visible, .np__scrub:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
 
