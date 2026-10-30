@@ -236,7 +236,6 @@
     activeBox.hidden = !key;
     if (key) activeName.textContent = collections[key].name || key;
     note.textContent = '';
-    try { if (key) sessionStorage.setItem('kas-code', key); else sessionStorage.removeItem('kas-code'); } catch (_) {}   // coming back from the portfolio, the collection is still open
     /* the address carries the code, so a link ending in ?code=HAP opens the collection straight away */
     try {
       const u = new URL(location.href);
@@ -259,7 +258,9 @@
 
   const top = $('[data-contact-link]');
   if (contact) top.href = `mailto:${contact}`; else top.hidden = true;
-  let saved = null;
-  try { saved = sessionStorage.getItem('kas-code'); } catch (_) {}
-  show(keyOf(new URLSearchParams(location.search).get('code')) || keyOf(saved));
+  /* A collection opens only from a link that carries its code (?code=HAP) or from typing the code — nothing is remembered,
+     so a visitor who comes by any other way never finds one already open. (An older version kept the code in the tab's
+     session; that is cleared here.) */
+  try { sessionStorage.removeItem('kas-code'); } catch (_) {}
+  show(keyOf(new URLSearchParams(location.search).get('code')));
 })();
