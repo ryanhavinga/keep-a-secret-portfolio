@@ -1,8 +1,8 @@
 # The Player page (archived)
 
 The original front page: one big cover with its neighbours tucked behind it, title and artist, a timeline,
-volume and the transport buttons, over a light that takes its colour from the artwork. It is **switched off**:
-the pill at the top no longer links to it and `player.html` / `js/app.js` live here instead.
+volume and the transport buttons, over a light that takes its colour from the artwork. It is now the **phone version of the Portfolio**: `player.html` / `js/app.js` are live in the site's root again
+(`index.html` sends phones there), and this folder keeps the original copies.
 
 This folder mirrors the site's layout, so putting it back is a copy (from the site's root):
 

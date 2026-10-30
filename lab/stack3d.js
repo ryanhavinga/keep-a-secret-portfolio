@@ -254,12 +254,17 @@
     x.translate(48, 800); x.rotate(-Math.PI / 2); x.textBaseline = 'middle'; x.textAlign = 'left';
     if ('letterSpacing' in x) x.letterSpacing = '3px';
     const face = '"Helvetica Neue", Helvetica, Arial, sans-serif', gap = 26;
-    x.font = `800 59px ${face}`; const wt = x.measureText(title).width;
-    x.font = `300 59px ${face}`; const wa = x.measureText(artist).width;
-    const start = -(wt + gap + wa) / 2;
-    x.font = `800 59px ${face}`; x.fillStyle = '#fff'; x.strokeStyle = '#fff'; x.lineWidth = 2.2; x.lineJoin = 'round';
-    x.strokeText(title, start, 0); x.fillText(title, start, 0);
-    x.font = `300 59px ${face}`; x.fillStyle = 'rgba(255,255,255,.72)'; x.fillText(artist, start + wt + gap, 0);
+    /* the title is bold; a part of it in brackets, like "(Akoestisch)", is a step lighter */
+    const m = title.match(/^(.*?)(\s*\([^)]*\))$/), main = m ? m[1] : title, extra = m ? m[2] : '';
+    const heavy = `800 59px ${face}`, medium = `500 59px ${face}`, thin = `300 59px ${face}`;
+    x.font = heavy; const wm = x.measureText(main).width;
+    x.font = medium; const we = extra ? x.measureText(extra).width : 0;
+    x.font = thin; const wa = x.measureText(artist).width;
+    const start = -(wm + we + gap + wa) / 2;
+    x.font = heavy; x.fillStyle = '#fff'; x.strokeStyle = '#fff'; x.lineWidth = 2.2; x.lineJoin = 'round';
+    x.strokeText(main, start, 0); x.fillText(main, start, 0);                          // (the same slight stroke the title always had)
+    if (extra) { x.font = medium; x.lineWidth = 1; x.strokeText(extra, start + wm, 0); x.fillText(extra, start + wm, 0); }
+    x.font = thin; x.fillStyle = 'rgba(255,255,255,.72)'; x.fillText(artist, start + wm + we + gap, 0);
     return c;
   }
 

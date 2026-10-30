@@ -37,7 +37,7 @@ const CONFIG = {
       duration: 200
     },
     {
-      title: 'Beter dan ooit - Akoestisch',
+      title: 'Beter dan ooit (Akoestisch)',
       artist: 'Gilles',
       artwork: 'img/track-3.jpg',
       audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',
@@ -82,8 +82,8 @@ const CONFIG = {
   /* ---------- PORTFOLIO (index.html, the landing page) ----------
      Everything we've made, on its own page: big covers stacked on a shelf,
      floating a little, and a click pulls one out into full view with its
-     info beside it. `tracks` above is the player (the ones we feature);
-     this is the whole catalogue. Order here is the order down the page.
+     info beside it. `tracks` above is the old player's list (no longer used: the phone player on player.html now plays
+     this list); this is the whole catalogue. Order here is the order down the page.
 
        title, artist : shown on the shelf edge and in the info panel
        artwork       : path to a square image (needed — the page is the covers).
@@ -141,7 +141,7 @@ const CONFIG = {
     tracks: [
       { title: 'Nergens Liever',              artist: 'Gilles',     artwork: 'img/track-1.jpg',                 audio: 'audio/track 1 - Nergens Liever.m4a',                       color: '#9d386f', duration: 197 },
       { title: 'Beter dan ooit',              artist: 'Gilles',     artwork: 'img/Beter dan ooit - Gilles.jpg', audio: 'audio/track 5 - Beter dan ooit.m4a',                       color: '#e8a100', duration: 172 },
-      { title: 'Beter dan ooit - Akoestisch', artist: 'Gilles',     artwork: 'img/track-3.jpg',                 audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',          color: '#0a3a63', duration: 167 },
+      { title: 'Beter dan ooit (Akoestisch)', artist: 'Gilles',     artwork: 'img/track-3.jpg',                 audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',          color: '#0a3a63', duration: 167 },
       { title: 'Boemerang',                   artist: 'Gilles',     artwork: 'img/Boemerang - Gilles.jpg',      audio: 'audio/track 2 - Boemerang.m4a',                            color: '#a54de0', duration: 190 },
       { title: 'Hoogtes',                     artist: 'Tim Tiago',  artwork: 'img/Hoogtes - Tim Tiago.jpg',     audio: 'audio/track 3 - Hoogtes.m4a',                              color: '#7a5a44', duration: 200 },
       { title: 'Incompleet',                  artist: 'Rosalie',    artwork: 'img/Incompleet - Rosalie.jpg',    audio: 'audio/track 6 - Incompleet.m4a',                            color: '#a8553a', duration: 229 },
@@ -179,7 +179,8 @@ const CONFIG = {
      are what's available. A plain list, one row per song, in groups by language, each under its own
      heading.
 
-       contact  : where each row's "Request" link sends its email (subject: "Demo request: <title>")
+       contact  : where each row's "Request" link sends its email (subject: "Demo request: <title>"); a collection can
+                  switch that link off for its rows with request: false
 
      Each entry in `tracks` is one row:
        title    : song title
@@ -203,7 +204,7 @@ const CONFIG = {
        collection is not shown anywhere. It is not a password: a link ending in ?code=HAP opens a collection straight
        away, and the files themselves are still on the server for anyone who goes looking. */
     collections: {
-      HAP: { name: 'Holland America Publishing' }
+      HAP: { name: 'Holland America Publishing', request: false }     // request: false — no Request link on its rows
     },
     tracks: [
       /* Nederlandstalig is switched off for now — take the comment marks away to bring it back (the heading comes with it):

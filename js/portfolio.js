@@ -88,12 +88,17 @@
     x.translate(48, 800); x.rotate(-Math.PI / 2); x.textBaseline = 'middle'; x.textAlign = 'left';
     if ('letterSpacing' in x) x.letterSpacing = '3px';
     const face = '"Helvetica Neue", Helvetica, Arial, sans-serif', gap = 26;
-    x.font = `800 59px ${face}`; const wt = x.measureText(title).width;
-    x.font = `300 59px ${face}`; const wa = x.measureText(artist).width;
-    const start = -(wt + gap + wa) / 2;
-    x.font = `800 59px ${face}`; x.fillStyle = '#fff'; x.strokeStyle = '#fff'; x.lineWidth = 2.2; x.lineJoin = 'round';
-    x.strokeText(title, start, 0); x.fillText(title, start, 0);                         // (the same slight stroke the title always had)
-    x.font = `300 59px ${face}`; x.fillStyle = 'rgba(255,255,255,.72)'; x.fillText(artist, start + wt + gap, 0);
+    /* the title is bold; a part of it in brackets, like "(Akoestisch)", is a step lighter */
+    const m = title.match(/^(.*?)(\s*\([^)]*\))$/), main = m ? m[1] : title, extra = m ? m[2] : '';
+    const heavy = `800 59px ${face}`, medium = `500 59px ${face}`, thin = `300 59px ${face}`;
+    x.font = heavy; const wm = x.measureText(main).width;
+    x.font = medium; const we = extra ? x.measureText(extra).width : 0;
+    x.font = thin; const wa = x.measureText(artist).width;
+    const start = -(wm + we + gap + wa) / 2;
+    x.font = heavy; x.fillStyle = '#fff'; x.strokeStyle = '#fff'; x.lineWidth = 2.2; x.lineJoin = 'round';
+    x.strokeText(main, start, 0); x.fillText(main, start, 0);                          // (the same slight stroke the title always had)
+    if (extra) { x.font = medium; x.lineWidth = 1; x.strokeText(extra, start + wm, 0); x.fillText(extra, start + wm, 0); }
+    x.font = thin; x.fillStyle = 'rgba(255,255,255,.72)'; x.fillText(artist, start + wm + we + gap, 0);
     const url = c.toDataURL('image/png');
     letteringCache.set(key, url);
     return url;
@@ -257,7 +262,19 @@
       }, 70);
     }, 540);                                               // (the swipe up and the fade out are done)
   }
+  /* The light at the top of the page: neutral cool white, or — while a cover is selected — that cover's main colour
+     (the same tint the floor's light is made of), eased over a second or so. */
+  function hslToRgb(h, s, l) {
+    s /= 100; l /= 100; const a = s * Math.min(l, 1 - l), f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+    return [f(0), f(8), f(4)].map(v => Math.round(v * 255));
+  }
+  function skyLight(f) {
+    const [r, g, b] = f ? hslToRgb(f.tint.h, clamp(f.tint.s + 12, 50, 92), 64) : [196, 208, 255];
+    html.style.setProperty('--tl-r', r); html.style.setProperty('--tl-g', g); html.style.setProperty('--tl-b', b);
+    html.style.setProperty('--tl-a', f ? .2 : .12);                           // and a little stronger while it is coloured
+  }
   function setFront(f) {
+    skyLight(f);
     timers.splice(0).forEach(clearTimeout);
     starting = null;
     const prev = front;
@@ -587,14 +604,14 @@
       zone.addEventListener('pointercancel', release);
     });
 
-    /* Half a second on the hairline brings up the thick timeline with the times in it, in a quick fade;
-       leaving the middle sends it straight back down, even quicker (css/portfolio.css). */
+    /* A little under half a second on the hairline brings up the thick timeline with the times in it, in a quick fade;
+       leaving the middle sends it back down by the same fade played backwards (css/portfolio.css). */
     let enter = 0, leave = 0;
     const leaveTime = () => { clearTimeout(leave); leave = setTimeout(() => { if (!dragging) el.classList.remove('is-time'); }, 40); };
     ui.scrub.addEventListener('pointerenter', ev => {
       if (ev.pointerType !== 'mouse') return;
       clearTimeout(enter); clearTimeout(leave);
-      enter = setTimeout(() => el.classList.add('is-time'), 500);
+      enter = setTimeout(() => el.classList.add('is-time'), 380);
     });
     ui.scrub.addEventListener('pointerleave', () => clearTimeout(enter));
     ui.mid.addEventListener('pointerenter', () => clearTimeout(leave));

@@ -26,6 +26,16 @@
 <meta name="twitter:description" content="A private listening room. By invitation only.">
 <meta name="twitter:image" content="https://keepasecret.nl/img/og-preview.jpg">
 
+<script>
+/* Which design this device gets: the shelf of covers (index.html) is for screens with a mouse; on a phone (a touch screen
+   with a short side of 500px or less) the Portfolio is this player page instead. ?layout=phone or ?layout=desktop forces one. */
+(function () {
+  var f = /[?&]layout=(phone|desktop)/.exec(location.search);
+  var phone = f ? f[1] === 'phone' : navigator.maxTouchPoints > 0 && Math.min(innerWidth, innerHeight) <= 500;
+  if (phone) location.replace('player.html' + (f ? '?layout=' + f[1] : ''));
+})();
+</script>
+
 <link rel="preload" as="font" type="font/otf" href="fonts/MonumentExtended-Ultrabold.otf" crossorigin>
 <link rel="preload" as="font" type="font/otf" href="fonts/MonumentExtended-Regular.otf" crossorigin>
 <link rel="stylesheet" href="css/styles.css">

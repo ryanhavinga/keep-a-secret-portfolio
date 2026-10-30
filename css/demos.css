@@ -117,7 +117,7 @@ html.fonts-wait .vlt { visibility: hidden; }
 .code__active b { font-weight: 600; color: #fff; }
 .code__clear { font: inherit; color: rgba(255, 255, 255, .55); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; transition: color .3s var(--ease); }
 .code__clear:hover { color: #fff; }
-[data-groups] { margin-top: clamp(30px, 5vh, 48px); }
+[data-groups] { margin-top: clamp(42px, 6.7vh, 62px); }     /* the selection and its list stand a little lower, clear of the code bar */
 .empty { margin: 0 0 0 var(--inset); padding: 4px 0 0; font: 14px/1.5 var(--ui); letter-spacing: .01em; color: #fff; }
 [data-groups].is-bare { margin-top: 0; }
 
@@ -309,6 +309,22 @@ html.fonts-wait .vlt { visibility: hidden; }
   font-size: 10.5px;
   letter-spacing: .08em;
   color: var(--w-30);
+}
+
+/* ---------- your selection ------------------------------------- */
+.sel {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  margin: 0 0 0 var(--inset);
+  padding-right: clamp(0px, .6vw, 8px);
+}
+.sel__title { margin: 0; font: 700 clamp(18px, 1.7vw, 22px)/1.15 var(--ui); letter-spacing: .01em; color: #fff; }
+.sel__count { font: 500 13px/1.2 var(--ui); letter-spacing: .03em; color: var(--w-48); white-space: nowrap; }
+.sel + .group .rows { margin-top: clamp(14px, 2vh, 20px); }
+
+/* a collection with no Request links: the column on the right goes, the time ends the row */
+.no-ask .row { grid-template-columns: 40px 54px minmax(0, 1fr) minmax(0, 1.5fr); grid-template-areas: 'no icon info player'; }
+@media (max-width: 860px) {
+  .no-ask .row { grid-template-columns: 54px minmax(0, 1fr); grid-template-areas: 'icon info' 'player player'; }
 }
 
 /* ---------- foot ---------------------------------------------- */

@@ -176,13 +176,23 @@
       groups.innerHTML = '<p class="empty">No demos in this collection yet.</p>';
       return;
     }
+    /* "Your selection" and how many songs it holds, over the lists */
+    const head = document.createElement('div');
+    head.className = 'sel';
+    head.innerHTML = `<h2 class="sel__title">Your selection</h2><span class="sel__count">${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'}</span>`;
+    groups.appendChild(head);
     [...new Set(tracks.filter(t => !t.language).concat(tracks).map(t => t.language || ''))].forEach(listFor);
+
+    /* a collection can switch the Request link off (request: false in CONFIG.demos.collections) */
+    const canAsk = collections[active].request !== false;
+    /* with nothing to put in the right-hand column (no Request link, no "on hold") the column goes */
+    groups.classList.toggle('no-ask', tracks.every(t => t.audio && !STATUS_LABEL[t.status] && !(contact && canAsk)));
 
     tracks.forEach((t, i) => {
       const meta = [t.year, t.genre, t.bpm && `${t.bpm} BPM`, t.key].filter(Boolean).join(' · ');
       const state = STATUS_LABEL[t.status];                       // on hold / cut: no Request link
       const forWho = active ? `Collection: ${collections[active].name || active}\n` : '';
-      const mail = contact && !state
+      const mail = contact && canAsk && !state
         ? `mailto:${contact}?subject=${encodeURIComponent(`Demo request: ${t.title}`)}&body=${encodeURIComponent(`Hi,\n\nI'd like to request the demo of "${t.title}".\n${forWho}\n`)}`
         : null;
       const li = document.createElement('li');

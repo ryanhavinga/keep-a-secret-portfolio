@@ -66,6 +66,6 @@ Even with a go-ahead, ask separately before anything destructive or hard to reve
 
 ## Repo layout reminder
 
-Plain static site, no build step: `index.html` (the landing page: the portfolio), `demos.html`, `css/styles.css`, `js/portfolio.js` (behavior; the switched-off Player page and its `js/app.js` are in `archive/player/`),
+Plain static site, no build step: `index.html` (the landing page: the portfolio — on phones it redirects to `player.html`, the round-light player with every track from `CONFIG.portfolio.tracks`; `?layout=phone|desktop` forces one), `demos.html`, `css/styles.css`, `js/portfolio.js` (behavior; the switched-off Player page and its `js/app.js` are in `archive/player/`),
 `js/config.js` (the file you edit for content — tracks, branding, the demos). See
 `README.md` for the full editing guide and the site's design rationale.
