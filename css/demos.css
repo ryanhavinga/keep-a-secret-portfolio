@@ -133,8 +133,8 @@ html.fonts-wait .vlt { visibility: hidden; }
   --pad: clamp(16px, 2.2vh, 22px);
   position: relative;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1.5fr) 104px;
-  grid-template-areas: 'no info player ask';
+  grid-template-columns: 40px 54px minmax(0, 1fr) minmax(0, 1.5fr) 104px;
+  grid-template-areas: 'no icon info player ask';
   align-items: center;
   column-gap: clamp(14px, 2vw, 26px);
   padding: var(--pad) clamp(0px, .6vw, 8px) var(--pad) var(--inset);
@@ -153,6 +153,17 @@ html.fonts-wait .vlt { visibility: hidden; }
 }
 .row.is-playing::before { opacity: 1; }
 
+.row__icon {                               /* the little tile with a music note, left, level with the middle of the row */
+  grid-area: icon;
+  width: 54px; height: 54px;
+  display: grid; place-items: center;
+  border-radius: 13px;
+  background: #1f1d29;
+  color: #b9a7e8;
+}
+.row__icon svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.row__icon svg circle { fill: currentColor; stroke: none; }
+.row.is-playing .row__icon { background: #2a2639; color: #d6c8ff; }
 .row__no {
   grid-area: no;
   font-size: clamp(16px, 1.55vw, 20px);        /* as big as the song's name, and white like it */
@@ -185,8 +196,8 @@ html.fonts-wait .vlt { visibility: hidden; }
 }
 .row__meta {
   margin: 9px 0 0;
-  font-size: 11px;
-  letter-spacing: .06em;
+  font-size: 13px;
+  letter-spacing: .03em;
   color: var(--w-48);
 }
 .row__meta:empty { display: none; }
@@ -322,11 +333,11 @@ html.fonts-wait .vlt { visibility: hidden; }
 /* ---------- narrower screens: the row folds into two lines ----- */
 @media (max-width: 860px) {
   .row {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 54px minmax(0, 1fr);
     grid-template-areas:
-      'info'
-      'player'
-      'ask';
+      'icon info'
+      'player player'
+      'ask ask';
     row-gap: 10px;
   }
   /* the page pill drops below the wordmark here (see .seg in styles.css) */

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" class="pf-html">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keep A Secret — Portfolio (WebGL prototype)</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- PROTOTYPE — the cover stack as a real 3D scene (WebGL). Everything around it (header, page pill, socials, credit line, the player bar) is the
+     site's own markup and stylesheets, copied as it is, so it looks exactly the same. Nothing on the live site links here. -->
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/portfolio.css">
+<style>
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; z-index: 1; }
+.floor { position: fixed !important; z-index: 0; left: 0; right: 0; }
+#nogl[hidden] { display: none; }
+#nogl { position: fixed; inset: 0; display: grid; place-items: center; font-size: 14px; color: #fff; z-index: 50; }
+</style>
+</head>
+<body class="page-pf">
+
+<header class="pf__bar">
+  <div class="wordmark">
+    <span class="wordmark__main">Keep A Secret</span>
+    <span class="wordmark__sub">Portfolio</span>
+  </div>
+  <nav class="topbar__links">
+    <a class="tag" href="../contact.html">Contact</a>
+  </nav>
+</header>
+
+<nav class="seg" data-seg aria-label="Pages">
+  <span class="seg__thumb" aria-hidden="true"></span>
+  <a class="seg__btn" href="../index.html" aria-current="page">Portfolio</a>
+  <a class="seg__btn" href="../demos.html">Demos</a>
+</nav>
+
+<div class="floor" id="floor" aria-hidden="true"></div>
+<canvas id="gl"></canvas>
+
+<div class="socials">
+  <a data-instagram href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5"/>
+      <circle cx="12" cy="12" r="4.2"/>
+      <circle cx="17.1" cy="6.9" r="1"/>
+    </svg>
+  </a>
+  <a data-spotify-playlist href="#" target="_blank" rel="noopener noreferrer" aria-label="Spotify playlist" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="9.5"/>
+      <path d="M6.9 9.2c3.6-1 7.6-.7 10.6 1.1M7.4 12.3c3-.8 6.2-.5 8.7 1M7.9 15.2c2.4-.6 4.7-.3 6.7.8"/>
+    </svg>
+  </a>
+</div>
+
+<footer class="pf__foot">
+  <p>&copy; Keep A Secret. All Rights Reserved</p>
+  <p>Written &amp; Produced by Keep A Secret</p>
+</footer>
+
+<div class="np" data-np role="region" aria-label="Now playing">
+  <div class="np__ctrl">
+    <button class="np__btn" data-np-prev type="button" aria-label="Previous">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 9.5 12 18 18Z"/><path d="M6 6v12"/></svg>
+    </button>
+    <button class="np__btn np__btn--play" data-np-play type="button" aria-label="Play">
+      <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5 19 12 9 18.5Z"/></svg>
+      <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg>
+    </button>
+    <button class="np__btn" data-np-next type="button" aria-label="Next">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 14.5 12 6 18Z"/><path d="M18 6v12"/></svg>
+    </button>
+  </div>
+  <div class="np__mid" data-np-mid>
+    <button class="np__who" data-np-open type="button" aria-label="Show credits">
+      <img class="np__art" data-np-art alt="">
+      <span class="np__text"><b data-np-title></b><span data-np-artist></span></span>
+    </button>
+    <!-- hover the hairline for half a second and the artwork and title give way to the times
+         (centred on the bar) with a timeline under them; leave and it sinks away again, fast -->
+    <div class="np__time" aria-hidden="true">
+      <span class="np__tl"><span class="np__t" data-np-elapsed>0:00</span><span class="np__t" data-np-total>0:00</span></span>
+      <div class="np__tscrub" data-np-tscrub>
+        <div class="np__ttrack"><div class="np__tfill" data-np-tfill></div></div>
+      </div>
+    </div>
+    <div class="np__scrub" data-np-scrub role="slider" tabindex="0" aria-label="Seek"
+         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="np__track"><div class="np__fill" data-np-fill></div></div>
+    </div>
+  </div>
+  <div class="np__vol">
+    <button class="np__btn np__btn--vol" data-np-vol type="button" aria-label="Volume" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="i-body" d="M4 9.6v4.8h3.6L12.4 18.4V5.6L7.6 9.6Z"/>
+        <path class="i-wave" d="M15.6 9.2a4 4 0 0 1 0 5.6M18.2 6.6a7.6 7.6 0 0 1 0 10.8"/>
+        <path class="i-mute" d="M15.6 9.6l5 4.8M20.6 9.6l-5 4.8"/>
+      </svg>
+    </button>
+    <div class="np__flyout" data-np-flyout>
+      <div class="np__vtrack" data-np-vtrack role="slider" tabindex="0" aria-label="Volume" aria-orientation="vertical"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="40">
+        <div class="np__vfill" data-np-vfill></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p id="nogl" hidden>This prototype needs WebGL 2.</p>
+<script src="../js/config.js"></script>
+<script src="../js/nav.js"></script>
+<script src="stack3d.js"></script>
+</body>
+</html>

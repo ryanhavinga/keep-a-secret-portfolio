@@ -57,7 +57,7 @@ html.fonts-wait .seg { visibility: hidden; }
   --lift: 1.7vh;                                   /* the whole stack stands this much higher (its size is unchanged) */
   --pad-top: calc(clamp(100px, 14vh, 150px) + 18px - var(--lift));   /* clear of the header and the page pill above the row */
   --head: 6px;                                     /* the breath between the header and the row */
-  --sink: clamp(22px, 5vh, 52px);                  /* the whole row (covers and their shadows, same size) sits this far down, so a lifted cover keeps clear of the top */
+  --sink: clamp(15px, 3.5vh, 38px);                  /* the whole row (covers and their shadows, same size) sits this far down, so a lifted cover keeps clear of the top */
   --pad-bot: 58px;                                 /* room for the credit line under the row */
   --w: min(830px, calc(100vh - var(--pad-top) - var(--head) - var(--pad-bot) - 36px - var(--lift)));
   --w: min(830px, calc(100dvh - var(--pad-top) - var(--head) - var(--pad-bot) - 36px - var(--lift)));
@@ -180,11 +180,33 @@ html.fonts-wait .seg { visibility: hidden; }
 }
 /* the cover that is playing turns to face you: nothing tucked under a neighbour, nothing out of focus */
 .cd.is-front .cd__shade { opacity: 0; }
-/* a cover being put back fades out (and in again in its slot) — each plane on its own, since fading the whole cover
-   would flatten its 3D */
-.cd__face, .cd__edge { transition: opacity .3s var(--ease); }
-.cd.is-fading .cd__face, .cd.is-fading .cd__edge, .cd.is-fading .cd__shade { opacity: 0; transition: opacity .22s var(--ease); }
+/* put back: it swipes quickly up, and then glides forward out of the back of the stack into its place */
+.cd.is-swiping { transition: translate .5s cubic-bezier(.45, 0, .3, 1), rotate .3s; }                        /* exactly the player bar's move and curve */
+.cd.is-entering { transition: translate .75s cubic-bezier(.1, .72, .15, 1), rotate .3s; }                    /* slows right down as it arrives */
+.fl.is-entering { transition: translate .75s cubic-bezier(.1, .72, .15, 1), rotate .3s, opacity .25s var(--ease); }
+/* Standing flat and facing you the cover is one plain picture (its spine is edge-on and shows nothing, so its 3D is
+   switched off): that is what lets it fade away as a single layer, quickly and smoothly, together with the player bar. */
+.cd.is-flat, .cd.is-flat .cd__btn, .cd.is-flat .cd__bob { transform-style: flat; }
+.cd.is-flat .cd__edge { visibility: hidden; }
+.cd.is-leaving { opacity: 0; transition: translate .5s cubic-bezier(.45, 0, .3, 1), rotate .3s, opacity .4s var(--ease) .05s; }
 .cd.is-front .cd__face { filter: none !important; transition: filter .35s var(--ease); }   /* an outermost cover loses its blur smoothly */
+/* A cover being put back is ONE object: its artwork, its spine, its shading and its light on the floor fade out together
+   and fade in together, by exactly the same curve and time (they used to differ, so the artwork was gone while the
+   spine was still there, and the shading came in before the artwork). The !important beats the other transitions the
+   planes have in their various states. */
+.cd__face, .cd__edge { will-change: opacity; }
+.cd.is-fading .cd__face, .cd.is-fading .cd__edge, .cd.is-fading .cd__shade,
+.fl.is-fading .fl__glow, .fl.is-fading .fl__edge { transition: opacity .4s var(--ease) !important; }
+.cd.is-entering .cd__shade,
+.fl.is-entering .fl__glow, .fl.is-entering .fl__edge { transition: opacity .4s cubic-bezier(.4, 0, .6, 1) !important; }
+.cd.is-entering .cd__face, .cd.is-entering .cd__edge { transition: opacity .4s cubic-bezier(.4, 0, .6, 1) !important; }
+.cd.is-hide .cd__face, .cd.is-hide .cd__edge { opacity: 0 !important; transition: none !important; }
+/* The shading on the artwork (the dark tuck towards its far end) is not faded separately on the way in: it is there in full
+   from the start, so it arrives exactly as strongly as the artwork (faded on its own on top of the artwork's fade, it only showed
+   once the cover was back). */
+.cd.is-hide .cd__shade, .cd.is-entering .cd__shade { opacity: 1 !important; transition: none !important; }
+.cd.is-fading .cd__face, .cd.is-fading .cd__edge, .cd.is-fading .cd__shade,
+.fl.is-fading .fl__glow, .fl.is-fading .fl__edge { opacity: 0 !important; }
 .cd--l .cd__shade { background: linear-gradient(to right, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .3) 68%, rgba(0, 0, 0, .78) 100%); box-shadow: 0 1px 0 var(--edge-dark), inset 0 1px 0 var(--edge-lite); }
 .cd--r .cd__shade { background: linear-gradient(to left,  rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .3) 68%, rgba(0, 0, 0, .78) 100%); box-shadow: 0 1px 0 var(--edge-dark), inset 0 1px 0 var(--edge-lite); }
 
@@ -220,6 +242,7 @@ html.fonts-wait .seg { visibility: hidden; }
 .cd--l .cd__edge { left: calc(var(--t) * -1);  transform-origin: 100% 50%; transform: rotateY(-90deg); }
 .cd--r .cd__edge { left: 100%;                  transform-origin: 0 50%;    transform: rotateY(90deg); }
 
+.cd__lettering { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 .cd__label {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center; gap: .45em;   /* title and artist centred on the spine, both ways */
@@ -240,10 +263,11 @@ html.fonts-wait .seg { visibility: hidden; }
 .shelf__veil {
   position: absolute; left: -100vw; right: -100vw; top: -100vh; bottom: -100vh;     /* the whole window, whatever the shelf's own box is */
   z-index: 30; pointer-events: none;
-  -webkit-backdrop-filter: blur(0px); backdrop-filter: blur(0px);
-  transition: -webkit-backdrop-filter 1.6s var(--ease), backdrop-filter 1.6s var(--ease);
+  -webkit-backdrop-filter: blur(2.5px); backdrop-filter: blur(2.5px);
+  visibility: hidden; opacity: 0;                              /* not drawn at all until a cover stands flat */
+  transition: opacity .3s var(--ease), visibility 0s linear .3s;                /* it goes quickly, so it is never there while the cover is put back */
 }
-html.bg-soft .shelf__veil { -webkit-backdrop-filter: blur(2.5px); backdrop-filter: blur(2.5px); }
+html.bg-soft .shelf__veil { visibility: visible; opacity: 1; transition: opacity 1.6s var(--ease); }
 
 /* ---------- the ground ----------------------------------------- */
 /* Under the row: each cover throws a pool of its own colour onto the floor
@@ -290,7 +314,9 @@ html.bg-soft .shelf__veil { -webkit-backdrop-filter: blur(2.5px); backdrop-filte
 .fl.cd--r .fl__glow { left: 5%; }          /* on the right the front of the cover is local +x, so mirror the reach */
 .fl__edge {
   /* the spine's reflection, straight down under it: it drifts further away and fades as the cover lifts (--mag) */
-  position: absolute; top: calc(100% + 14px + var(--mag, 0) * var(--w) * .1);
+  position: absolute; top: calc(100% + 14px);
+  translate: 0 calc(var(--mag, 0) * var(--w) * .1);
+  will-change: transform, opacity;
   width: var(--t); height: 100%;
   /* No flat middle and no sides: brightest down the centre, falling away smoothly to nothing on both
      edges, then blurred well beyond that — so it reads as a faint glow under the spine, not a bar */
@@ -375,7 +401,10 @@ html.np-live .socials { opacity: 0; pointer-events: none; }
 }
 .np[hidden] { display: none; }
 /* the bar isn't there until something is played: it rises from below the window with the first play */
-.np:not(.is-live) { transform: translate(-50%, calc(100% + 60px)); opacity: 0; pointer-events: none; }
+.np:not(.is-live) {
+  transform: translate(-50%, calc(100% + 60px)); opacity: 0; pointer-events: none;
+  transition: transform .5s cubic-bezier(.45, 0, .3, 1), opacity .4s var(--ease) .05s;       /* sinks away, smoothly, as the cover is put back */
+}
 /* the middle of the bar: the artwork and title — or, while the hairline under them is
    hovered, the times and a thick timeline, which rise in from below. The bar itself
    never changes size. */

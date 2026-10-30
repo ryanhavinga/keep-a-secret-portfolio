@@ -75,6 +75,31 @@
   }
 
   /* ==========================================================
+     THE LETTERING ON A SPINE — drawn once as a picture (title bold, artist thin, reading upwards, white). As a picture it is
+     sharp at every size and wherever the cover is, as the artwork is; as live text in a layer that moves it was only drawn
+     sharply once the cover had stopped, so the spine of a cover coming back into the row showed up blurry until it had arrived.
+     ========================================================== */
+  const letteringCache = new Map();
+  function lettering(title, artist) {
+    const key = title + '\u0001' + artist;
+    if (letteringCache.has(key)) return letteringCache.get(key);
+    const c = document.createElement('canvas'); c.width = 96; c.height = 1600;
+    const x = c.getContext('2d');
+    x.translate(48, 800); x.rotate(-Math.PI / 2); x.textBaseline = 'middle'; x.textAlign = 'left';
+    if ('letterSpacing' in x) x.letterSpacing = '3px';
+    const face = '"Helvetica Neue", Helvetica, Arial, sans-serif', gap = 26;
+    x.font = `800 59px ${face}`; const wt = x.measureText(title).width;
+    x.font = `300 59px ${face}`; const wa = x.measureText(artist).width;
+    const start = -(wt + gap + wa) / 2;
+    x.font = `800 59px ${face}`; x.fillStyle = '#fff'; x.strokeStyle = '#fff'; x.lineWidth = 2.2; x.lineJoin = 'round';
+    x.strokeText(title, start, 0); x.fillText(title, start, 0);                         // (the same slight stroke the title always had)
+    x.font = `300 59px ${face}`; x.fillStyle = 'rgba(255,255,255,.72)'; x.fillText(artist, start + wt + gap, 0);
+    const url = c.toDataURL('image/png');
+    letteringCache.set(key, url);
+    return url;
+  }
+
+  /* ==========================================================
      THE SHELF
      ========================================================== */
   const shelf = $('[data-shelf]');
@@ -98,7 +123,7 @@
         <div class="cd__bob">
           <img class="cd__face" src="${esc(t.artwork)}" alt="${rep ? '' : esc(t.title) + ' — artwork'}" decoding="async">
           <div class="cd__shade"></div>
-          <div class="cd__edge"><span class="cd__label"><b>${esc(t.title)}</b><span>${esc(t.artist)}</span></span></div>
+          <div class="cd__edge"><img class="cd__lettering" src="${lettering(t.title, t.artist)}" alt="" decoding="async"></div>
         </div>
       </div>`;
     shelf.appendChild(li);
@@ -108,7 +133,7 @@
     fl.className = `fl cd--${side}`;
     fl.innerHTML = `<div class="fl__glow"></div><div class="fl__edge"></div>`;
     floor.appendChild(fl);
-    const it = { ym: 0, zm: 0, lf: 0, li, fl, t, n: i, ti, rep, row, pos: i, side, pose: 'slot', btn: $('.cd__btn', li), face: $('.cd__face', li), tint: tintOf(t, null) };
+    const it = { ym: 0, zm: 0, lf: 0, li, fl, t, n: i, ti, rep, row, slot: i, pos: i, side, pose: 'slot', btn: $('.cd__btn', li), face: $('.cd__face', li), tint: tintOf(t, null) };
     paintTint(li, it.tint); paintTint(fl, it.tint);
     /* swap the configured colour for the real one as soon as the artwork has loaded */
     const real = () => { it.tint = tintOf(t, it.face); paintTint(li, it.tint); paintTint(fl, it.tint); };
@@ -154,6 +179,7 @@
   const BACK = .28;                                        // how far the stack steps back, as a share of a cover's width
   const OUT = .2;                                          // how far a cover is slid out, spine first
   const hoverOn = matchMedia('(hover: hover) and (pointer: fine)').matches && !reduced;
+  const SWIPE = .55;                                       // how far up (share of its width) a cover swipes when it is put back
   const LIFT = .09;                                        // the cover that is out stands this much higher (a share of its width)
   let front = null;
   let wakeHover = () => {};                                // set below, where the hover spring lives
@@ -162,43 +188,74 @@
   let pick = null;                                         // the copy of a release that was clicked (a release can be in the row twice)
   const timers = [];
   const later = (ms, fn) => { const id = setTimeout(fn, ms); timers.push(id); };
+  function setSide(it, side) {
+    it.side = side;
+    for (const el of both(it)) { el.classList.toggle('cd--l', side === 'l'); el.classList.toggle('cd--r', side === 'r'); }
+  }
   function place() {
     const w = px('--w'), p = px('--p');
     items.forEach(it => {
-      let x = it.row * p, rot = 90, z = front ? -w * BACK : 0, zi = 20 - Math.round(Math.abs(it.row) * 2), ly = 0;
+      const row = it.slot - (N - 1) / 2;                      // its signed distance from the middle, in covers — where it stands NOW (the order changes when a cover is put back)
+      const sideNow = row < 0 ? 'l' : 'r';
+      if (it.side !== sideNow && it.pose !== 'pull' && it.pose !== 'flat' && it.pose !== 'swipe') {
+        /* a cover that slides across the middle turns over to the other hinge once it is halfway across; one that is out of sight does so at once */
+        if (it.pose === 'enter') setSide(it, sideNow);
+        else if (!it.sideT) it.sideT = setTimeout(() => { it.sideT = 0; if (it.pose === 'slot') setSide(it, it.slot - (N - 1) / 2 < 0 ? 'l' : 'r'); }, 300);
+      }
+      let x = row * p, rot = 90, z = front ? -w * BACK : 0, zi = 20 - Math.round(Math.abs(row) * 2), ly = 0;
       if (it.pose === 'pull') { z = w * OUT; }                // sliding out: it keeps its place in the paint order, so its neighbours still cover it
       else if (it.pose === 'flat') { x = it.side === 'l' ? -w / 2 : w / 2; rot = 0; z = w * .05; zi = 40; }
-      else if (it.pose === 'turn') { z = w * OUT; zi = 40; }   // going back: turns edge-on where it stands, still in front of the stack
-      if (!hoverOn && (it.pose === 'flat' || it.pose === 'turn')) ly = -w * LIFT;   // (with a mouse the rise is eased in JS, in step with the hover lift going — see the frame loop)
+      else if (it.pose === 'swipe') { x = it.side === 'l' ? -w / 2 : w / 2; rot = 0; z = w * .05; zi = 40; ly = -w * (LIFT + SWIPE); }   // being put back: swipes up, still facing you
+      else if (it.pose === 'enter') { z -= w * .6; }        // …and is unseen in its slot again, far back, ready to come forward into it
+      if (it.under) zi = 1;                                  // while it comes forward from the back it is behind every cover of the stack, never drawn over one
+      if (!hoverOn && it.pose === 'flat') ly = -w * LIFT;   // (with a mouse the rise is eased in JS, in step with the hover lift going — see the frame loop)
       for (const el of both(it)) {
         el.style.setProperty('--x', `${x.toFixed(1)}px`);
         el.style.setProperty('--rot', `${rot}deg`);
         el.style.setProperty('--z', `${z.toFixed(1)}px`);
-        el.classList.toggle('is-front', it.pose === 'flat');
-        el.classList.toggle('is-rim', it.n === 0 || it.n === N - 1);         // the outermost two are softened
+        el.classList.toggle('is-front', it.pose === 'flat' || it.pose === 'swipe');
+        el.classList.toggle('is-rim', it.slot === 0 || it.slot === N - 1);         // the outermost two are softened
       }
       it.li.style.zIndex = String(zi);
       it.li.style.setProperty('--ly', `${ly.toFixed(1)}px`);
-      it.pos = it.n;
+      it.pos = it.slot;
     });
   }
   place();
   addEventListener('resize', place);
-  /* Putting a cover back never slides it through its neighbours: it turns edge-on where it stands (in front of the
-     stack) and fades out while it does, then — unseen — is in its slot again, and fades back in there. Quick and soft. */
+  /* Putting a cover back: it swipes up and out as fast as the player bar sinks, fading with it (a flat cover is one plain
+     picture, so it goes as one layer). Unseen, it is put far back in its own, empty place in the stack, blurred, and
+     glides forward out of the back into it — slowing right down as it arrives, sharpening as it does, fading in.
+     Nothing ever slides through its neighbours.
+     (The covers do keep a `slot` each, so the row could be turned round — a cover put back at the far end, the others
+     closing up — but that was tried and not wanted; every cover goes back to where it was.) */
   function sendHome(it) {
-    clearTimeout(it.homeT); clearTimeout(it.seatT);
-    it.pose = 'turn'; place();
+    clearTimeout(it.homeT); clearTimeout(it.seatT); clearTimeout(it.fadeT); clearTimeout(it.underT); it.under = false;
+    const tok = it.tok = (it.tok || 0) + 1;
+    for (const el of both(it)) el.classList.remove('is-entering', 'is-fading');
+    it.li.classList.remove('is-hide');
+    const flat = it.li.classList.contains('is-flat');
+    it.pose = 'swipe'; place();
+    it.li.classList.add('is-swiping');
+    if (flat) it.li.classList.add('is-leaving');                                              // one layer: fades with the bar
+    it.fadeT = setTimeout(() => {
+      it.fl.classList.add('is-fading');                                                       // its light on the floor goes with it
+      if (!flat) it.li.classList.add('is-fading');                                            // (not yet flat: its planes fade together instead)
+    }, 50);
     it.homeT = setTimeout(() => {
-      it.li.classList.add('is-fading');                    // fades out as the turn finishes
-      it.seatT = setTimeout(() => {
-        for (const el of both(it)) el.classList.add('no-tr');
-        it.pose = 'slot'; it.lf = 0; it.li.style.setProperty('--lf', '0'); place();      // back in its slot, unseen, at its own height
-        void it.li.offsetWidth;
-        for (const el of both(it)) el.classList.remove('no-tr');
-        requestAnimationFrame(() => it.li.classList.remove('is-fading'));                 // …and fades in there
-      }, 240);
-    }, 300);
+      it.li.classList.remove('is-swiping', 'is-leaving', 'is-flat');
+      it.li.classList.add('is-hide');                                                         // unseen, ready to come in
+      for (const el of both(it)) el.classList.add('no-tr');
+      it.pose = 'enter'; it.lf = 0; it.li.style.setProperty('--lf', '0'); place();      // far back in its place
+      /* a few frames on (a timer, which also runs in a background tab), rather than forcing a layout in the middle of the animation */
+      setTimeout(() => {
+        if (it.tok !== tok) return;
+        for (const el of both(it)) { el.classList.add('is-entering'); el.classList.remove('no-tr', 'is-fading'); }
+        it.li.classList.remove('is-hide');                                                    // fades in, while …
+        it.pose = 'slot'; place();                                                            // … gliding forward into its place
+        it.seatT = setTimeout(() => { for (const el of both(it)) el.classList.remove('is-entering'); }, 800);
+      }, 70);
+    }, 540);                                               // (the swipe up and the fade out are done)
   }
   function setFront(f) {
     timers.splice(0).forEach(clearTimeout);
@@ -208,16 +265,18 @@
     if (prev && prev !== f) sendHome(prev);
     html.classList.remove('bg-soft');                      // the background sharpens again…
     if (f) {
-      clearTimeout(f.homeT); clearTimeout(f.seatT); f.li.classList.remove('is-fading');
+      clearTimeout(f.homeT); clearTimeout(f.seatT); clearTimeout(f.fadeT); clearTimeout(f.underT); f.under = false; f.tok = (f.tok || 0) + 1; for (const el of both(f)) el.classList.remove('is-fading', 'is-swiping', 'is-entering', 'is-leaving', 'is-flat', 'is-hide');
       f.pose = 'pull';                                     // spine first, out of the stack — still covered by its neighbours
       place();
-      later(340, () => { f.pose = 'flat'; place(); html.classList.add('bg-soft'); });   // once it is clear of its neighbours it comes in front, rises and turns to face you in one go — and the rest of the row goes slowly soft behind it
+      later(340, () => { f.pose = 'flat'; place(); });
+      later(900, () => f.li.classList.add('is-flat'));         // the turn is done: from here on it is one plain picture
+      later(950, () => html.classList.add('bg-soft'));         // the background only goes soft once the cover has settled, so the two never animate together   // once it is clear of its neighbours it comes in front, rises and turns to face you in one go — and the rest of the row goes slowly soft behind it
     }
-    items.forEach(it => { if (it !== f && it !== prev && it.pose !== 'turn') it.pose = 'slot'; });
+    items.forEach(it => { if (it !== f && it !== prev && it.pose !== 'swipe' && it.pose !== 'enter') it.pose = 'slot'; });
     wakeHover();
   }
   /* of a track's copies in the row, the one nearest the middle comes out */
-  const nearest = ti => items.filter(it => it.ti === ti).sort((a, b) => Math.abs(a.row) - Math.abs(b.row))[0];
+  const nearest = ti => items.filter(it => it.ti === ti).sort((a, b) => Math.abs(a.slot - (N - 1) / 2) - Math.abs(b.slot - (N - 1) / 2))[0];
   /* the first layout places the covers, it doesn't fly them in from where they were created */
   items.forEach(it => { it.li.classList.add('no-tr'); it.fl.classList.add('no-tr'); });
   const settle = () => items.forEach(it => { it.li.classList.remove('no-tr'); it.fl.classList.remove('no-tr'); });
@@ -271,11 +330,11 @@
         else { mags[n] = target; vels[n] = 0; }
         const lift = Math.max(0, mags[n]);
         const m = lift.toFixed(4);
-        it.li.style.setProperty('--mag', m); it.fl.style.setProperty('--mag', m);
+        if (it.m !== m) { it.m = m; it.li.style.setProperty('--mag', m); it.fl.style.setProperty('--mag', m); }
         /* the cover that is pulled out gives up its hover lift and takes up the little zoom instead — eased,
            so nothing jumps at the moment it changes over */
         const pulled = it.pose === 'flat';                 // (until it turns, the hover lift stays, so it neither dips nor hops on its way out)
-        const up = it.pose === 'flat' || it.pose === 'turn' ? 1 : 0;   // the pulled-out cover stands higher
+        const up = it.pose === 'flat' || it.pose === 'swipe' ? 1 : 0;   // the pulled-out cover stands higher
         const k = 1 - Math.exp(-9 * dt);
         /* the hover lift fades out while the standing height fades in, by the same curve, so a cover that was
            under the pointer when it was clicked keeps its height all the way — no dip, no hop */
@@ -283,7 +342,10 @@
         it.lf += (up - it.lf) * k;
         it.zm += ((pulled ? lift : 0) - it.zm) * k;
         if (Math.abs(it.ym - (pulled ? 0 : lift)) > .002 || Math.abs(it.zm - (pulled ? lift : 0)) > .002 || Math.abs(it.lf - up) > .002) busy = true;
-        it.li.style.setProperty('--ym', it.ym.toFixed(4)); it.li.style.setProperty('--zm', it.zm.toFixed(4)); it.li.style.setProperty('--lf', it.lf.toFixed(4));
+        const ys = it.ym.toFixed(4), zs = it.zm.toFixed(4), ls = it.lf.toFixed(4);
+        if (it.ys !== ys) { it.ys = ys; it.li.style.setProperty('--ym', ys); }
+        if (it.zs !== zs) { it.zs = zs; it.li.style.setProperty('--zm', zs); }
+        if (it.ls !== ls) { it.ls = ls; it.li.style.setProperty('--lf', ls); }
       });
 
       /* with a cover pulled out and playing the viewpoint stays still (it would turn the big cover with the pointer) */
@@ -381,17 +443,32 @@
 
     /* the speaker at the right end opens a vertical fader; same stored level as the player's */
     const volEl = $('.np__vol', el), volBtn = $('[data-np-vol]', el), vtrack = $('[data-np-vtrack]', el), vfill = $('[data-np-vfill]', el);
+    /* As on the old player page: the fader taken down to nothing mutes, and any other level un-mutes; and a click on the
+       speaker while the fader is open mutes or un-mutes (the level of the fader stays where it was). The native mute
+       flag does it, so it works on iPhone too, where the volume itself can't be set. */
+    let muted = false;
+    const paintMute = () => {
+      el.classList.toggle('is-muted', muted || vol === 0);
+      volBtn.setAttribute('aria-label', muted ? 'Unmute' : 'Volume');
+    };
+    function setMuted(next) {
+      muted = next;
+      audio.muted = muted;
+      paintMute();
+    }
     function setVol(v, save) {
       vol = clamp(v, 0, 1);
       audio.volume = vol;
       vfill.style.height = `${vol * 100}%`;
       vtrack.setAttribute('aria-valuenow', Math.round(vol * 100));
-      el.classList.toggle('is-muted', vol === 0);
+      muted = vol === 0;
+      audio.muted = muted;
+      paintMute();
       if (save) { try { localStorage.setItem('kas-volume', String(vol)); } catch (_) {} }
     }
     setVol(vol, false);
     const setOpen = on => { volEl.classList.toggle('is-open', on); volBtn.setAttribute('aria-expanded', String(on)); };
-    volBtn.addEventListener('click', () => setOpen(!volEl.classList.contains('is-open')));
+    volBtn.addEventListener('click', () => { if (!volEl.classList.contains('is-open')) setOpen(true); else setMuted(!muted); });
     document.addEventListener('pointerdown', ev => { if (!ev.target.closest('.np__vol')) setOpen(false); });
     const fromY = ev => { const r = vtrack.getBoundingClientRect(); setVol(1 - (ev.clientY - r.top) / r.height, true); };
     let vdrag = false;
@@ -540,7 +617,7 @@
       live: () => el.classList.contains('is-live'),
       /* stop altogether: back to the start, and the bar goes */
       stop() {
-        audio.pause(); audio.muted = false;
+        audio.pause(); audio.muted = muted;
         try { audio.currentTime = 0; } catch (_) {}
         el.classList.remove('is-live', 'is-playing');
         paint(); changed();
@@ -550,7 +627,7 @@
       playTrack(ti) {
         const n = queue.findIndex(q => q.ti === ti);
         if (n < 0) return;
-        audio.muted = false;
+        audio.muted = muted;
         if (n === i && loaded === i) toggle(); else load(n, true);
       },
       hold(ti) {
@@ -561,7 +638,7 @@
       },
       release() {
         try { audio.currentTime = 0; } catch (_) {}
-        audio.muted = false;
+        audio.muted = muted;                                // (heard again, unless the player itself was muted)
         if (audio.paused) audio.play().catch(() => {});
       }
     });

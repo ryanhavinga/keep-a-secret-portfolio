@@ -22,6 +22,9 @@
   const PLAY = '<svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5 19 12 9 18.5Z"/></svg>' +
                '<svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg>';
 
+  /* a small music note on a dark tile, in front of every song */
+  const NOTE = '<svg viewBox="0 0 24 24"><path d="M9.5 18V6.2l8-1.7v11.2"/><circle cx="7.2" cy="18" r="2.3"/><circle cx="15.7" cy="15.7" r="2.3"/></svg>';
+
   const Player = (() => {
     const audio = $('[data-audio]');
     const entries = [];
@@ -154,7 +157,7 @@
       if (lists.has(lang)) return lists.get(lang);
       const sec = document.createElement('section');
       sec.className = 'group';
-      if (lang) sec.innerHTML = `<h2 class="group__title">${esc(lang)}</h2>`;
+      if (lang && headings) sec.innerHTML = `<h2 class="group__title">${esc(lang)}</h2>`;     // (a heading only when there is more than one language to tell apart)
       const ol = document.createElement('ol');
       ol.className = 'rows';
       sec.appendChild(ol);
@@ -168,6 +171,7 @@
       return;
     }
     const tracks = (V.tracks || []).filter(t => (t.collections || []).includes(active));
+    const headings = new Set(tracks.map(t => t.language || '')).size > 1;
     if (!tracks.length) {
       groups.innerHTML = '<p class="empty">No demos in this collection yet.</p>';
       return;
@@ -185,6 +189,7 @@
       li.className = 'row';
       li.innerHTML = `
         <span class="row__no">${String(i + 1).padStart(2, '0')}</span>
+        <span class="row__icon" aria-hidden="true">${NOTE}</span>
         <div class="row__info">
           <h2 class="row__title">${esc(t.title)}</h2>
           ${meta ? `<p class="row__meta">${esc(meta)}</p>` : ''}
