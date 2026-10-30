@@ -38,9 +38,8 @@ Everything below is in **`js/config.js`**.
 
 ### Logo
 ```js
-brand: { logo: 'Keep A Secret', sublogo: 'Player', logoImage: null, tagline: 'Private Session' }
+brand: { logo: 'Keep A Secret', logoImage: null, tagline: 'Private Session' }
 ```
-`sublogo` is the smaller line underneath, the player's page name (Portfolio and The Vault have their own in their HTML) — set it to `null` to hide it.
 Set `logoImage: 'img/logo.svg'` to swap the whole wordmark for an image.
 
 ### Tracks

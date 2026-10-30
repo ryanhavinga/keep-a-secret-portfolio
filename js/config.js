@@ -40,7 +40,6 @@ const CONFIG = {
   /* ---------- BRANDING ---------- */
   brand: {
     logo: 'Keep A Secret',       // top-left wordmark (rendered uppercase)
-    sublogo: 'Player',           // smaller line under it — the page's name (the portfolio and the Vault have their own); null hides it
     logoImage: null,             // optional: 'img/logo.svg' — replaces the text wordmark
     tagline: 'Contact'           // small top-right label
   },
@@ -131,8 +130,6 @@ const CONFIG = {
        spotify, apple: optional links to the track on Spotify / Apple Music, for the
                        two small icons bottom right. Without one the icon opens a
                        search for "title artist" instead.
-       ink           : optional, 'dark' or 'light': the colour of the lettering on the shelf
-                       edge. Left out, it is picked from how light the edge is.
        credits       : optional sections shown under the title, like a streaming
                        app's credits: [{ heading, people: [{ name, role }] }].
                        Overrides creditsByArtist for that one track. With neither, a
@@ -181,7 +178,7 @@ const CONFIG = {
       { title: 'Beter dan ooit',              artist: 'Gilles',     artwork: 'img/Beter dan ooit - Gilles.jpg', audio: 'audio/track 5 - Beter dan ooit.m4a',                       color: '#e8a100', duration: 172 },
       { title: 'Beter dan ooit - Akoestisch', artist: 'Gilles',     artwork: 'img/track-3.jpg',                 audio: 'audio/track 3 - Beter dan ooit (Akoestisch).m4a',          color: '#0a3a63', duration: 167 },
       { title: 'Boemerang',                   artist: 'Gilles',     artwork: 'img/Boemerang - Gilles.jpg',      audio: 'audio/track 2 - Boemerang.m4a',                            color: '#a54de0', duration: 190 },
-      { title: 'Hoogtes',                     artist: 'Tim Tiago',  artwork: 'img/Hoogtes - Tim Tiago.jpg',     audio: 'audio/track 3 - Hoogtes.m4a',                              color: '#7a5a44', duration: 200, ink: 'dark' },
+      { title: 'Hoogtes',                     artist: 'Tim Tiago',  artwork: 'img/Hoogtes - Tim Tiago.jpg',     audio: 'audio/track 3 - Hoogtes.m4a',                              color: '#7a5a44', duration: 200 },
       { title: 'Incompleet',                  artist: 'Rosalie',    artwork: 'img/Incompleet - Rosalie.jpg',    audio: 'audio/track 6 - Incompleet.m4a',                            color: '#a8553a', duration: 229 },
       { title: 'Liever Kwijt',                artist: 'Rosalie',    artwork: 'img/Liever Kwijt - Rosalie.jpg',  audio: 'audio/track 7 - Liever Kwijt.m4a',                          color: '#8a3fb0', duration: 176 }
     ]

@@ -1915,8 +1915,6 @@
       logo.innerHTML = `<img src="${b.logoImage}" alt="${b.logo}">`;
     } else {
       $('[data-logo-main]').textContent = b.logo;
-      const sub = $('[data-logo-sub]');
-      if (b.sublogo) { sub.textContent = b.sublogo; sub.hidden = false; } else { sub.hidden = true; }
     }
     $('[data-tagline]').textContent = b.tagline || '';
     document.title = `${b.logo} — Private Listening`;

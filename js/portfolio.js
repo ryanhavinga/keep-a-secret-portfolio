@@ -67,17 +67,6 @@
     const yellowish = hue > 30 && hue < 75;
     return { h: Math.round(hue), s: clamp(Math.round((h == null ? fs : .72) * 100), 45, 82), l: yellowish ? 44 : 38 };
   }
-  /* The lettering on the spine goes black on the light spines and stays white on
-     the dark ones, whichever reads better against that colour (a track can force
-     it with ink: 'dark' | 'light' in CONFIG.portfolio). */
-  function lumOf(tint) {
-    const s = tint.s / 100, l = tint.l / 100, a = s * Math.min(l, 1 - l);
-    const f = n => { const k = (n + tint.h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
-    const lin = c => c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4);
-    return .2126 * lin(f(0)) + .7152 * lin(f(8)) + .0722 * lin(f(4));
-  }
-  const INK_DARK_ABOVE = .2;
-  const darkInk = (t, tint) => t.ink ? t.ink === 'dark' : lumOf(tint) > INK_DARK_ABOVE;
   function paintTint(el, tint) {
     el.style.setProperty('--h', tint.h);
     el.style.setProperty('--s', tint.s);
@@ -107,7 +96,7 @@
         <div class="cd__bob">
           <img class="cd__face" src="${esc(t.artwork)}" alt="${rep ? '' : esc(t.title) + ' — artwork'}" decoding="async">
           <div class="cd__shade"></div>
-          <div class="cd__edge"><span class="cd__label"><b>${esc(t.title)}</b><span>${esc(t.artist)}</span></span></div>
+          <div class="cd__edge"><span class="cd__play" data-play aria-hidden="true"><svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.5 20 12 7 19.5Z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><rect x="5" y="4.5" width="5" height="15" rx="1.2"/><rect x="14" y="4.5" width="5" height="15" rx="1.2"/></svg></span><span class="cd__label"><b>${esc(t.title)}</b><span>${esc(t.artist)}</span></span><span class="cd__info" data-info aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 11v5.2"/><circle class="dot" cx="12" cy="7.9" r=".6"/></svg></span></div>
         </div>
       </div>`;
     shelf.appendChild(li);
@@ -119,12 +108,19 @@
     floor.appendChild(fl);
     /* pos: its place along the row */
     const it = { li, fl, t, n, ti, rep, pos: n, k: 0, side: 'r', btn: $('.cd__btn', li), face: $('.cd__face', li), tint: tintOf(t, null) };
-    paintTint(li, it.tint); paintTint(fl, it.tint); li.classList.toggle('is-ink-dark', darkInk(t, it.tint));
+    paintTint(li, it.tint); paintTint(fl, it.tint);
     /* swap the configured colour for the real one as soon as the artwork has loaded */
-    const real = () => { it.tint = tintOf(t, it.face); paintTint(li, it.tint); paintTint(fl, it.tint); li.classList.toggle('is-ink-dark', darkInk(t, it.tint)); };
+    const real = () => { it.tint = tintOf(t, it.face); paintTint(li, it.tint); paintTint(fl, it.tint); };
     if (it.face.complete && it.face.naturalWidth) real(); else it.face.addEventListener('load', real, { once: true });
-    it.btn.addEventListener('click', () => Focus.open(n));
-    it.btn.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); Focus.open(n); } });
+    /* Playing comes first. A click on a cover plays its track (the bar comes up); on the one that is already
+       playing it opens the credits instead. The symbols on the spine are the explicit ways: play / pause at
+       the top, the credits ("i") at the bottom. */
+    it.btn.addEventListener('click', ev => {
+      if (ev.target.closest('[data-info]')) { Focus.open(n); return; }
+      if (ev.target.closest('[data-play]')) { NP.playTrack(it.ti); return; }
+      if (NP.has(it.ti) && !NP.isPlaying(it.ti)) NP.playTrack(it.ti); else Focus.open(n);
+    });
+    it.btn.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); it.btn.click(); } });
     items.push(it);
   }
   if (PF.heading) $('[data-pf-heading]').textContent = PF.heading;
@@ -276,13 +272,225 @@
   }
 
   /* ==========================================================
+     NOW PLAYING — the glass bar at the foot of the shelf
+     Plays the tracks in CONFIG.portfolio that have audio, in shelf order, one
+     after the next. Nothing starts by itself: it waits, on the first track,
+     for play. Opening a cover's credits has a Play button for that track.
+     ========================================================== */
+  const NP = (() => {
+    const el = $('[data-np]'), audio = $('[data-np-audio]');
+    const queue = tracks.map((t, ti) => ({ t, ti })).filter(q => q.t.audio);
+    const idle = { has: () => false, playTrack() {}, isPlaying: () => false, current: () => -1, live: () => false, onOpen: null };
+    if (!el || !audio || !queue.length) { if (el) el.hidden = true; return idle; }
+
+    const ui = {
+      art: $('[data-np-art]', el), title: $('[data-np-title]', el), artist: $('[data-np-artist]', el),
+      play: $('[data-np-play]', el), prev: $('[data-np-prev]', el), next: $('[data-np-next]', el),
+      who: $('[data-np-open]', el), scrub: $('[data-np-scrub]', el), fill: $('[data-np-fill]', el),
+      mid: $('[data-np-mid]', el), tscrub: $('[data-np-tscrub]', el), tfill: $('[data-np-tfill]', el),
+      elapsed: $('[data-np-elapsed]', el), total: $('[data-np-total]', el)
+    };
+    let i = 0, loaded = -1, dragging = false;
+    const api = { onOpen: null };
+
+    /* the fader level the player left off at, so the loudness doesn't jump */
+    let vol = .4;
+    try { const sv = parseFloat(localStorage.getItem('kas-volume')); if (isFinite(sv)) vol = clamp(sv, 0, 1); } catch (_) {}
+    audio.volume = vol;
+
+    /* the speaker at the right end opens a vertical fader; same stored level as the player's */
+    const volEl = $('.np__vol', el), volBtn = $('[data-np-vol]', el), vtrack = $('[data-np-vtrack]', el), vfill = $('[data-np-vfill]', el);
+    function setVol(v, save) {
+      vol = clamp(v, 0, 1);
+      audio.volume = vol;
+      vfill.style.height = `${vol * 100}%`;
+      vtrack.setAttribute('aria-valuenow', Math.round(vol * 100));
+      el.classList.toggle('is-muted', vol === 0);
+      if (save) { try { localStorage.setItem('kas-volume', String(vol)); } catch (_) {} }
+    }
+    setVol(vol, false);
+    const setOpen = on => { volEl.classList.toggle('is-open', on); volBtn.setAttribute('aria-expanded', String(on)); };
+    volBtn.addEventListener('click', () => setOpen(!volEl.classList.contains('is-open')));
+    document.addEventListener('pointerdown', ev => { if (!ev.target.closest('.np__vol')) setOpen(false); });
+    const fromY = ev => { const r = vtrack.getBoundingClientRect(); setVol(1 - (ev.clientY - r.top) / r.height, true); };
+    let vdrag = false;
+    vtrack.addEventListener('pointerdown', ev => { vdrag = true; try { vtrack.setPointerCapture(ev.pointerId); } catch (_) {} fromY(ev); });
+    vtrack.addEventListener('pointermove', ev => { if (vdrag) fromY(ev); });
+    vtrack.addEventListener('pointerup', () => { vdrag = false; });
+    vtrack.addEventListener('pointercancel', () => { vdrag = false; });
+    vtrack.addEventListener('keydown', ev => {
+      const d = { ArrowUp: .05, ArrowRight: .05, ArrowDown: -.05, ArrowLeft: -.05 }[ev.key];
+      if (d === undefined) { if (ev.key === 'Escape') { setOpen(false); volBtn.focus(); } return; }
+      ev.preventDefault(); ev.stopPropagation(); setVol(vol + d, true);
+    });
+
+    const len = () => (isFinite(audio.duration) && audio.duration) || queue[i].t.duration || 0;
+    const changed = () => document.dispatchEvent(new CustomEvent('np:change'));
+    function paint() {
+      const d = len(), t = loaded === i ? audio.currentTime || 0 : 0;
+      const pct = d ? Math.min(100, t / d * 100) : 0;
+      ui.fill.style.width = ui.tfill.style.width = `${pct}%`;
+      ui.scrub.setAttribute('aria-valuenow', Math.round(pct));
+      ui.elapsed.textContent = time(t); ui.total.textContent = time(d);
+    }
+    function show() {
+      const { t } = queue[i];
+      ui.art.src = t.artwork; ui.art.alt = `${t.title} — artwork`;
+      ui.title.textContent = t.title; ui.artist.textContent = t.artist;
+      ui.who.setAttribute('aria-label', `Show credits for ${t.title}`);
+      if ('mediaSession' in navigator && window.MediaMetadata) {
+        navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: t.artist, artwork: [{ src: t.artwork }] });
+      }
+      paint(); changed();
+    }
+    /* Seeking needs a source the browser can jump around in. A host that serves
+       the file with byte ranges (Cloudflare does) is; a plain dev server isn't, and
+       there the playhead snaps back. So when a jump is asked for beyond what is
+       seekable, the track is fetched once into memory and the element moves onto
+       that copy, keeping the playhead and the play state. */
+    const copies = new Map();
+    const canJump = t => { try { return audio.seekable.length > 0 && audio.seekable.end(audio.seekable.length - 1) >= t - .5; } catch (_) { return false; } };
+    function jump(t) {
+      t = clamp(t, 0, len());
+      if (loaded < 0 || canJump(t)) { audio.currentTime = t; paint(); return; }
+      const n = loaded;
+      const apply = url => {
+        if (loaded !== n) return;
+        const was = !audio.paused;
+        if (audio.src !== url) {
+          audio.src = url;
+          audio.addEventListener('loadedmetadata', () => { audio.currentTime = t; paint(); if (was) audio.play().catch(() => {}); }, { once: true });
+        } else { audio.currentTime = t; paint(); }
+      };
+      if (copies.has(n)) return apply(copies.get(n));
+      fetch(queue[n].t.audio).then(r => r.blob()).then(b => { const u = URL.createObjectURL(b); copies.set(n, u); apply(u); }).catch(() => { audio.currentTime = t; });
+    }
+
+    function load(n, go) {
+      i = (n + queue.length) % queue.length;
+      show();
+      if (loaded !== i) { audio.src = copies.get(i) || queue[i].t.audio; loaded = i; paint(); }
+      if (go) audio.play().catch(() => {});
+    }
+    function toggle() {
+      if (loaded !== i) load(i, true);
+      else if (audio.paused) audio.play().catch(() => {});
+      else audio.pause();
+    }
+    const prev = () => { if (loaded === i && audio.currentTime > 3) { audio.currentTime = 0; paint(); } else load(i - 1, !audio.paused); };
+    const next = () => load(i + 1, !audio.paused);
+
+    /* The bar steps down out of the way as soon as the mouse is below the covers — anywhere under them, not
+       only under the bar itself — and comes back up when the mouse is on the covers again. Straight above the
+       bar, on the way down to it, it stays put. */
+    let tucked = false;
+    const sync = () => {
+      el.classList.toggle('is-tucked', tucked);
+    };
+    document.addEventListener('pointermove', ev => {
+      if (ev.pointerType !== 'mouse' || tucked) return;
+      if (ev.clientY < shelf.getBoundingClientRect().bottom) return;     // still on the covers' rows
+      /* where the bar rests, not where it happens to be mid-slide */
+      const rest = { l: (innerWidth - el.offsetWidth) / 2, b: innerHeight - (parseFloat(getComputedStyle(el).bottom) || 0) };
+      const overBar = ev.clientX >= rest.l && ev.clientX <= rest.l + el.offsetWidth && ev.clientY <= rest.b;
+      if (!overBar) { tucked = true; sync(); }
+    }, { passive: true });
+    shelf.addEventListener('pointerover', ev => {
+      if (ev.pointerType === 'mouse' && tucked && ev.target.closest && ev.target.closest('.cd')) { tucked = false; sync(); }
+    });
+    document.addEventListener('np:change', sync);
+
+    ui.play.addEventListener('click', toggle);
+    ui.prev.addEventListener('click', prev);
+    ui.next.addEventListener('click', next);
+    ui.who.addEventListener('click', () => api.onOpen && api.onOpen(queue[i].ti));
+    audio.addEventListener('play',  () => { el.classList.add('is-live', 'is-playing');    ui.play.setAttribute('aria-label', 'Pause'); changed(); });
+    audio.addEventListener('pause', () => { el.classList.remove('is-playing'); ui.play.setAttribute('aria-label', 'Play');  changed(); });
+    audio.addEventListener('timeupdate', () => !dragging && paint());
+    audio.addEventListener('loadedmetadata', paint);
+    audio.addEventListener('ended', () => load(i + 1, true));   // on to the next, round to the first at the end
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.setActionHandler('previoustrack', prev);
+        navigator.mediaSession.setActionHandler('nexttrack', next);
+      } catch (_) {}
+    }
+
+    /* the timeline — the hairline, and the thick one that replaces it while hovered: tap or drag along either */
+    const seek = (zone, ev) => {
+      const r = zone.getBoundingClientRect();
+      const ratio = clamp((ev.clientX - r.left) / r.width, 0, 1);
+      if (loaded !== i) load(i, true);
+      const go = () => jump(ratio * len());
+      if (isFinite(audio.duration) && audio.duration) go(); else audio.addEventListener('loadedmetadata', go, { once: true });
+    };
+    [ui.scrub, ui.tscrub].forEach(zone => {
+      /* as on the player page: held from the press, and "scrubbing" (the fill follows the finger exactly)
+         a beat later, so the first jump still eases */
+      let hold = 0;
+      zone.addEventListener('pointerdown', ev => { dragging = true; zone.classList.add('is-held'); hold = setTimeout(() => dragging && zone.classList.add('is-scrubbing'), 90); try { zone.setPointerCapture(ev.pointerId); } catch (_) {} seek(zone, ev); });
+      zone.addEventListener('pointermove', ev => { if (dragging && zone.hasPointerCapture(ev.pointerId)) seek(zone, ev); });
+      const release = () => { dragging = false; clearTimeout(hold); zone.classList.remove('is-held', 'is-scrubbing'); if (!ui.mid.matches(':hover')) leaveTime(); };
+      zone.addEventListener('pointerup', release);
+      zone.addEventListener('pointercancel', release);
+    });
+
+    /* Half a second on the hairline brings up the times and the thick timeline; leaving the
+       middle sends them away again after a beat — each at the same slow pace (css/portfolio.css). */
+    let enter = 0, leave = 0;
+    const leaveTime = () => { clearTimeout(leave); leave = setTimeout(() => { if (!dragging) el.classList.remove('is-time'); }, 250); };
+    ui.scrub.addEventListener('pointerenter', ev => {
+      if (ev.pointerType !== 'mouse') return;
+      clearTimeout(enter); clearTimeout(leave);
+      enter = setTimeout(() => el.classList.add('is-time'), 500);
+    });
+    ui.scrub.addEventListener('pointerleave', () => clearTimeout(enter));
+    ui.mid.addEventListener('pointerenter', () => clearTimeout(leave));
+    ui.mid.addEventListener('pointerleave', () => { clearTimeout(enter); if (el.classList.contains('is-time')) leaveTime(); });
+    ui.scrub.addEventListener('keydown', ev => {
+      if (loaded !== i || !['ArrowLeft', 'ArrowRight'].includes(ev.key)) return;
+      ev.preventDefault(); ev.stopPropagation();
+      jump(audio.currentTime + (ev.key === 'ArrowRight' ? 5 : -5));
+    });
+    /* space plays or pauses, unless something that takes space itself has the focus or a cover is pulled out */
+    document.addEventListener('keydown', ev => {
+      if (ev.code !== 'Space' || html.classList.contains('is-focused') || ev.target.closest('a, button, input, [role=slider], [role=button]')) return;
+      ev.preventDefault(); toggle();
+    });
+
+    load(0, false);
+    return Object.assign(api, {
+      has: ti => queue.some(q => q.ti === ti),
+      current: () => queue[i].ti,
+      live: () => el.classList.contains('is-live'),
+      isPlaying: ti => !audio.paused && queue[i].ti === ti,
+      /* play this track, or pause it if it is the one already playing */
+      playTrack(ti) {
+        const n = queue.findIndex(q => q.ti === ti);
+        if (n < 0) return;
+        if (n === i && loaded === i) toggle(); else load(n, true);
+      }
+    });
+  })();
+
+  /* the covers whose track the bar can play get the play symbol; once something has been played, the one the
+     bar is on keeps its symbol up (pause bars while it plays) */
+  items.forEach(it => it.li.classList.toggle('has-audio', NP.has(it.ti)));
+  const markNow = () => items.forEach(it => {
+    it.li.classList.toggle('is-now', NP.live() && NP.current() === it.ti);   // marked only once something has been played
+    it.li.classList.toggle('is-playing', NP.isPlaying(it.ti));
+  });
+  document.addEventListener('np:change', markNow);
+  markNow();
+
+  /* ==========================================================
      THE FOCUS VIEW — a cover pulled out of the shelf
      ========================================================== */
   const Focus = (() => {
     const el = $('[data-focus]');
     const card = $('[data-card]'), cardImg = $('[data-card-img]');
     const audio = $('[data-audio]');
-    /* listening lives on the Player page; this view is the credits. CONFIG.portfolio.listen = true brings the play button and timeline back. */
+    /* listening is in the bar at the foot of the page; this view is the credits. CONFIG.portfolio.listen = true brings a play button and timeline of its own back here. */
     const LISTEN = PF.listen === true;
     const q = s => $(s, el);
     const ui = {
@@ -461,7 +669,7 @@
       const r = ui.scrub.getBoundingClientRect();
       const ratio = clamp((ev.clientX - r.left) / r.width, 0, 1);
       if (audio.paused) audio.play().catch(() => {});
-      const go = () => { audio.currentTime = ratio * len(); paint(); };
+      const go = () => jump(ratio * len());
       if (isFinite(audio.duration) && audio.duration) go(); else audio.addEventListener('loadedmetadata', go, { once: true });
     };
     ui.scrub.addEventListener('pointerdown', ev => {
@@ -493,4 +701,7 @@
 
     return { open };
   })();
+
+  /* the bar's title and artwork open that track's credits */
+  NP.onOpen = ti => Focus.open(ti);
 })();

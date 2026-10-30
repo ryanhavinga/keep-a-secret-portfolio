@@ -54,12 +54,13 @@ html.fonts-wait .seg { visibility: hidden; }
      height of the window (what's left under the header, over the credit),
      and the spacing from its width. */
   --n: 7;                                          /* set from the track count by portfolio.js */
-  --pad-top: calc(clamp(100px, 14vh, 150px) + 18px);   /* clear of the header and the page pill above the row */
+  --lift: 1.7vh;                                   /* the whole stack stands this much higher (its size is unchanged) */
+  --pad-top: calc(clamp(100px, 14vh, 150px) + 18px - var(--lift));   /* clear of the header and the page pill above the row */
   --head: 6px;                                     /* the breath between the header and the row */
   --sink: clamp(8px, 2vh, 22px);                  /* the whole row sits lower, so a lifted cover keeps clear of the top */
   --pad-bot: 58px;                                 /* room for the credit line under the row */
-  --w: min(800px, calc(100vh - var(--pad-top) - var(--head) - var(--pad-bot) - 64px));
-  --w: min(800px, calc(100dvh - var(--pad-top) - var(--head) - var(--pad-bot) - 64px));
+  --w: min(830px, calc(100vh - var(--pad-top) - var(--head) - var(--pad-bot) - 36px - var(--lift)));
+  --w: min(830px, calc(100dvh - var(--pad-top) - var(--head) - var(--pad-bot) - 36px - var(--lift)));
   /* distance from one cover's near edge to the next. The row is stretched
      across the width of the page (the outermost spines sit just inside the
      edges), but never so far apart that the covers stop belonging together */
@@ -212,9 +213,6 @@ html.fonts-wait .seg { visibility: hidden; }
   color: #fff;
   white-space: nowrap;
 }
-.cd.is-ink-dark .cd__label { color: #0b0b0c; }
-.cd.is-ink-dark .cd__label b { -webkit-text-stroke-color: #0b0b0c; }
-.cd.is-ink-dark .cd__label span { color: rgba(11, 11, 12, .66); }
 .cd__label b { font-weight: 800; letter-spacing: .05em; -webkit-text-stroke: .035em currentColor; }   /* the title is always the heavier of the two */
 .cd__label span { font-weight: 500; letter-spacing: .06em; color: rgba(255, 255, 255, .7); }
 
@@ -264,10 +262,17 @@ html.fonts-wait .seg { visibility: hidden; }
   /* the spine's reflection, straight down under it: it drifts further away and fades as the cover lifts (--mag) */
   position: absolute; top: calc(100% + 14px + var(--mag, 0) * var(--w) * .1);
   width: var(--t); height: 100%;
-  background: hsl(var(--h) calc(var(--s) * 1%) calc(var(--l, 38) * 1%));
+  /* No flat middle and no sides: brightest down the centre, falling away smoothly to nothing on both
+     edges, then blurred well beyond that — so it reads as a faint glow under the spine, not a bar */
+  background: linear-gradient(90deg,
+    hsl(var(--h) calc(var(--s) * 1%) calc(var(--l, 38) * 1%) / 0),
+    hsl(var(--h) calc(var(--s) * 1%) calc(var(--l, 38) * 1%) / .7) 24%,
+    hsl(var(--h) calc(var(--s) * 1%) calc(var(--l, 38) * 1%)) 50%,
+    hsl(var(--h) calc(var(--s) * 1%) calc(var(--l, 38) * 1%) / .7) 76%,
+    hsl(var(--h) calc(var(--s) * 1%) calc(var(--l, 38) * 1%) / 0));
   backface-visibility: hidden;
-  filter: blur(max(5px, calc(var(--w) * .008)));
-  opacity: calc(1 - var(--mag, 0) * .62);
+  filter: blur(max(11px, calc(var(--w) * .019)));
+  opacity: calc((1 - var(--mag, 0) * .62) * .85);
   -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, .3), rgba(0, 0, 0, .15) 18%, rgba(0, 0, 0, .05) 36%, rgba(0, 0, 0, 0) 56%);
           mask-image: linear-gradient(to top, rgba(0, 0, 0, .3), rgba(0, 0, 0, .15) 18%, rgba(0, 0, 0, .05) 36%, rgba(0, 0, 0, 0) 56%);
 }
@@ -277,7 +282,7 @@ html.fonts-wait .seg { visibility: hidden; }
 /* ---------- foot ---------------------------------------------- */
 .pf__foot {
   position: fixed; z-index: 5;
-  left: 50%; bottom: clamp(10px, 2vh, 20px);
+  left: 50%; bottom: clamp(18px, 3vh, 36px);       /* the same distance from the foot of the window as the player bar */
   transform: translateX(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 1px;
   text-align: center; white-space: nowrap;
@@ -296,7 +301,7 @@ html.fonts-wait .seg { visibility: hidden; }
 .socials {
   position: fixed; z-index: 5;
   left: clamp(20px, 3.4vw, 48px);
-  bottom: clamp(10px, 2vh, 20px);
+  bottom: clamp(18px, 3vh, 36px);                  /* …and the same as the credit line and the player bar */
   height: calc(2 * 9.5px * 1.16 + 1px);
   display: flex; align-items: center; gap: 14px;
 }
@@ -309,6 +314,236 @@ html.fonts-wait .seg { visibility: hidden; }
   transition: stroke .4s var(--ease);
 }
 .socials a:hover svg { stroke: #8c8c8c; }
+
+/* ============================================================
+   NOW PLAYING — the glass bar over the foot of the shelf
+   Same glass as the page pill: a light, blurred track with a hairline rim.
+   Sits over the credit line (which its glass blurs while it is up). Out of sight until the first track is played; the credits
+   open over it (it stays put underneath and is there again when they close).
+   ============================================================ */
+.np {
+  position: fixed; z-index: 30;              /* under the credits (z 60): they cover it, and it is simply there again when they close */
+  left: 50%; transform: translateX(-50%);
+  bottom: clamp(18px, 3vh, 36px);              /* the same distance from the foot of the window as the page pill is from the top */
+  width: fit-content;
+  max-width: calc(100vw - 2 * clamp(16px, 4vw, 48px));
+  height: 58px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 8px 0 16px;             /* the left edge to the previous symbol is the same as the next symbol to the artwork (.np__ctrl) */
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), 0 18px 40px -16px rgba(0, 0, 0, .85);
+  transition: transform .55s var(--ease), opacity .4s var(--ease);
+  will-change: transform, opacity;
+}
+.np[hidden] { display: none; }
+/* the bar isn't there until something is played: it rises from below the window with the first play */
+/* …and it steps out of the way while the pointer is down in the strip at the foot of the page (js/portfolio.js),
+   coming back up when the pointer is on the covers again */
+.np:not(.is-live), .np.is-tucked { transform: translate(-50%, calc(100% + 60px)); opacity: 0; pointer-events: none; }
+/* the middle of the bar: the artwork and title — or, while the hairline under them is
+   hovered, the times and a thick timeline, which rise in from below. The bar itself
+   never changes size. */
+.np__mid {
+  position: relative; flex: 0 1 auto; min-width: 0;
+  width: 316px; height: 100%;
+  margin-right: 8px;                 /* the hairline under it stops here, a little short of the speaker */
+}
+.np__who {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; gap: 11px;
+  text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  /* coming back: it sharpens again at the same quick pace it blurred */
+  transition: opacity .2s var(--ease) .06s, filter .2s var(--ease) .06s;
+}
+/* the artwork and title blur away quickly as the times come up from below — still just there behind them */
+.np.is-time .np__who { opacity: .22; filter: blur(7px); pointer-events: none; transition: opacity .2s var(--ease), filter .2s var(--ease); }
+.np__art {
+  flex: 0 0 auto;
+  width: 38px; height: 38px;
+  border-radius: 9px;                /* a square, softly rounded — like the covers */
+  object-fit: cover;
+  background: #1a1a1d;
+}
+.np__text { min-width: 0; flex: 1 1 112px; display: flex; flex-direction: column; gap: 2px; }
+.np__text b, .np__text span {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--sans);
+  letter-spacing: .01em; line-height: 1.15;
+}
+.np__text b { font-size: 13px; font-weight: 600; color: #fff; }
+.np__text span { font-size: 11.5px; font-weight: 500; color: rgba(255, 255, 255, .78); }
+.np__ctrl { flex: 0 0 auto; display: flex; align-items: center; gap: 0; margin-right: 6px; }
+/* Previous and next sit close in against the play button, the same distance either side:
+   the three buttons are only as wide as their symbols (the artwork of each is drawn
+   centred in its own box and may be wider), and the symbols' own edges — not the boxes —
+   are what the gap is measured between. */
+.np__ctrl [data-np-prev], .np__ctrl [data-np-next] { width: 32px; }   /* ≈15px of air between the symbols */
+.np__btn {
+  position: relative;
+  width: 42px; height: 42px;
+  display: grid; place-items: center;
+  color: #fff; cursor: pointer;
+  border-radius: 50%;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .3s var(--ease), opacity .3s var(--ease);
+}
+.np__btn svg {
+  position: absolute;
+  width: 28px;
+  fill: currentColor; stroke: currentColor;
+  stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round;
+  transition: opacity .3s var(--ease), transform .3s var(--ease);
+}
+.np__btn--vol { width: 38px; height: 38px; }
+.np__btn--vol svg { width: 24px; fill: none; stroke-width: 1.7; }
+.np__btn--vol .i-body { fill: currentColor; }
+.np__btn--vol .i-mute { opacity: 0; }
+.np.is-muted .np__btn--vol .i-wave { opacity: 0; }
+.np.is-muted .np__btn--vol .i-mute { opacity: 1; }
+.np__btn--play { width: 32px; height: 52px; }
+.np__btn--play svg { width: 38px; }
+.np__btn .i-pause { stroke: none; }
+/* the triangle is centred by its edges (its box runs 9 to 19 of 24), not by its weight, so the
+   gaps to its neighbours are equal */
+.np__btn--play .i-play  { transform: translateX(-8.33%); }
+.np.is-playing .np__btn--play .i-play  { opacity: 0; transform: translateX(-8.33%) scale(0); }
+.np:not(.is-playing) .np__btn--play .i-pause { opacity: 0; transform: scale(0); }
+@media (hover: hover) and (pointer: fine) {
+  .np__btn:hover { transform: scale(1.1); }
+  .np__who:hover .np__text b { text-shadow: 0 0 14px rgba(255, 255, 255, .35); }
+}
+.np__btn:focus-visible, .np__who:focus-visible, .np__scrub:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+
+/* the volume: the speaker at the right end; its fader rises above it, in the same glass */
+.np__vol { position: relative; flex: 0 0 auto; }
+.np__flyout {
+  position: absolute; left: 50%; bottom: calc(100% + 14px);
+  width: 40px; height: 132px;
+  transform: translate(-50%, 6px);
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .15);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35); backdrop-filter: blur(24px) saturate(1.35);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), 0 18px 40px -16px rgba(0, 0, 0, .85);
+  opacity: 0; visibility: hidden;
+  transition: opacity .25s var(--ease), transform .25s var(--ease), visibility 0s linear .25s;
+}
+.np__vol.is-open .np__flyout { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition: opacity .25s var(--ease), transform .25s var(--ease); }
+.np__vtrack {
+  position: relative; width: 22px; height: 100px;
+  display: flex; justify-content: center;
+  cursor: pointer; touch-action: none;
+}
+.np__vtrack::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 5px; margin-left: -2.5px;
+  border-radius: 999px; background: rgba(255, 255, 255, .28);
+}
+.np__vfill {
+  position: absolute; left: 50%; bottom: 0; width: 5px; margin-left: -2.5px; height: 40%;
+  border-radius: 999px; background: #fff;
+}
+.np__vtrack:focus-visible { outline: 2px solid #fff; outline-offset: 4px; border-radius: 6px; }
+
+/* the hairline along the bottom of the middle — from the artwork's left edge to just before
+   the speaker — thicker when held */
+.np__scrub {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 14px;
+  cursor: pointer; touch-action: none;
+  transition: opacity .7s var(--ease);
+}
+.np.is-time .np__scrub { opacity: 0; pointer-events: none; }
+
+/* the other face of the middle: the times above, a thick timeline below it — a touch higher than
+   the hairline, inside the bar, and exactly as wide as the hairline it replaces */
+.np__time {
+  position: absolute; inset: 0;
+  opacity: 0; transform: translateY(14px);
+  pointer-events: none;
+  transition: opacity .35s var(--ease), transform .7s var(--ease);
+}
+.np.is-time .np__time { opacity: 1; transform: none; pointer-events: auto; }
+.np__t {
+  position: absolute; bottom: 27px;           /* right above the timeline */
+  font-family: var(--sans); font-size: 15px; font-weight: 500; line-height: 1;
+  letter-spacing: .02em; font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.np__t:first-child { left: 0; }
+.np__t:last-child { right: 0; }
+.np__tscrub { position: absolute; left: 0; right: 0; bottom: 0; height: 34px; cursor: pointer; touch-action: none; }
+/* the player page's timeline, in glass: it thickens under the pointer and when held, and fills up in white */
+.np__ttrack {
+  position: absolute; left: 0; right: 0; bottom: 14px; height: 10px;   /* a little above where the hairline sits, and well inside the bar even at its thickest */
+  transform: translateY(50%);                 /* grows round its own middle */
+  border-radius: 999px; background: rgba(255, 255, 255, .3); overflow: hidden;
+  transition: height .32s var(--ease);
+}
+.np__tscrub.is-held .np__ttrack { height: 14px; }
+@media (hover: hover) and (pointer: fine) {
+  .np__tscrub:hover .np__ttrack { height: 14px; }
+}
+.np__tfill {
+  height: 100%; width: 0;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, .6);
+  transition: width .18s linear;
+}
+.np__tscrub.is-scrubbing .np__tfill, .np__scrub.is-scrubbing .np__fill { transition: none; }
+.np__track {
+  position: absolute; left: 0; right: 0; bottom: 3px; height: 2px;   /* just under the middle of the gap between the artwork and the bar's lower edge */
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .28);
+  overflow: hidden;
+  transition: height .25s var(--ease);
+}
+.np__fill { height: 100%; width: 0; background: #fff; transition: width .18s linear; }
+.np__scrub.is-held .np__track { height: 5px; }
+@media (hover: hover) and (pointer: fine) {
+  .np__scrub:hover .np__track { height: 5px; }
+}
+.np__scrub:focus-visible { outline-offset: 2px; }
+
+/* ============================================================
+   PLAY AND CREDITS FROM THE SHELF
+   Playing comes first: a click on a cover plays its track, or — on the one that is already
+   playing — opens its credits. Two small symbols on the spine do it explicitly: play at the
+   top (pause bars on the cover that is playing) and an "i" for the credits at the bottom.
+   Both are there while the pointer is on that cover (always, where there is no pointer to
+   hover with).
+   ============================================================ */
+.cd__play {
+  position: absolute; left: 50%; top: calc(var(--w) * .022);
+  width: max(26px, calc(var(--t) * 1.05)); height: max(26px, calc(var(--t) * 1.05));
+  margin-left: calc(max(26px, calc(var(--t) * 1.05)) / -2);
+  display: none; place-items: center;
+  color: #fff; cursor: pointer;
+  opacity: 0; transition: opacity .35s var(--ease), transform .3s var(--ease);
+}
+.cd.has-audio .cd__play { display: grid; }
+.cd__play svg { display: block; width: 60%; fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.cd__play .i-pause { display: none; stroke: none; }
+.cd.is-playing .cd__play .i-play { display: none; }
+.cd.is-playing .cd__play .i-pause { display: block; }
+.cd:hover .cd__play, .cd.is-now .cd__play { opacity: 1; }
+@media (hover: none) { .cd.has-audio .cd__play { opacity: 1; } }
+@media (hover: hover) and (pointer: fine) { .cd__play:hover { transform: scale(1.18); } }
+.cd__info {
+  position: absolute; left: 50%; bottom: calc(var(--w) * .022);
+  width: max(26px, calc(var(--t) * 1.05)); height: max(26px, calc(var(--t) * 1.05));
+  margin-left: calc(max(26px, calc(var(--t) * 1.05)) / -2);
+  display: grid; place-items: center;
+  color: #fff; cursor: pointer;
+  opacity: 0; transition: opacity .35s var(--ease), transform .3s var(--ease);
+}
+.cd__info svg { display: block; width: 62%; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+.cd__info .dot { fill: currentColor; stroke-width: 1.4; }
+.cd:hover .cd__info { opacity: 1; }
+@media (hover: none) { .cd__info { opacity: 1; } }
+@media (hover: hover) and (pointer: fine) { .cd__info:hover { transform: scale(1.18); } }
 
 /* ============================================================
    THE FOCUS VIEW
@@ -536,7 +771,7 @@ html.fonts-wait .seg { visibility: hidden; }
 
 /* ---------- smaller screens ----------------------------------- */
 @media (max-width: 860px) {
-  .pf { --pad-top: 150px; }
+  .pf { --pad-top: 150px; --lift: 0px; }
 
   /* the cover on top, the info underneath, the whole thing scrolls if it must */
   .focus {
@@ -545,7 +780,7 @@ html.fonts-wait .seg { visibility: hidden; }
     grid-template-rows: auto auto;
     align-content: start;
     row-gap: 24px;
-    padding: 76px clamp(20px, 6vw, 40px) 40px;
+    padding: 76px clamp(20px, 6vw, 40px) 130px;   /* room under the text for the now-playing bar */
     overflow-y: auto;
   }
   .focus__stage { width: min(100%, 52vh, 420px); }
@@ -554,6 +789,7 @@ html.fonts-wait .seg { visibility: hidden; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .np__mid, .np__who, .np__time, .np__scrub { transition-duration: .01s; }
   .cd { transition-duration: .01s; }
   .fl { transition-duration: .01s; }
 }
