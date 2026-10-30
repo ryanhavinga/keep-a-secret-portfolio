@@ -262,19 +262,7 @@
       }, 70);
     }, 540);                                               // (the swipe up and the fade out are done)
   }
-  /* The light at the top of the page: neutral cool white, or — while a cover is selected — that cover's main colour
-     (the same tint the floor's light is made of), eased over a second or so. */
-  function hslToRgb(h, s, l) {
-    s /= 100; l /= 100; const a = s * Math.min(l, 1 - l), f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
-    return [f(0), f(8), f(4)].map(v => Math.round(v * 255));
-  }
-  function skyLight(f) {
-    const [r, g, b] = f ? hslToRgb(f.tint.h, clamp(f.tint.s + 12, 50, 92), 64) : [196, 208, 255];
-    html.style.setProperty('--tl-r', r); html.style.setProperty('--tl-g', g); html.style.setProperty('--tl-b', b);
-    html.style.setProperty('--tl-a', f ? .2 : .12);                           // and a little stronger while it is coloured
-  }
   function setFront(f) {
-    skyLight(f);
     timers.splice(0).forEach(clearTimeout);
     starting = null;
     const prev = front;

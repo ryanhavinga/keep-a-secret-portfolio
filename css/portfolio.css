@@ -28,22 +28,6 @@ html.fonts-wait .seg { visibility: hidden; }
   min-height: 100dvh;
 }
 
-/* A little light from above: a soft, wide glow at the top of the page, like a lamp somewhere over the row, just enough to lift the
-   black there and give the covers' tops something to catch. Behind everything (the covers, the floor, the header all sit over it).
-   Its colour (--tl-r/g/b) is cool white until a cover is selected; then it takes that cover's main colour, eased in and out. */
-@property --tl-r { syntax: '<number>'; inherits: true; initial-value: 196; }
-@property --tl-g { syntax: '<number>'; inherits: true; initial-value: 208; }
-@property --tl-b { syntax: '<number>'; inherits: true; initial-value: 255; }
-@property --tl-a { syntax: '<number>'; inherits: true; initial-value: .12; }
-html.pf-html { transition: --tl-r 1.5s var(--ease), --tl-g 1.5s var(--ease), --tl-b 1.5s var(--ease), --tl-a 1.5s var(--ease); }
-.page-pf::before {
-  content: '';
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(75% 44% at 50% -8%, rgb(var(--tl-r) var(--tl-g) var(--tl-b) / var(--tl-a)), rgb(var(--tl-r) var(--tl-g) var(--tl-b) / calc(var(--tl-a) * .34)) 52%, transparent 76%),
-    radial-gradient(34% 22% at 50% -2%, rgba(255, 255, 255, .06), transparent 72%);
-}
-
 /* The viewpoint's drift (--px, --py) is changed every frame while the pointer moves, so these
    two are registered as non-inheriting: only the shelf and the floor themselves are re-styled,
    not everything beneath them (and nothing else on the page). */
