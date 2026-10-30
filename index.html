@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="pf-html">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Keep A Secret — Private Listening</title>
+<title>Keep A Secret — Portfolio</title>
 <meta name="description" content="A private listening room. By invitation only.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#08080a">
@@ -29,6 +29,19 @@
 <link rel="preload" as="font" type="font/otf" href="fonts/MonumentExtended-Ultrabold.otf" crossorigin>
 <link rel="preload" as="font" type="font/otf" href="fonts/MonumentExtended-Regular.otf" crossorigin>
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/portfolio.css">
+<script>
+/* Keeps the lettering out of sight until Monument Extended is in, instead
+   of flashing it in a fallback face first (see the note in vault.html). */
+(function () {
+  var d = document.documentElement, done = function () { d.classList.remove('fonts-wait'); };
+  d.classList.add('fonts-wait');
+  try {
+    Promise.all([document.fonts.load('800 1em "Monument Extended"'), document.fonts.load('400 1em "Monument Extended"')]).then(done, done);
+  } catch (e) { done(); }
+  setTimeout(done, 1200);
+})();
+</script>
 <!-- The Vault is one click away: fetch its page and scripts quietly in the
      background so it is up the instant it's opened, not after a load. -->
 <link rel="prefetch" href="vault.html">
@@ -36,214 +49,116 @@
 <link rel="prefetch" href="js/vault.js" as="script">
 <script src="js/transition.js"></script>
 </head>
-<body>
+<body class="page-pf">
 
-<!-- cinematic environment layers -->
-<div class="env" aria-hidden="true">
-  <!-- The track-change surge (brighter, more saturated, easing back down)
-       lives on these two `.light-surge` wrappers rather than on the ring/
-       leds elements themselves, which each carry their own infinite
-       `flicker` animation — kept on a plain ancestor instead so the two
-       effects are never fighting for the same element's style. `filter`
-       on the wrapper still visually reaches every pixel underneath it.
-       Split in two because .env__mesh has to sit between the main light
-       and the bloom in front of it. -->
-  <div class="light-surge">
-    <!-- Two identical banks of light layers, only one lit at a time. A
-         track change writes the new colours into whichever bank is
-         currently dark and then cross-fades their opacity, so the colour
-         change never repaints anything that's on screen — see .light-bank
-         in css/styles.css and applyLight in js/app.js. -->
-    <div class="light-bank light-bank--a is-lit">
-      <!-- the light: a bright band, big enough to run off the bottom of the screen -->
-      <div class="ring ring--glow"></div>
-      <div class="ring ring--core"></div>
-      <!-- the lamp itself: one lit point per hole in the grille, band-masked,
-           then broken up by low-frequency noise so it never reads as a flat
-           glow. __accents paints over __dots, scattering cells of a
-           contrasting hue through the field. -->
-      <div class="leds">
-        <div class="leds__noise">
-          <div class="leds__dots"></div>
-          <div class="leds__accents"></div>
-        </div>
-      </div>
-    </div>
-    <div class="light-bank light-bank--b">
-      <div class="ring ring--glow"></div>
-      <div class="ring ring--core"></div>
-      <div class="leds">
-        <div class="leds__noise">
-          <div class="leds__dots"></div>
-          <div class="leds__accents"></div>
-        </div>
-      </div>
-    </div>
+<header class="pf__bar">
+  <div class="wordmark">
+    <span class="wordmark__main">Keep A Secret</span>
+    <span class="wordmark__sub">Portfolio</span>
   </div>
-  <!-- the perforated black grille sits on top, one hole per lit point -->
-  <div class="env__mesh"></div>
-  <!-- bloom in front of the grille — its own pair of banks, since it has to
-       sit above the grille while everything else sits below it -->
-  <div class="light-surge">
-    <div class="light-bank light-bank--a is-lit"><div class="ring ring--bloom"></div></div>
-    <div class="light-bank light-bank--b"><div class="ring ring--bloom"></div></div>
-  </div>
-  <canvas class="env__grain" data-grain></canvas>
-  <div class="env__vignette"></div>
-</div>
-
-<!-- Softens the room behind the volume flyout while it's open, for
-     legibility against a busy background — toggled via body.is-volume-open
-     (js/app.js, openVolume/closeVolume). Sits above .env (z-index 0) and
-     below .stage (10), so the light and grain blur while the player itself
-     stays sharp. -->
-<div class="scene-blur" aria-hidden="true"></div>
+  <nav class="topbar__links">
+    <a class="tag" href="contact.html">Contact</a>
+  </nav>
+</header>
 
 <!-- the way between the pages: the slider sits under the one you are on (js/nav.js).
      "The Vault" asks for its password first (CONFIG.gate). -->
 <nav class="seg" data-seg aria-label="Pages">
   <span class="seg__thumb" aria-hidden="true"></span>
-  <a class="seg__btn" href="portfolio.html">Portfolio</a>
-  <a class="seg__btn" href="index.html" aria-current="page">Player</a>
+  <a class="seg__btn" href="index.html" aria-current="page">Portfolio</a>
+  <a class="seg__btn" href="player.html">Player</a>
   <a class="seg__btn" href="vault.html" data-vault>The Vault</a>
 </nav>
 
-<header class="topbar">
-  <div class="wordmark" data-logo>
-    <span class="wordmark__main" data-logo-main>Keep A Secret</span>
-    <span class="wordmark__sub" data-logo-sub>Player</span>
+<main class="pf" data-pf>
+  <h1 class="pf__title" data-pf-heading>Portfolio</h1>
+
+  <!-- one cover per track, built from CONFIG.portfolio.tracks -->
+  <div class="floor" data-floor aria-hidden="true"></div>
+  <ol class="shelf" data-shelf></ol>
+
+  <!-- bottom left, level with the credit line: Instagram and the Spotify playlist
+       (hrefs set from CONFIG.instagram / CONFIG.spotify by js/portfolio.js) -->
+  <div class="socials">
+    <a data-instagram href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.5" y="3.5" width="17" height="17" rx="5"/>
+        <circle cx="12" cy="12" r="4.2"/>
+        <circle cx="17.1" cy="6.9" r="1"/>
+      </svg>
+    </a>
+    <a data-spotify-playlist href="#" target="_blank" rel="noopener noreferrer" aria-label="Spotify playlist" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9.5"/>
+        <path d="M6.9 9.2c3.6-1 7.6-.7 10.6 1.1M7.4 12.3c3-.8 6.2-.5 8.7 1M7.9 15.2c2.4-.6 4.7-.3 6.7.8"/>
+      </svg>
+    </a>
   </div>
-  <nav class="topbar__links">
-    <a class="tag" data-tagline href="contact.html">Private Session</a>
-  </nav>
-</header>
 
-<main class="stage">
-  <!-- Track switching still works without the big edge arrows that used to
-       live here: the small transport buttons below, the keyboard's ←/→,
-       clicking a side cover, and dragging the cover stack itself. -->
-
-  <div class="carousel" data-carousel>
-
-    <!-- ══════════ BLOCK 1 — MUSIC PLAYER ══════════ -->
-    <article class="block block--player" data-block="player" tabindex="0">
-      <div class="player">
-
-        <!-- cover stack: the playing track, with its neighbours tucked behind.
-             Built from CONFIG.tracks by app.js — click a side cover to switch.
-             Static otherwise — swiping steps tracks by spinning the title/
-             artist carousel below instead, Apple Music-style; the artwork
-             only ever swaps, at the moment a track actually changes. -->
-        <div class="covers" data-covers></div>
-
-        <!-- one .meta-item per track (built by app.js, same as .covers) —
-             a horizontal title/artist carousel that tracks a swipe live,
-             independent of the artwork above it. -->
-        <div class="player__meta" data-meta></div>
-
-        <div class="transport">
-          <div class="timeline">
-            <span class="timeline__t" data-current>0:00</span>
-            <div class="scrub" data-scrub role="slider" tabindex="0"
-                 aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-              <div class="scrub__track"><div class="scrub__fill" data-fill></div></div>
-            </div>
-            <!-- volume flyout: rises directly above this button rather than
-                 beside the artwork, so it stays anchored to the control
-                 that opens it wherever the timeline row lands. -->
-            <div class="vol-wrap">
-              <button class="vol-toggle" data-vol-toggle type="button"
-                      aria-label="Volume" aria-expanded="false" aria-controls="volume-flyout">
-                <!-- Two complete glyphs from img/Volume icon.svg and
-                     img/Volume icon mute.svg, cross-faded by .is-muted
-                     rather than one icon plus a synthetic slash overlay.
-                     Both use the SAME shared viewBox (the unmuted file's
-                     own content bounds — the wider of the two, since the
-                     muted glyph's speaker+✕ span less) so the glyph sits
-                     at the same scale and position in both states; only
-                     the content swaps. Left at the default
-                     preserveAspectRatio (xMidYMid meet) rather than
-                     "none" — that stretched the shared box to fill the
-                     square button edge to edge, but broke the muted
-                     icon's clipPath-based reveal on iOS Safari, which
-                     doesn't handle clip-path referencing a local
-                     clipPath under a non-uniform (preserveAspectRatio=
-                     none) scale reliably. Letterboxed top/bottom instead
-                     now (536:426 source aspect within a square box) —
-                     visibly not edge to edge, but every browser renders
-                     the muted state correctly, which matters more.
-
-                     Both source files reuse one path for more geometry
-                     than they show, relying on a clipPath to reveal only
-                     the intended part (the muted file's "speaker" path
-                     is the exact same shape as the unmuted icon's full
-                     path, including its wave arcs, just clipped to a
-                     window too narrow to reach them) — clipPaths kept
-                     and referenced exactly as those files define them
-                     rather than hand-trimming the path data itself. -->
-                <svg class="vol-toggle__icon" viewBox="476.710938 12.003906 536.25 426.246094"
-                     aria-hidden="true">
-                  <defs>
-                    <clipPath id="vt-mute-speaker"><path d="M 476.710938 12.003906 L 768.460938 12.003906 L 768.460938 438.25 L 476.710938 438.25 Z"/></clipPath>
-                    <clipPath id="vt-mute-x"><path d="M 791.902344 42 L 950 42 L 950 410.570312 L 791.902344 410.570312 Z"/></clipPath>
-                  </defs>
-                  <path class="vol-toggle__unmuted" fill-rule="nonzero" d="M 745.152344 392.378906 C 745.152344 401.839844 739.6875 410.425781 731.128906 414.425781 C 727.832031 416.003906 724.285156 416.761719 720.765625 416.761719 C 715.21875 416.761719 709.699219 414.847656 705.222656 411.132812 L 572.027344 300.773438 L 501.066406 300.773438 C 487.609375 300.773438 476.710938 289.847656 476.710938 276.390625 L 476.710938 179.324219 C 476.710938 165.863281 487.609375 154.9375 501.066406 154.9375 L 572.027344 154.9375 L 705.222656 44.554688 C 712.515625 38.527344 722.597656 37.234375 731.15625 41.289062 C 739.6875 45.285156 745.152344 53.875 745.152344 63.335938 Z M 838.78125 354.304688 C 838.191406 354.335938 837.625 354.363281 837.035156 354.363281 C 830.585938 354.363281 824.390625 351.828125 819.800781 347.238281 L 816.535156 343.972656 C 808.003906 335.4375 806.988281 321.921875 814.199219 312.207031 C 832.445312 287.625 842.074219 258.453125 842.074219 227.871094 C 842.074219 194.953125 831.121094 164.089844 810.453125 138.605469 C 802.570312 128.917969 803.300781 114.839844 812.113281 106.027344 L 815.382812 102.757812 C 820.253906 97.886719 826.757812 95.242188 833.824219 95.664062 C 840.695312 96 847.117188 99.238281 851.480469 104.5625 C 880.175781 139.675781 895.351562 182.335938 895.351562 227.871094 C 895.351562 270.277344 881.921875 310.632812 856.550781 344.589844 C 852.324219 350.25 845.847656 353.800781 838.78125 354.304688 Z M 939.535156 429.605469 C 935.113281 434.8125 928.75 437.9375 921.933594 438.21875 C 921.597656 438.25 921.257812 438.25 920.894531 438.25 C 914.445312 438.25 908.25 435.6875 903.660156 431.125 L 900.476562 427.914062 C 891.523438 418.988281 890.933594 404.683594 899.042969 394.996094 C 938.351562 348.28125 960.007812 288.921875 960.007812 227.871094 C 960.007812 164.34375 936.832031 103.238281 894.761719 55.734375 C 886.230469 46.074219 886.652344 31.488281 895.71875 22.394531 L 898.929688 19.183594 C 903.660156 14.425781 909.828125 11.777344 916.894531 12.003906 C 923.597656 12.199219 929.933594 15.183594 934.410156 20.195312 C 985.238281 77.445312 1013.257812 151.195312 1013.257812 227.871094 C 1013.285156 301.621094 987.097656 373.257812 939.535156 429.605469 Z M 939.535156 429.605469 "/>
-                  <g class="vol-toggle__muted">
-                    <path clip-path="url(#vt-mute-speaker)" fill-rule="nonzero" d="M 745.152344 392.378906 C 745.152344 401.839844 739.6875 410.425781 731.128906 414.425781 C 727.832031 416.003906 724.285156 416.761719 720.765625 416.761719 C 715.21875 416.761719 709.699219 414.847656 705.222656 411.132812 L 572.027344 300.773438 L 501.066406 300.773438 C 487.609375 300.773438 476.710938 289.847656 476.710938 276.390625 L 476.710938 179.324219 C 476.710938 165.863281 487.609375 154.9375 501.066406 154.9375 L 572.027344 154.9375 L 705.222656 44.554688 C 712.515625 38.527344 722.597656 37.234375 731.15625 41.289062 C 739.6875 45.285156 745.152344 53.875 745.152344 63.335938 Z M 838.78125 354.304688 C 838.191406 354.335938 837.625 354.363281 837.035156 354.363281 C 830.585938 354.363281 824.390625 351.828125 819.800781 347.238281 L 816.535156 343.972656 C 808.003906 335.4375 806.988281 321.921875 814.199219 312.207031 C 832.445312 287.625 842.074219 258.453125 842.074219 227.871094 C 842.074219 194.953125 831.121094 164.089844 810.453125 138.605469 C 802.570312 128.917969 803.300781 114.839844 812.113281 106.027344 L 815.382812 102.757812 C 820.253906 97.886719 826.757812 95.242188 833.824219 95.664062 C 840.695312 96 847.117188 99.238281 851.480469 104.5625 C 880.175781 139.675781 895.351562 182.335938 895.351562 227.871094 C 895.351562 270.277344 881.921875 310.632812 856.550781 344.589844 C 852.324219 350.25 845.847656 353.800781 838.78125 354.304688 Z M 939.535156 429.605469 C 935.113281 434.8125 928.75 437.9375 921.933594 438.21875 C 921.597656 438.25 921.257812 438.25 920.894531 438.25 C 914.445312 438.25 908.25 435.6875 903.660156 431.125 L 900.476562 427.914062 C 891.523438 418.988281 890.933594 404.683594 899.042969 394.996094 C 938.351562 348.28125 960.007812 288.921875 960.007812 227.871094 C 960.007812 164.34375 936.832031 103.238281 894.761719 55.734375 C 886.230469 46.074219 886.652344 31.488281 895.71875 22.394531 L 898.929688 19.183594 C 903.660156 14.425781 909.828125 11.777344 916.894531 12.003906 C 923.597656 12.199219 929.933594 15.183594 934.410156 20.195312 C 985.238281 77.445312 1013.257812 151.195312 1013.257812 227.871094 C 1013.285156 301.621094 987.097656 373.257812 939.535156 429.605469 Z M 939.535156 429.605469 "/>
-                    <path clip-path="url(#vt-mute-x)" fill-rule="nonzero" d="M 765.074219 62.578125 L 765.074219 389.933594 C 765.074219 397.875 760.46875 405.097656 753.289062 408.472656 C 750.527344 409.761719 747.558594 410.394531 744.613281 410.394531 C 739.925781 410.394531 735.261719 408.777344 731.496094 405.648438 L 614.445312 308.09375 L 580.933594 308.09375 C 547.09375 308.09375 519.554688 280.554688 519.554688 246.714844 L 519.554688 205.796875 C 519.554688 171.957031 547.09375 144.417969 580.933594 144.417969 L 614.445312 144.417969 L 731.519531 46.863281 C 737.65625 41.769531 746.1875 40.746094 753.289062 44.039062 C 760.46875 47.414062 765.074219 54.636719 765.074219 62.578125 Z M 906.53125 226.257812 L 943.214844 189.570312 C 951.214844 181.570312 951.214844 168.640625 943.214844 160.640625 C 935.21875 152.640625 922.285156 152.640625 914.285156 160.640625 L 877.601562 197.324219 L 840.917969 160.640625 C 832.917969 152.640625 819.988281 152.640625 811.988281 160.640625 C 803.988281 168.640625 803.988281 181.570312 811.988281 189.570312 L 848.671875 226.257812 L 811.988281 262.941406 C 803.988281 270.941406 803.988281 283.871094 811.988281 291.871094 C 815.976562 295.859375 821.214844 297.867188 826.453125 297.867188 C 831.691406 297.867188 836.925781 295.859375 840.917969 291.871094 L 877.601562 255.1875 L 914.285156 291.871094 C 918.277344 295.859375 923.515625 297.867188 928.75 297.867188 C 933.988281 297.867188 939.226562 295.859375 943.21875 291.871094 C 951.214844 283.871094 951.214844 270.941406 943.21875 262.941406 Z M 906.53125 226.257812 "/>
-                  </g>
-                </svg>
-              </button>
-              <div class="volume" data-volume id="volume-flyout">
-                <div class="volume__track" data-vol-track role="slider" tabindex="0"
-                     aria-label="Volume" aria-orientation="vertical"
-                     aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
-                  <div class="volume__bar">
-                    <div class="volume__fill" data-vol-fill></div>
-                    <span class="volume__head" data-vol-head></span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <span class="timeline__t" data-duration>0:00</span>
-          </div>
-
-          <div class="controls">
-            <button class="ctrl ctrl--side" data-prev aria-label="Previous track">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 9.5 12 18 18Z"/><path d="M6 6v12"/></svg>
-            </button>
-
-            <button class="ctrl ctrl--play" data-play aria-label="Play">
-              <svg class="ctrl__icon ctrl__icon--play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5 19 12 9 18.5Z"/></svg>
-              <svg class="ctrl__icon ctrl__icon--pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg>
-            </button>
-
-            <button class="ctrl ctrl--side" data-next aria-label="Next track">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 14.5 12 6 18Z"/><path d="M18 6v12"/></svg>
-            </button>
-          </div>
-
-          <p class="player__note" data-note hidden>Preview timeline — audio pending</p>
-        </div>
-      </div>
-    </article>
-
-    <!-- The TikTok and Bio panels used to live here. Their content is still
-         in js/config.js (CONFIG.tiktok, CONFIG.bio) so nothing is lost —
-         app.js just skips anything whose markup isn't in the page. -->
-
-  </div>
+  <footer class="pf__foot">
+    <p>&copy; Keep A Secret. All Rights Reserved</p>
+    <p>Written &amp; Produced by Keep A Secret</p>
+  </footer>
 </main>
 
-<div class="footer-credit">
-  <p>&copy; Keep A Secret. All Rights Reserved</p>
-  <p>Written &amp; Produced by Keep A Secret</p>
+<!-- ══════════ A COVER PULLED OUT OF THE SHELF ══════════
+     Opened by js/portfolio.js: the cover slides out of the stack and turns
+     to face you, the shelf dims behind it, and its details come in on the
+     right. -->
+<div class="focus" data-focus hidden>
+  <div class="focus__veil" data-veil></div>
+
+  <div class="focus__stage" data-stage>
+    <div class="focus__card" data-card><img data-card-img alt=""></div>
+  </div>
+
+  <section class="focus__info" data-info>
+    <h2 class="focus__title" data-title></h2>
+    <p class="focus__artist" data-artist></p>
+    <p class="focus__line" data-year hidden></p>
+    <p class="focus__note" data-note hidden></p>
+
+    <div class="focus__player" data-player hidden>
+      <button class="focus__play" data-play type="button" aria-label="Play">
+        <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5 19 12 9 18.5Z"/></svg>
+        <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg>
+      </button>
+      <div class="focus__scrub" data-scrub role="slider" tabindex="0" aria-label="Seek"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="focus__track"><div class="focus__fill" data-fill></div></div>
+      </div>
+      <span class="focus__time" data-time>0:00</span>
+    </div>
+
+    <div class="focus__credits" data-credits hidden></div>
+    <div class="focus__links" data-links></div>
+    <p class="focus__credit" data-credit-line>Written &amp; Produced by Keep A Secret</p>
+  </section>
+
+  <!-- small streaming icons, bottom right: they go to the track's own link when
+       CONFIG.portfolio gives one (spotify / apple), otherwise to a search for it -->
+  <div class="focus__stream">
+    <a class="focus__svc" data-spotify target="_blank" rel="noopener noreferrer" aria-label="Listen on Spotify" title="Spotify">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M5.9 9.1c4.3-1.2 9-.8 12.6 1.4M6.5 12.4c3.6-.9 7.3-.6 10.3 1.2M7.1 15.5c2.9-.7 5.7-.4 8.1.9" fill="none" stroke="#060607" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </a>
+    <a class="focus__svc" data-apple target="_blank" rel="noopener noreferrer" aria-label="Listen on Apple Music" title="Apple Music">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5.5" fill="currentColor"/><path d="M9.1 17.3a2.1 2.1 0 1 1-1.3-1.9V8.4a.9.9 0 0 1 .7-.9l6.6-1.4a.9.9 0 0 1 1.1.9v8.4a2.1 2.1 0 1 1-1.3-1.9V8.6l-5.1 1.1z" fill="#060607"/></svg>
+    </a>
+  </div>
+
+  <button class="focus__close" data-close type="button" aria-label="Back to the shelf">Back</button>
+  <button class="focus__nav focus__nav--prev" data-prev type="button" aria-label="Previous">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg>
+  </button>
+  <button class="focus__nav focus__nav--next" data-next type="button" aria-label="Next">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+  </button>
 </div>
 
-<audio data-audio preload="metadata"></audio>
+<audio data-audio preload="none"></audio>
 
 <script src="js/config.js"></script>
 <script src="js/nav.js"></script>
-<script src="js/app.js"></script>
+<script src="js/portfolio.js"></script>
 </body>
 </html>

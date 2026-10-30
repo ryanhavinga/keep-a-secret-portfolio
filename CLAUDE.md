@@ -66,6 +66,6 @@ Even with a go-ahead, ask separately before anything destructive or hard to reve
 
 ## Repo layout reminder
 
-Plain static site, no build step: `index.html`, `css/styles.css`, `js/app.js` (behavior),
+Plain static site, no build step: `index.html` (the landing page: the portfolio), `player.html`, `vault.html`, `css/styles.css`, `js/app.js` (behavior),
 `js/config.js` (the file you edit for content — tracks, branding, the Vault's password). See
 `README.md` for the full editing guide and the site's design rationale.

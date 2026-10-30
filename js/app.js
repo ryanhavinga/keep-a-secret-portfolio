@@ -534,7 +534,7 @@
       }
     }
 
-    /* Which of the two .light-bank stacks (index.html) is lit right now.
+    /* Which of the two .light-bank stacks (player.html) is lit right now.
        The other one is dark, and is where the next track's colours go. */
     let litBank = 'a';
     let firstLight = true;   // the page's very first light is simply there — it only cross-fades on later track changes

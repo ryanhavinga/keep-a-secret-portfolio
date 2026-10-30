@@ -1,10 +1,12 @@
 # KEEP A SECRET — private listening room
 
-A static site. No build step, no dependencies. Open `index.html` in a browser, or drop the
+A static site. No build step, no dependencies. Open `index.html` (the portfolio, the landing page) in a browser, or drop the
 whole folder onto any host (Netlify, Vercel, Cloudflare Pages, plain FTP).
 
 ```
-index.html
+index.html          the landing page: the portfolio
+player.html         the player
+vault.html          the Vault
 css/styles.css      all styling
 js/config.js        ← everything you normally edit lives here
 js/app.js           carousel, player, grain
@@ -17,7 +19,7 @@ fonts/              Monument Extended
 
 ## Run it locally
 
-Open `index.html` directly, or — better — serve it, so the player can sample the real
+Open `index.html` directly, or — better — serve it, so the player (`player.html`) can sample the real
 dominant colour out of each artwork:
 
 ```bash
@@ -108,7 +110,7 @@ how to make a new one). It is a doorman, not a lock: nothing server-side is chec
 passed around, not anyone determined. The old front-door password (SEP26 / OKT26) and the publishers' page (HAP)
 are gone; HAP is now the Vault's password.
 
-### Portfolio (`portfolio.html`)
+### Portfolio (`index.html`, the landing page)
 Everything we've made, on its own page: the covers stand upright in a row, each turned toward the middle, so
 the ones in the centre are seen almost edge-on (just the spine, with the title running up it) and each one
 further out shows more of its face, all from one perspective. The row sizes itself from
@@ -144,12 +146,12 @@ previews over ≈300 KB.
 
 ### Footer credit
 "© Keep A Secret. All Rights Reserved" and "Written & produced by Keep A Secret" sit fixed,
-centred at the very bottom of the page — set directly in `index.html` (`.footer-credit`), not
+centred at the very bottom of the page — set directly in `player.html` (`.footer-credit`), not
 in `js/config.js`. Site-wide rather than per-track, so there's nothing to edit per song; change
 the text in the markup itself if it ever needs to say something else.
 
 ### TikTok and Bio — removed from the page
-Both panels were taken out of `index.html`. Their settings are still in `js/config.js`
+Both panels were taken out of `player.html`. Their settings are still in `js/config.js`
 (`tiktok`, `bio`) and their content is intact, but nothing reads them: `app.js` only fills in
 markup that is actually present. Putting either back means restoring its `<article>` block,
 its styles, its `fillContent` branch, and adding its name to `order` below.

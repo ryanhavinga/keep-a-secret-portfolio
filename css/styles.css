@@ -192,7 +192,7 @@ body.is-volume-open .player__meta {
 
 /* ---------- THE TRACK-CHANGE SURGE ----------------------------
    Wraps the ring layers and the LED field (in two pieces — see the note
-   in index.html). Brighter and a little more saturated while a new track
+   in player.html). Brighter and a little more saturated while a new track
    settles in, easing back down once it has. Lives on a plain ancestor
    rather than on the ring/leds elements themselves, which each carry their
    own infinite `flicker` animation — see the comment on .ring in the next
@@ -347,7 +347,7 @@ body.is-surging .light-surge {
    track-change surge lives on `.light-surge` instead (below), not part of
    this loop — kept off the elements that carry this animation on purpose,
    so the two effects never have to interact on the same element. See the
-   note in index.html above the `.light-surge` wrappers. */
+   note in player.html above the `.light-surge` wrappers. */
 @keyframes flicker {
   0%   { opacity: var(--o); }
   6%   { opacity: calc(var(--o) * .97); }
@@ -677,7 +677,7 @@ body.is-unlocked .leds {
   will-change: transform, opacity, filter, scale;
   -webkit-tap-highlight-color: transparent;
 }
-/* tabindex="0" (index.html) is what lets ←/→ step tracks with the
+/* tabindex="0" (player.html) is what lets ←/→ step tracks with the
    keyboard at all, but that also makes this the thing the page's own
    shared :focus-visible rule above outlines — a thin ring drawn right
    around the whole square block, artwork included, the moment a ←/→
@@ -1245,7 +1245,7 @@ body.is-unlocked .leds {
      nothing definite to resolve against and silently fell back to the
      svg's intrinsic aspect ratio instead. aspect-ratio:1 forces it
      regardless of any of that, so preserveAspectRatio="none" on the svg
-     element (index.html) has an actually-square box to stretch into,
+     element (player.html) has an actually-square box to stretch into,
      landing edge to edge the way the old icon did. */
   width: 100%;
   aspect-ratio: 1;
@@ -1439,7 +1439,7 @@ body.is-unlocked .leds {
   color: rgba(255, 255, 255, .28);
 }
 
-/* The TikTok and Bio panels were removed from index.html; their styles
+/* The TikTok and Bio panels were removed from player.html; their styles
    went with them. CONFIG.tiktok and CONFIG.bio still hold the content if
    either ever comes back. */
 

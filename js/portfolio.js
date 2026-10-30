@@ -1,5 +1,5 @@
 /* ============================================================
-   KEEP A SECRET — PORTFOLIO (portfolio.html)
+   KEEP A SECRET — PORTFOLIO (index.html — the landing page)
    The shelf · a cover pulled out into full view
    Content lives in js/config.js, under CONFIG.portfolio.
    ============================================================ */

@@ -113,7 +113,7 @@ const CONFIG = {
     }
   ],
 
-  /* ---------- PORTFOLIO (portfolio.html) ----------
+  /* ---------- PORTFOLIO (index.html, the landing page) ----------
      Everything we've made, on its own page: big covers stacked on a shelf,
      floating a little, and a click pulls one out into full view with its
      info beside it. `tracks` above is the player (the ones we feature);
@@ -299,7 +299,7 @@ const CONFIG = {
 
   /* ---------- CAROUSEL ORDER ----------
      Only the player is in the page now — the TikTok and Bio panels were
-     removed from index.html and the big arrows step through tracks
+     removed from player.html and the big arrows step through tracks
      instead. Their content above is kept, unused, so putting either panel
      back is a matter of restoring its markup and adding it here again. */
   order: ['player']
