@@ -66,7 +66,7 @@
   addEventListener('pageshow', ev => { if (ev.persisted) fade(0, 0); });
 
   /* every way of leaving a page goes through this one fade — links below, and the
-     password doors, which call window.kasGo(url) */
+     page pill, which calls window.kasGo(url) */
   function go(href) {
     try { sessionStorage.setItem(KEY, '1'); } catch (_) {}
     fade(1, OUT);

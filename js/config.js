@@ -4,39 +4,6 @@
    ============================================================ */
 
 const CONFIG = {
-  /* ---------- THE VAULT'S PASSWORD ----------
-     Asked when someone chooses "The Vault" on the page pill at the top
-     (js/nav.js), and again at vault.html itself if it is opened by a direct
-     link. A doorman for an invite-only page, not real security: the Vault's
-     markup is already in the page whether someone types the password or
-     not, and this only ever runs in the visitor's own browser — nothing
-     server-side is checking anything. If the material behind it ever needs
-     actually protecting, put the site behind your host's own password
-     (Netlify and Cloudflare both do this server-side) instead of this.
-
-     passwordHash : a SHA-256 hash of the real password, not the password
-                    itself — so it isn't just sitting here in plain text
-                    for anyone who opens this file to read straight off.
-                    A single hash string, or a list — any one of them opens
-                    the door. Set to null to take the password away.
-
-                    To set or change the password: open this page in any
-                    browser, open its JavaScript console, and run —
-
-                      await crypto.subtle.digest('SHA-256',
-                        new TextEncoder().encode('YOURNEWPASSWORD'))
-                        .then(b => [...new Uint8Array(b)]
-                        .map(x => x.toString(16).padStart(2, '0')).join(''))
-
-                    — typing the password in capitals (the door compares
-                    case-insensitively, always against the uppercase
-                    form), then paste the hex string it prints below.
-
-     Once let in, a browser tab stays in for as long as it is open. */
-  gate: {
-    passwordHash: 'f6a3783cdc8378be169ca627487ad0b245e0bf4e9a65e8e7057896532ea02241'   // "HAP"
-  },
-
   /* ---------- BRANDING ---------- */
   brand: {
     logo: 'Keep A Secret',       // top-left wordmark (rendered uppercase)
@@ -137,11 +104,9 @@ const CONFIG = {
   ------------------------------------------------------------ */
   portfolio: {
     heading: 'Portfolio',
-    /* How many covers the row holds when "All" is chosen. When there are
-       fewer tracks than this, the set runs round again from the start until
-       the row is full (7 tracks and 10 → the first 3 appear a second time).
-       Never cuts real tracks: with more than this many, they all show. Choosing
-       an artist in the filter shows their tracks once each, never repeated. */
+    /* How many covers the row holds. When there are fewer tracks than this, the set runs round again from
+       the start until the row is full (7 tracks and 10 → the first 3 appear a second time). Never cuts real
+       tracks: with more than this many, they all show. */
     fill: 10,
     /* false: the track page is just the credits (listening is on the Player page).
        true: it also gets a play button and timeline for tracks that have audio. */
@@ -208,14 +173,13 @@ const CONFIG = {
     }
   ],
 
-  /* ---------- THE VAULT (vault.html) ----------
-     Finished songs that aren't anyone's yet — written, produced and ready
-     for an artist to cut. Kept apart from `tracks` above on purpose: those
-     are the portfolio (records that are already out), these are what's
-     available. A plain list, one row per song, in groups by language, each
-     under its own heading. Behind the password (CONFIG.gate).
+  /* ---------- DEMOS (demos.html) ----------
+     Unreleased songs that aren't anyone's yet — written, produced and ready for an artist to cut. Kept
+     apart from `tracks` above on purpose: those are the portfolio (records that are already out), these
+     are what's available. A plain list, one row per song, in groups by language, each under its own
+     heading.
 
-       contact  : where each row's "Request" link sends its email
+       contact  : where each row's "Request" link sends its email (subject: "Demo request: <title>")
 
      Each entry in `tracks` is one row:
        title    : song title
@@ -231,16 +195,9 @@ const CONFIG = {
        status   : 'available' (default) | 'on hold' | 'cut'
                   the last two swap the Request link for their label —
                   'cut' is a song that's been placed.
-       note     : optional one-liner, e.g. 'Female vocal'
-
-     eyebrow, heading, intro, sealed are only read by the switched-off 3D
-     door version, saved in archive/vault-door/ — see the README there. */
-  vault: {
-    eyebrow: 'The Vault',
-    heading: 'Ready to cut',
-    intro: 'Finished songs, written and produced in-house, held back for the right artist. Every box on this wall is available to cut.',
+       note     : optional one-liner, e.g. 'Female vocal' */
+  demos: {
     contact: 'contact@keepasecret.nl',
-    sealed: 2,
     tracks: [
       {
         title: 'Alles Waar Je Spijt Van Hebt',

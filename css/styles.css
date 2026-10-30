@@ -574,7 +574,7 @@ body.is-unlocked .leds {
   transition: text-shadow .7s var(--ease);
 }
 .tag:hover { text-shadow: 0 0 16px rgba(255, 255, 255, .28); }
-/* "The Vault" and "Contact" side by side top-right — stacked on a phone,
+/* "Demos" and "Contact" side by side top-right — stacked on a phone,
    where the two of them in a row would run into the wordmark */
 .topbar__links {
   display: flex; align-items: flex-start;
@@ -585,12 +585,12 @@ body.is-unlocked .leds {
 }
 
 /* ---------- the page pill ------------------------------------- */
-/* The way between the three pages — Portfolio · Player · The Vault — at the
+/* The way between the three pages — Portfolio · Demos — at the
    top of each of them (js/nav.js). Same lettering as the credit line at the
    foot of a page. A light glass track with a dark slider that sits under the
    page you are on and glides to the one you choose before the page changes.
-   z-index above .topbar (40), so it stays clickable over the Vault's door;
-   below the password prompt (.gate, 100). */
+   z-index above .topbar (40), so it stays clickable over the page;
+   still below the credits (.focus). */
 .seg {
   position: absolute; z-index: 45;
   top: clamp(18px, 3vh, 36px);
@@ -1450,140 +1450,6 @@ body.is-unlocked .leds {
 /* The TikTok and Bio panels were removed from player.html; their styles
    went with them. CONFIG.tiktok and CONFIG.bio still hold the content if
    either ever comes back. */
-
-/* ============================================================
-   THE GATE
-   ============================================================ */
-/* Set synchronously by the very first thing in vault.html's <head> — see
-   the note there — if this session has already typed the Vault's password.
-   This rule is what actually keeps vault.html's door invisible for that
-   case: css/styles.css is itself render-blocking, so it's in effect before
-   there's anything on the page to paint at all, regardless of how the rest
-   of the document streams in after it. */
-html.is-remembered .gate { display: none; }
-.gate {
-  position: fixed; inset: 0; z-index: 100;
-  display: grid; place-items: center;
-  padding: 32px;
-  /* matches .page-contact's own background exactly, rather than a flat
-     #000 — the same soft vignette both places now. */
-  background:
-    radial-gradient(120% 90% at 50% 30%, #0e0e11 0%, #08080a 44%, #030304 70%, #000 100%);
-  /* This door now only stands in front of vault.html (a direct link to it
-     without the password). Everything behind it is already on screen, so
-     this one transition is the room's entrance, revealed all at once.
-     js/vault.js's setTimeout removing the gate element outright is timed
-     off this same number — keep the two matched if this changes. */
-  transition: opacity 3.4s var(--ease);
-}
-/* the gate dissolving and the room coming up are the same move — both are
-   black at the crossover, so it reads as one slow fade rather than a swap */
-.gate.is-open { opacity: 0; pointer-events: none; }
-/* the copy and form vanish the instant the gate opens, rather than riding
-   the parent's 2.2s fade — the black backdrop still dissolves slowly to
-   reveal the room, but the door's own text shouldn't still be readable
-   while that happens */
-.gate__inner { width: min(340px, 100%); text-align: center; opacity: 1; }
-.gate.is-open .gate__inner { opacity: 0; transition: none; }
-/* a password that sends you to another page: the door's words go quietly,
-   then the page changes */
-.gate__inner { transition: opacity .4s var(--ease); }
-.gate.is-leaving .gate__inner { opacity: 0; pointer-events: none; }
-
-.gate__mark {
-  margin: 0;
-  font-family: var(--display); font-weight: 800;
-  font-size: clamp(20px, 2.3vw, 28px);
-  letter-spacing: .015em; word-spacing: -.3em;
-
-}
-/* was 14px, back when this sat below .gate__sub ("Demo Portal", removed)
-   — closer to the mark now that it's the very next line, and brighter
-   (was --w-30) by request. */
-.gate__eyebrow {
-  margin: 6px 0 0;
-  font-size: 9px; letter-spacing: .42em; text-indent: .42em;
-
-  color: var(--w-72);
-}
-
-.gate__form {
-  margin-top: clamp(36px, 7vh, 60px);
-  display: grid; gap: 24px; justify-items: center;
-}
-/* no box — a single hairline, the way the rest of the site draws a rule */
-.gate__input {
-  width: 100%;
-  padding: 12px 4px;
-  background: none; border: 0;
-  border-bottom: 1px solid var(--hairline);
-  /* Plain sans rather than --display (Monument Extended) — a password
-     input never actually renders its typed characters, only the native
-     mask dot glyph repeated, and Monument Extended's own version of that
-     glyph reads as a stretched oval rather than a round dot. --sans's
-     own is a plain circle. */
-  font-family: var(--sans); font-weight: 400;
-  /* iOS Safari zooms the whole page in on focus for any input under 16px,
-     and since the gate's submit is intercepted with preventDefault rather
-     than a real navigation, nothing ever resets that zoom afterward — the
-     zoomed-in state just carries straight into the unlocked room. 16px is
-     the threshold where it stops happening at all. */
-  font-size: 16px; letter-spacing: .32em; text-indent: .32em;
-  text-align: center;
-  color: var(--white);
-  caret-color: var(--w-48);
-  transition: border-color .7s var(--ease);
-}
-.gate__input:focus { outline: none; border-bottom-color: var(--w-48); }
-.gate__input::placeholder {
-  font-size: 10px; letter-spacing: .34em;
-
-  color: rgba(255, 255, 255, .18);
-}
-.gate__btn {
-  padding: 13px 34px;
-  border: 1px solid var(--white);
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 10px; letter-spacing: .34em; text-indent: .34em;
-
-  color: var(--white);
-  touch-action: manipulation;
-  transition: background-color .7s var(--ease);
-}
-.gate__btn:hover { background: rgba(255, 255, 255, .1); }
-
-/* The same door, asked for from the page pill (js/nav.js): it fades up over
-   whatever page you are on when "The Vault" is chosen, and goes again on
-   Back, Esc, or a tap beside the form. */
-.gate--ask {
-  opacity: 0; visibility: hidden; pointer-events: none;
-  background: rgba(4, 4, 5, .9);
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  transition: opacity .35s var(--ease), visibility 0s linear .35s;
-}
-.gate--ask.is-shown { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .35s var(--ease); }
-.gate__cancel {
-  padding: 6px 10px;
-  font-size: 10px; letter-spacing: .34em; text-indent: .34em;
-
-  color: var(--w-48);
-  touch-action: manipulation;
-  transition: color .4s var(--ease);
-}
-.gate__cancel:hover { color: var(--white); }
-
-/* a wrong password is answered with a shake and nothing else — no red, no
-   copy, in keeping with a door that isn't explaining itself */
-.gate.is-wrong .gate__inner { animation: refuse .5s var(--ease); }
-.gate.is-wrong .gate__input { border-bottom-color: var(--w-48); }
-@keyframes refuse {
-  0%, 100% { transform: translateX(0); }
-  18% { transform: translateX(-4px); }
-  38% { transform: translateX(3px); }
-  58% { transform: translateX(-2px); }
-  78% { transform: translateX(1px); }
-}
 
 /* ============================================================
    CONTACT PAGE — contact.html

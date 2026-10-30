@@ -1,5 +1,14 @@
 # The Vault — the door version (archived)
 
+> **No password any more.** This version asks for a password through `js/nav.js` (`window.kasVault`), which has been
+> removed from the site. To use it again, take out its `gate()` / door code and the gate markup, or bring the old
+> `js/nav.js` password section back.
+
+> **Naming.** This was written when the page was still called "The Vault": the files are `vault.html`, `css/vault.css`,
+> `js/vault.js` and the content is `CONFIG.vault`. The live page is now **Demos** (`demos.html`, `css/demos.css`,
+> `js/demos.js`, `CONFIG.demos`), so putting this back means either renaming it to match or using the old names.
+
+
 The Vault used to open with a 3D safe door, then a wall of safe-deposit boxes. That version is
 **switched off** and kept here, untouched, so it can come back. The live Vault is now a plain list
 (see "The Vault" in the main README).

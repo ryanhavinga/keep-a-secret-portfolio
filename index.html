@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/portfolio.css">
 <script>
 /* Keeps the lettering out of sight until Monument Extended is in, instead
-   of flashing it in a fallback face first (see the note in vault.html). */
+   of flashing it in a fallback face first (see the note in demos.html). */
 (function () {
   var d = document.documentElement, done = function () { d.classList.remove('fonts-wait'); };
   d.classList.add('fonts-wait');
@@ -42,11 +42,10 @@
   setTimeout(done, 1200);
 })();
 </script>
-<!-- The Vault is one click away: fetch its page and scripts quietly in the
-     background so it is up the instant it's opened, not after a load. -->
-<link rel="prefetch" href="vault.html">
-<link rel="prefetch" href="css/vault.css">
-<link rel="prefetch" href="js/vault.js" as="script">
+<!-- The demos page is one click away: fetch it quietly in the background so it is up the instant it's opened. -->
+<link rel="prefetch" href="demos.html">
+<link rel="prefetch" href="css/demos.css">
+<link rel="prefetch" href="js/demos.js" as="script">
 <script src="js/transition.js"></script>
 </head>
 <body class="page-pf">
@@ -61,13 +60,11 @@
   </nav>
 </header>
 
-<!-- the way between the pages: the slider sits under the one you are on (js/nav.js).
-     "The Vault" asks for its password first (CONFIG.gate). -->
+<!-- the way between the pages: the slider sits under the one you are on (js/nav.js). -->
 <nav class="seg" data-seg aria-label="Pages">
   <span class="seg__thumb" aria-hidden="true"></span>
   <a class="seg__btn" href="index.html" aria-current="page">Portfolio</a>
-  <a class="seg__btn" href="player.html">Player</a>
-  <a class="seg__btn" href="vault.html" data-vault>The Vault</a>
+  <a class="seg__btn" href="demos.html">Demos</a>
 </nav>
 
 <main class="pf" data-pf>
@@ -178,14 +175,13 @@
       <img class="np__art" data-np-art alt="">
       <span class="np__text"><b data-np-title></b><span data-np-artist></span></span>
     </button>
-    <!-- hover the hairline for half a second and the artwork and title give way to the
-         times and a thick timeline; leave and they come back, as slowly -->
+    <!-- hover the hairline for half a second and the artwork and title give way to the times
+         (centred on the bar) with a timeline under them; leave and it sinks away again, fast -->
     <div class="np__time" aria-hidden="true">
-      <span class="np__t" data-np-elapsed>0:00</span>
+      <span class="np__tl"><span class="np__t" data-np-elapsed>0:00</span><span class="np__t" data-np-total>0:00</span></span>
       <div class="np__tscrub" data-np-tscrub>
         <div class="np__ttrack"><div class="np__tfill" data-np-tfill></div></div>
       </div>
-      <span class="np__t" data-np-total>0:00</span>
     </div>
     <div class="np__scrub" data-np-scrub role="slider" tabindex="0" aria-label="Seek"
          aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">

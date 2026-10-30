@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" class="vault-html">
+<head>
+<script>
+/* Runs before anything else in the document, so nothing can paint first:
+   a tab that has already typed the Vault's password (at the page pill, or
+   at the door below) never sees the door. */
+try {
+  if (sessionStorage.getItem('kas-vault') === '1') {
+    document.documentElement.classList.add('is-remembered');
+  }
+} catch (_) {}
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Vault — Keep A Secret</title>
+<meta name="description" content="Finished songs, ready to cut. By invitation only.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#08080a">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Keep A Secret">
+<meta property="og:title" content="Keep A Secret — The Vault">
+<meta property="og:description" content="Finished songs, ready to cut. By invitation only.">
+<meta property="og:url" content="https://keepasecret.nl/vault.html">
+<meta property="og:image" content="https://keepasecret.nl/img/track-1.jpg">
+
+<link rel="preload" as="font" type="font/otf" href="fonts/MonumentExtended-Ultrabold.otf" crossorigin>
+<link rel="preload" as="font" type="font/otf" href="fonts/MonumentExtended-Regular.otf" crossorigin>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/vault.css">
+<script>
+/* Keeps the lettering out of sight until Monument Extended is in, instead
+   of flashing it in a fallback face first. Gives up after 1.2s so a slow
+   or failed font can never hold the page back. */
+(function () {
+  var d = document.documentElement, done = function () { d.classList.remove('fonts-wait'); };
+  d.classList.add('fonts-wait');
+  try {
+    Promise.all([document.fonts.load('800 1em "Monument Extended"'), document.fonts.load('400 1em "Monument Extended"')]).then(done, done);
+  } catch (e) { done(); }
+  setTimeout(done, 1200);
+})();
+</script>
+<script src="js/transition.js"></script>
+</head>
+<body class="page-vault">
+
+<!-- The Vault's own door, for a visitor who arrives here without having been
+     asked at the page pill (a direct link) — so it is no way round the
+     password. A doorman, not a lock: see the note on CONFIG.gate in js/config.js. -->
+<div class="gate" data-gate>
+  <div class="gate__inner">
+    <p class="gate__mark">Keep A Secret</p>
+    <p class="gate__eyebrow">By invitation</p>
+    <form class="gate__form" data-gate-form>
+      <input class="gate__input" data-gate-input type="password" placeholder="Password"
+             aria-label="Password" autocomplete="off" autocapitalize="characters"
+             autocorrect="off" spellcheck="false" autofocus>
+      <button class="gate__btn" type="submit">Enter</button>
+    </form>
+  </div>
+</div>
+
+<!-- the way between the pages: the slider sits under the one you are on (js/nav.js).
+     "The Vault" asks for its password first (CONFIG.gate). -->
+<nav class="seg" data-seg aria-label="Pages">
+  <span class="seg__thumb" aria-hidden="true"></span>
+  <a class="seg__btn" href="index.html">Portfolio</a>
+  <a class="seg__btn" href="vault.html" data-vault aria-current="page">The Vault</a>
+</nav>
+
+<header class="vlt__bar">
+  <a class="wordmark" href="index.html">
+    <span class="wordmark__main">Keep A Secret</span>
+    <span class="wordmark__sub">The Vault</span>
+  </a>
+  <a class="tag" data-contact-link href="mailto:contact@keepasecret.nl">Contact</a>
+</header>
+
+<main class="vlt">
+  <!-- no visible title — the pill already says where you are; the page keeps one for screen readers -->
+  <h1 class="vlt__title">The Vault</h1>
+
+  <!-- one heading and one list per language, one row per song, built from CONFIG.vault.tracks -->
+  <div data-groups></div>
+
+  <footer class="vlt__foot">
+    <p>&copy; Keep A Secret. All Rights Reserved</p>
+    <p>Written &amp; Produced by Keep A Secret</p>
+  </footer>
+</main>
+
+<audio data-audio preload="none"></audio>
+
+<script src="js/config.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/vault.js"></script>
+</body>
+</html>

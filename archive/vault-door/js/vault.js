@@ -44,7 +44,7 @@
       const status = STATUS_LABEL[t.status] ? t.status : 'available';
       const meta = [t.genre, t.bpm && `${t.bpm} BPM`, t.key].filter(Boolean).join(' · ');
       const mail = contact && status !== 'cut'
-        ? `mailto:${contact}?subject=${encodeURIComponent(`The Vault — ${t.title}`)}`
+        ? `mailto:${contact}?subject=${encodeURIComponent(`Demo request: ${t.title}`)}&body=${encodeURIComponent(`Hi,\n\nI'd like to request the demo of "${t.title}".\n\n`)}`
         : null;
 
       const li = document.createElement('li');

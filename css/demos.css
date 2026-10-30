@@ -1,0 +1,287 @@
+/* ============================================================
+   KEEP A SECRET — DEMOS (demos.html)
+   Loaded after css/styles.css, which supplies the fonts, the tokens and
+   the door. Same type, same play button and same timeline as the player
+   on the portfolio — laid out as a plain list, one song under the next.
+   ============================================================ */
+
+/* styles.css locks <html>/<body> to the viewport for the portfolio's one
+   fixed room; this is a page that scrolls */
+html.demos-html,
+html.demos-html body {
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* the lettering stays out of sight while Monument Extended arrives
+   (script in demos.html's head) rather than flashing in a fallback */
+html.fonts-wait .vlt__bar,
+html.fonts-wait .vlt { visibility: hidden; }
+
+.page-demos {
+  background:
+    radial-gradient(120% 70% at 50% 0%, #121215 0%, #08080a 46%, #030304 78%, #000 100%) fixed,
+    #040405;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ---------- the bar ------------------------------------------- */
+.vlt__bar {
+  position: absolute; z-index: 20;
+  top: clamp(20px, 3.4vh, 40px);
+  left: clamp(20px, 3.4vw, 48px);
+  right: clamp(20px, 3.4vw, 48px);
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 20px;
+}
+
+/* the wordmark and the page's name under it are the shared ones from css/styles.css —
+   the same on the player and the portfolio */
+.vlt__bar .wordmark { display: block; }
+
+/* ---------- the page ------------------------------------------ */
+.vlt {
+  --gutter: clamp(20px, 5vw, 48px);
+  width: min(1040px, 100% - 2 * var(--gutter));
+  margin: 0 auto;
+  padding: clamp(120px, 19vh, 190px) 0 clamp(36px, 6vh, 56px);
+}
+
+.vlt__title {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.group + .group { margin-top: clamp(40px, 7vh, 72px); }
+.group__title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(24px, 3.6vw, 44px);
+  line-height: 1.05;
+  letter-spacing: .015em;
+}
+/* ---------- the list ------------------------------------------ */
+.rows {
+  list-style: none;
+  margin: clamp(22px, 3.6vh, 36px) 0 0;
+  padding: 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.row {
+  --pad: clamp(16px, 2.2vh, 22px);
+  position: relative;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1.5fr) 104px;
+  grid-template-areas: 'no info player ask';
+  align-items: center;
+  column-gap: clamp(14px, 2vw, 26px);
+  padding: var(--pad) clamp(0px, .6vw, 8px);
+  border-top: 1px solid var(--hairline);
+  transition: background-color .7s var(--ease);
+}
+/* the row that's playing is lit from its left edge, the way the room
+   around the player takes its light from the artwork */
+.row::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, 0) 62%);
+  opacity: 0;
+  transition: opacity .8s var(--ease);
+  pointer-events: none;
+}
+.row.is-playing::before { opacity: 1; }
+
+.row__no {
+  grid-area: no;
+  font-size: 11px;
+  letter-spacing: .14em;
+  font-variant-numeric: tabular-nums;
+  color: var(--w-30);
+  transition: color .5s var(--ease);
+}
+.row.is-playing .row__no { color: var(--white); }
+
+/* the player's title and artist: plain sans, bold over medium */
+.row__info { grid-area: info; min-width: 0; }
+.row__title {
+  margin: 0;
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: clamp(16px, 1.55vw, 20px);
+  letter-spacing: .01em;
+  line-height: 1.15;
+  color: rgba(255, 255, 255, .92);
+  transition: color .5s var(--ease);
+}
+.row.is-playing .row__title { color: #fff; }
+.row__artist {
+  margin: 5px 0 0;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: clamp(12px, 1.1vw, 14px);
+  letter-spacing: .01em;
+  color: rgba(255, 255, 255, .82);
+}
+.row__meta {
+  margin: 9px 0 0;
+  font-size: 10px;
+  letter-spacing: .2em;
+
+  color: var(--w-48);
+}
+.row__meta:empty { display: none; }
+.row__note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--w-48);
+}
+
+/* ---------- play + timeline: the player's, in a row ------------ */
+.row__player {
+  grid-area: player;
+  display: flex; align-items: center;
+  gap: clamp(8px, 1.4vw, 16px);
+  min-width: 0;
+}
+
+.row__play {
+  flex: 0 0 auto;
+  position: relative;
+  width: 52px; height: 52px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  /* a bit grey at rest, full white on hover or while playing — exactly
+     the player's transport buttons */
+  color: #999;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform .32s var(--ease), color .32s var(--ease), opacity .6s ease;
+}
+.row__play svg {
+  position: absolute;
+  width: 56%;
+  fill: currentColor; stroke: currentColor;
+  stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round;
+  transition: opacity .35s var(--ease), transform .35s var(--ease);
+}
+.row__play .i-pause { stroke: none; }
+/* the triangle's weight sits left, so both are nudged right by the same
+   amount to share an optical centre — same as .ctrl__icon in the player */
+.row__play .i-play  { transform: translateX(6%) scale(1); }
+.row__play .i-pause { transform: translateX(6%) scale(1); }
+.row.is-playing .row__play { color: #fff; }
+.row.is-playing .row__play .i-play  { opacity: 0; transform: translateX(6%) scale(0); }
+.row:not(.is-playing) .row__play .i-pause { opacity: 0; transform: translateX(6%) scale(0); }
+@media (hover: hover) and (pointer: fine) {
+  .row__play:not(:disabled):hover { color: #fff; transform: scale(1.08); }
+}
+.row__play:not(:disabled):active { color: #fff; transform: scale(1.08); }
+.row__play:disabled { cursor: default; opacity: .45; }
+
+.row__scrub {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 12px 0;
+  cursor: pointer;
+  touch-action: none;
+}
+.row__scrub[aria-disabled='true'] { cursor: default; opacity: .5; }
+.row__track {
+  position: absolute; top: 50%; left: 0; right: 0;
+  transform: translateY(-50%);
+  height: 6px;
+  border-radius: 999px;
+  background: #3a3a3d;
+  overflow: hidden;
+  transition: height .32s var(--ease);
+}
+.row__scrub.is-held .row__track { height: 13px; }
+@media (hover: hover) and (pointer: fine) {
+  .row__scrub:not([aria-disabled='true']):hover .row__track { height: 13px; }
+}
+.row__fill {
+  height: 100%; width: 0;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, .6);
+  transition: width .18s linear;
+}
+.row__scrub.is-scrubbing .row__fill { transition: none; }
+
+.row__time {
+  flex: 0 0 auto;
+  min-width: 3.3em;
+  text-align: right;
+  font-size: 12px;
+  letter-spacing: .14em;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, .75);
+}
+
+.row__ask {
+  grid-area: ask;
+  justify-self: end;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: .3em;
+
+  white-space: nowrap;
+  color: var(--w-72);
+  transition: color .5s var(--ease), text-shadow .5s var(--ease);
+}
+.row__ask::after { content: ' \2192'; letter-spacing: 0; }
+.row__ask:hover { color: #fff; text-shadow: 0 0 16px rgba(255, 255, 255, .3); }
+
+.row__pending {
+  grid-area: ask; justify-self: end;
+  margin: 0;
+  font-size: 9px;
+  letter-spacing: .26em;
+
+  color: var(--w-30);
+}
+
+/* ---------- foot ---------------------------------------------- */
+.vlt__foot {
+  margin-top: clamp(56px, 9vh, 96px);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  text-align: center;
+}
+.vlt__foot p {
+  margin: 0;
+  font-family: Helvetica, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 9.5px;
+  line-height: 1.16;
+  letter-spacing: .1em;
+  color: #cecece;
+}
+
+/* ---------- narrower screens: the row folds into two lines ----- */
+@media (max-width: 860px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'info'
+      'player'
+      'ask';
+    row-gap: 10px;
+  }
+  /* the page pill drops below the wordmark here (see .seg in styles.css) */
+  .vlt { padding-top: 172px; }
+  .row__no { display: none; }
+  .row__ask, .row__pending { justify-self: start; margin-top: 2px; }
+  .row__play { margin-left: -10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row::before { transition: none; }
+}

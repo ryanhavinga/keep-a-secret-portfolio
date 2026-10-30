@@ -45,7 +45,7 @@ html.fonts-wait .seg { visibility: hidden; }
 }
 .pf__bar .wordmark { display: block; }
 /* the wordmark and the page's name under it are the shared ones from css/styles.css —
-   the same on the player and the Vault */
+   the same on every page */
 
 /* ---------- the shelf ------------------------------------------ */
 .pf {
@@ -108,31 +108,41 @@ html.fonts-wait .seg { visibility: hidden; }
 
 .cd {
   --h: 280; --s: 60; --l: 38;       /* the spine's tint, set from the artwork by portfolio.js */
-  --x: calc(var(--k, 0) * var(--p));
+  --x: calc(var(--k, 0) * var(--p) + var(--dx, 0px));     /* --dx: the shift that makes room for the cover that is playing */
   /* all the pointer does is lift a cover a little (--mag is 0..1, eased
      in JS), so it never moves into its neighbours */
-  --y: calc(var(--mag, 0) * var(--w) * -.1);
+  --y: calc(var(--ym, var(--mag, 0)) * var(--w) * -.1);      /* --ym: the same lift, eased away by JS once the cover is pulled out */
   position: absolute; top: 0; left: 50%;
   width: var(--w); height: var(--w);
   transform-style: preserve-3d;      /* inside one cover: its face and its spine */
   will-change: transform;
-  /* Its place along the row is the individual `translate` property, kept
-     apart from `transform` (the hover lift, written every frame by JS) so
-     each can animate without disturbing the other. */
-  translate: var(--x) 0;
-  transition: translate .6s cubic-bezier(.22, 1.04, .3, 1);
+  /* Its place along the row (and how far it stands forward, --z) is the individual `translate`
+     property, and its turn is the individual `rotate`, both kept apart from `transform` (the hover
+     lift, written every frame by JS) so each can animate without disturbing the others. */
+  translate: var(--x) var(--ly, 0px) var(--z, 0px);
+  transition: translate .7s cubic-bezier(.3, .6, .2, 1), rotate .55s cubic-bezier(.45, 0, .25, 1);
 }
+/* The cover pulled out stands higher (--ly) where it used to rise to on hover, and stays put: pointing at it
+   only zooms it in a touch (--zm, eased in by JS as the hover lift is eased out, so nothing jumps when the
+   cover changes over), about the cover's own middle rather than the hinge it turns on. */
+.cd { scale: calc(1 + var(--zm, 0) * .03); }
+.cd--l { translate: calc(var(--x) - var(--w) * var(--zm, 0) * .015) var(--ly, 0px) var(--z, 0px); }
+.cd--r { translate: calc(var(--x) + var(--w) * var(--zm, 0) * .015) var(--ly, 0px) var(--z, 0px); }
+/* the cover pulled out of the stack slides out spine first, then turns quickly and smoothly to face you */
+.cd.is-front, .fl.is-front { transition: translate .6s cubic-bezier(.2, .75, .2, 1), rotate .5s cubic-bezier(.45, 0, .25, 1); }
 .cd.no-tr { transition: none !important; }
 /* left of the middle: hinged on its left edge, face turned to the right;
    right of it: hinged on its right edge, face turned to the left */
 .cd--l {
   transform-origin: 0 50%;
-  transform: translate3d(0, var(--y), 0) rotateY(var(--rot, 90deg));
+  transform: translate3d(0, var(--y), 0);
+  rotate: y var(--rot, 90deg);
 }
 .cd--r {
   margin-left: calc(var(--w) * -1);
   transform-origin: 100% 50%;
-  transform: translate3d(0, var(--y), 0) rotateY(calc(var(--rot, 90deg) * -1));
+  transform: translate3d(0, var(--y), 0);
+  rotate: y calc(var(--rot, 90deg) * -1);
 }
 
 .cd__btn {
@@ -166,7 +176,11 @@ html.fonts-wait .seg { visibility: hidden; }
   position: absolute; inset: 0;
   backface-visibility: hidden;
   pointer-events: none;
+  transition: opacity .8s var(--ease);
 }
+/* the cover that is playing turns to face you: nothing tucked under a neighbour, nothing out of focus */
+.cd.is-front .cd__shade { opacity: 0; }
+.cd.is-front .cd__face { filter: none !important; transition: filter .35s var(--ease); }   /* an outermost cover loses its blur smoothly */
 .cd--l .cd__shade { background: linear-gradient(to right, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .3) 68%, rgba(0, 0, 0, .78) 100%); box-shadow: 0 1px 0 var(--edge-dark), inset 0 1px 0 var(--edge-lite); }
 .cd--r .cd__shade { background: linear-gradient(to left,  rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .3) 68%, rgba(0, 0, 0, .78) 100%); box-shadow: 0 1px 0 var(--edge-dark), inset 0 1px 0 var(--edge-lite); }
 
@@ -194,11 +208,11 @@ html.fonts-wait .seg { visibility: hidden; }
    strip showing between them and the break. The lit edges, a light tint of the colour,
    are inset on the outer side and along the top. All faint. */
 .cd {
-  --edge-dark: hsl(var(--h) calc(var(--s) * 1%) 11% / .7);
-  --edge-lite: hsl(var(--h) calc(var(--s) * 1%) 80% / .3);
+  --edge-dark: hsl(var(--h) calc(var(--s) * 1%) 11% / .4);
+  --edge-lite: hsl(var(--h) calc(var(--s) * 1%) 80% / .16);
 }
-.cd--l .cd__edge { box-shadow: 1px 1px 0 var(--edge-dark), inset 1.5px 0 0 var(--edge-lite), inset 0 1.5px 0 var(--edge-lite); }
-.cd--r .cd__edge { box-shadow: -1px 1px 0 var(--edge-dark), inset -1.5px 0 0 var(--edge-lite), inset 0 1.5px 0 var(--edge-lite); }
+.cd--l .cd__edge { box-shadow: 1px 1px 0 var(--edge-dark), inset 1px 0 0 var(--edge-lite), inset 0 1px 0 var(--edge-lite); }
+.cd--r .cd__edge { box-shadow: -1px 1px 0 var(--edge-dark), inset -1px 0 0 var(--edge-lite), inset 0 1px 0 var(--edge-lite); }
 .cd--l .cd__edge { left: calc(var(--t) * -1);  transform-origin: 100% 50%; transform: rotateY(-90deg); }
 .cd--r .cd__edge { left: 100%;                  transform-origin: 0 50%;    transform: rotateY(90deg); }
 
@@ -235,16 +249,17 @@ html.fonts-wait .seg { visibility: hidden; }
   background: radial-gradient(closest-side, rgba(255, 255, 255, .05), rgba(255, 255, 255, 0));
 }
 .fl {
-  --x: calc(var(--k, 0) * var(--p));
+  --x: calc(var(--k, 0) * var(--p) + var(--dx, 0px));
   position: absolute; top: 0; left: 50%;
   width: var(--w); height: var(--w);
   transform-style: preserve-3d;
-  translate: var(--x) 0;
-  transition: translate .52s cubic-bezier(.22, 1.04, .3, 1), opacity .25s var(--ease);
+  translate: var(--x) 0 var(--z, 0px);
+  transition: translate .6s cubic-bezier(.3, .6, .2, 1), rotate .55s cubic-bezier(.45, 0, .25, 1), opacity .25s var(--ease);
 }
 .fl.no-tr { transition: none !important; }
-.fl.cd--l { transform-origin: 0 50%;    transform: rotateY(var(--rot, 90deg)); }
-.fl.cd--r { transform-origin: 100% 50%; transform: rotateY(calc(var(--rot, 90deg) * -1)); margin-left: calc(var(--w) * -1); }
+.fl.cd--l { transform-origin: 0 50%;    rotate: y var(--rot, 90deg); }
+.fl.cd--r { transform-origin: 100% 50%; rotate: y calc(var(--rot, 90deg) * -1); margin-left: calc(var(--w) * -1); }
+.fl.is-front .fl__edge { opacity: 0 !important; }          /* turned to face you, it has no spine to reflect */
 
 .fl__glow {
   position: absolute; left: -45%; top: calc(100% + 7px);      /* reaches out past the front of the cover, towards you */
@@ -324,12 +339,12 @@ html.fonts-wait .seg { visibility: hidden; }
 .np {
   position: fixed; z-index: 30;              /* under the credits (z 60): they cover it, and it is simply there again when they close */
   left: 50%; transform: translateX(-50%);
-  bottom: clamp(18px, 3vh, 36px);              /* the same distance from the foot of the window as the page pill is from the top */
+  bottom: clamp(26px, 4vh, 46px);              /* a little higher than the page pill is from the top, so it stands clear of the foot of the window; still over the credit line, which its glass blurs */
   width: fit-content;
   max-width: calc(100vw - 2 * clamp(16px, 4vw, 48px));
   height: 58px;
   display: flex; align-items: center; gap: 10px;
-  padding: 0 8px 0 16px;             /* the left edge to the previous symbol is the same as the next symbol to the artwork (.np__ctrl) */
+  padding: 0 10.6px 0 16px;          /* the left edge to the previous symbol is the same as the next symbol to the artwork (.np__ctrl) */
   border-radius: 999px;
   background: rgba(255, 255, 255, .15);
   -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
@@ -339,16 +354,14 @@ html.fonts-wait .seg { visibility: hidden; }
 }
 .np[hidden] { display: none; }
 /* the bar isn't there until something is played: it rises from below the window with the first play */
-/* …and it steps out of the way while the pointer is down in the strip at the foot of the page (js/portfolio.js),
-   coming back up when the pointer is on the covers again */
-.np:not(.is-live), .np.is-tucked { transform: translate(-50%, calc(100% + 60px)); opacity: 0; pointer-events: none; }
+.np:not(.is-live) { transform: translate(-50%, calc(100% + 60px)); opacity: 0; pointer-events: none; }
 /* the middle of the bar: the artwork and title — or, while the hairline under them is
    hovered, the times and a thick timeline, which rise in from below. The bar itself
    never changes size. */
 .np__mid {
   position: relative; flex: 0 1 auto; min-width: 0;
   width: 316px; height: 100%;
-  margin-right: 8px;                 /* the hairline under it stops here, a little short of the speaker */
+  margin-right: 0;                   /* the hairline under it stops here; the speaker's spacing is set in .np's padding */
 }
 .np__who {
   position: absolute; inset: 0;
@@ -359,7 +372,7 @@ html.fonts-wait .seg { visibility: hidden; }
   transition: opacity .2s var(--ease) .06s, filter .2s var(--ease) .06s;
 }
 /* the artwork and title blur away quickly as the times come up from below — still just there behind them */
-.np.is-time .np__who { opacity: .22; filter: blur(7px); pointer-events: none; transition: opacity .2s var(--ease), filter .2s var(--ease); }
+.np.is-time .np__who { opacity: .75; filter: blur(3.5px); pointer-events: none; transition: opacity .2s var(--ease), filter .2s var(--ease); }
 .np__art {
   flex: 0 0 auto;
   width: 38px; height: 38px;
@@ -399,7 +412,7 @@ html.fonts-wait .seg { visibility: hidden; }
   transition: opacity .3s var(--ease), transform .3s var(--ease);
 }
 .np__btn--vol { width: 38px; height: 38px; }
-.np__btn--vol svg { width: 24px; fill: none; stroke-width: 1.7; }
+.np__btn--vol svg { width: 31px; fill: none; stroke-width: 1.7; }     /* bigger than it was (24px) */
 .np__btn--vol .i-body { fill: currentColor; }
 .np__btn--vol .i-mute { opacity: 0; }
 .np.is-muted .np__btn--vol .i-wave { opacity: 0; }
@@ -453,48 +466,45 @@ html.fonts-wait .seg { visibility: hidden; }
 .np__scrub {
   position: absolute; left: 0; right: 0; bottom: 0; height: 14px;
   cursor: pointer; touch-action: none;
-  transition: opacity .7s var(--ease);
+  transition: opacity .25s var(--ease);
 }
 .np.is-time .np__scrub { opacity: 0; pointer-events: none; }
 
-/* the other face of the middle: the times above, a thick timeline below it — a touch higher than
-   the hairline, inside the bar, and exactly as wide as the hairline it replaces */
+/* the other face of the middle: the times, centred on the bar's own middle, with a timeline under them as wide as
+   the hairline it replaces. The timeline's lower edge is where the hairline's is, so the space under it doesn't
+   change; it is thin enough to leave the times clear above it. It rises in a quick fade and sinks away quicker. */
 .np__time {
   position: absolute; inset: 0;
-  opacity: 0; transform: translateY(14px);
+  opacity: 0; transform: translateY(12px);
   pointer-events: none;
-  transition: opacity .35s var(--ease), transform .7s var(--ease);
+  transition: opacity .14s var(--ease), transform .18s var(--ease);
 }
-.np.is-time .np__time { opacity: 1; transform: none; pointer-events: auto; }
+.np.is-time .np__time {
+  opacity: 1; transform: none; pointer-events: auto;
+  transition: opacity .26s cubic-bezier(.25, .8, .3, 1), transform .3s cubic-bezier(.2, .85, .25, 1);
+}
+.np__tl {
+  position: absolute; left: 0; right: 0; top: 50%; height: 15px; margin-top: -7.5px;   /* the middle of the bar, top to bottom */
+  display: flex; align-items: center; justify-content: space-between;
+  pointer-events: none; color: #fff;
+}
 .np__t {
-  position: absolute; bottom: 27px;           /* right above the timeline */
-  font-family: var(--sans); font-size: 15px; font-weight: 500; line-height: 1;
+  font-family: var(--sans); font-size: 14px; font-weight: 600; line-height: 1;
   letter-spacing: .02em; font-variant-numeric: tabular-nums;
-  color: #fff;
 }
-.np__t:first-child { left: 0; }
-.np__t:last-child { right: 0; }
-.np__tscrub { position: absolute; left: 0; right: 0; bottom: 0; height: 34px; cursor: pointer; touch-action: none; }
-/* the player page's timeline, in glass: it thickens under the pointer and when held, and fills up in white */
+.np__tscrub { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; cursor: pointer; touch-action: none; }
 .np__ttrack {
-  position: absolute; left: 0; right: 0; bottom: 14px; height: 10px;   /* a little above where the hairline sits, and well inside the bar even at its thickest */
-  transform: translateY(50%);                 /* grows round its own middle */
+  position: absolute; left: 0; right: 0; bottom: 6px; height: 11px;   /* a little above the hairline's place, and thick enough to sit close under the times */
   border-radius: 999px; background: rgba(255, 255, 255, .3); overflow: hidden;
-  transition: height .32s var(--ease);
-}
-.np__tscrub.is-held .np__ttrack { height: 14px; }
-@media (hover: hover) and (pointer: fine) {
-  .np__tscrub:hover .np__ttrack { height: 14px; }
 }
 .np__tfill {
   height: 100%; width: 0;
   background: #fff;
-  box-shadow: 0 0 10px rgba(255, 255, 255, .6);
   transition: width .18s linear;
 }
 .np__tscrub.is-scrubbing .np__tfill, .np__scrub.is-scrubbing .np__fill { transition: none; }
 .np__track {
-  position: absolute; left: 0; right: 0; bottom: 3px; height: 2px;   /* just under the middle of the gap between the artwork and the bar's lower edge */
+  position: absolute; left: 0; right: 0; bottom: 4px; height: 2px;   /* exactly in the middle of the gap between the artwork's foot and the bar's lower edge */
   border-radius: 999px;
   background: rgba(255, 255, 255, .28);
   overflow: hidden;
@@ -506,44 +516,6 @@ html.fonts-wait .seg { visibility: hidden; }
   .np__scrub:hover .np__track { height: 5px; }
 }
 .np__scrub:focus-visible { outline-offset: 2px; }
-
-/* ============================================================
-   PLAY AND CREDITS FROM THE SHELF
-   Playing comes first: a click on a cover plays its track, or — on the one that is already
-   playing — opens its credits. Two small symbols on the spine do it explicitly: play at the
-   top (pause bars on the cover that is playing) and an "i" for the credits at the bottom.
-   Both are there while the pointer is on that cover (always, where there is no pointer to
-   hover with).
-   ============================================================ */
-.cd__play {
-  position: absolute; left: 50%; top: calc(var(--w) * .022);
-  width: max(26px, calc(var(--t) * 1.05)); height: max(26px, calc(var(--t) * 1.05));
-  margin-left: calc(max(26px, calc(var(--t) * 1.05)) / -2);
-  display: none; place-items: center;
-  color: #fff; cursor: pointer;
-  opacity: 0; transition: opacity .35s var(--ease), transform .3s var(--ease);
-}
-.cd.has-audio .cd__play { display: grid; }
-.cd__play svg { display: block; width: 60%; fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
-.cd__play .i-pause { display: none; stroke: none; }
-.cd.is-playing .cd__play .i-play { display: none; }
-.cd.is-playing .cd__play .i-pause { display: block; }
-.cd:hover .cd__play, .cd.is-now .cd__play { opacity: 1; }
-@media (hover: none) { .cd.has-audio .cd__play { opacity: 1; } }
-@media (hover: hover) and (pointer: fine) { .cd__play:hover { transform: scale(1.18); } }
-.cd__info {
-  position: absolute; left: 50%; bottom: calc(var(--w) * .022);
-  width: max(26px, calc(var(--t) * 1.05)); height: max(26px, calc(var(--t) * 1.05));
-  margin-left: calc(max(26px, calc(var(--t) * 1.05)) / -2);
-  display: grid; place-items: center;
-  color: #fff; cursor: pointer;
-  opacity: 0; transition: opacity .35s var(--ease), transform .3s var(--ease);
-}
-.cd__info svg { display: block; width: 62%; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
-.cd__info .dot { fill: currentColor; stroke-width: 1.4; }
-.cd:hover .cd__info { opacity: 1; }
-@media (hover: none) { .cd__info { opacity: 1; } }
-@media (hover: hover) and (pointer: fine) { .cd__info:hover { transform: scale(1.18); } }
 
 /* ============================================================
    THE FOCUS VIEW

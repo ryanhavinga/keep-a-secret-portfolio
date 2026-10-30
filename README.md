@@ -5,13 +5,12 @@ whole folder onto any host (Netlify, Vercel, Cloudflare Pages, plain FTP).
 
 ```
 index.html          the landing page: the portfolio
-player.html         the player
-vault.html          the Vault
+demos.html          the demos (unreleased songs)
 css/styles.css      all styling
 js/config.js        ← everything you normally edit lives here
-js/app.js           carousel, player, grain
-js/nav.js           the Portfolio · Player · The Vault pill, and the Vault's password
-archive/            switched-off things kept for later (the Vault's 3D door)
+js/portfolio.js     the landing page: shelf, now-playing bar
+js/nav.js           the Portfolio · Demos pill
+archive/            switched-off things kept for later: the Player page, the 3D-door vault, an older list page
 img/                artwork
 audio/              your audio files
 fonts/              Monument Extended
@@ -19,8 +18,7 @@ fonts/              Monument Extended
 
 ## Run it locally
 
-Open `index.html` directly, or — better — serve it, so the player (`player.html`) can sample the real
-dominant colour out of each artwork:
+Open `index.html` directly, or — better — serve it:
 
 ```bash
 python3 -m http.server 4321
@@ -31,6 +29,11 @@ Then visit `http://localhost:4321`.
 > Opening the file straight off disk (`file://`) works fine, but browsers block reading
 > image pixels from local files, so the panel falls back to the `color` value written in
 > `js/config.js` for each track. Those fallbacks are already set to match your covers.
+
+> **The Player page is switched off.** `player.html` and `js/app.js` (the carousel, its light and everything the
+> sections "Tracks", "Footer credit", "Panel order", "Navigating" and "Notes" below say about *the player*) are
+> kept in `archive/player/` — see the README there for how to put them back. Their styling is still in
+> `css/styles.css`. The 3D safe-door version of the demos page is kept there too (`archive/vault-door/`).
 
 ## Editing
 
@@ -79,35 +82,31 @@ Set `logoImage: 'img/logo.svg'` to swap the whole wordmark for an image.
 > (macOS's `afconvert` can *read* MP3 but has no MP3 *encoder* — AAC is what it actually
 > produces. For true `.mp3` output, encode with `ffmpeg` or a DAW's export instead.)
 
-### The Vault (`vault.html`)
-A plain page for finished songs that are still available for an artist to cut, kept apart from the portfolio
-(released records). Reached with "The Vault" on the pill at the top of every page (see below), which asks for its
-password. No title of its own; the songs are listed under a heading per language (Nederlandstalig, Engelstalig),
+### Demos (`demos.html`)
+A plain page for unreleased songs that are still available for an artist to cut, kept apart from the portfolio
+(released records). Reached with "Demos" on the pill at the top of every page (see below). No title of its own; the songs are listed under a heading per language (Nederlandstalig, Engelstalig),
 each a list: a number, the title with a small line of genre · BPM · key (and a note, if
-there is one), the same play button and timeline as the player, and a "Request" link that opens an email about
-that song. Playing one stops the last; when one ends the next starts. The pill and the wordmark sit above it,
-as everywhere.
+there is one), the same play button and timeline as the player, and a "Request" link that opens an email to
+`contact` with the subject "Demo request: <title>" and a line asking for that demo. Playing one stops the last; when
+one ends the next starts.
 
-Its content is `vault` in `js/config.js`: `contact` (where "Request" mails to) and `tracks` — one
+Its content is `demos` in `js/config.js`: `contact` (where "Request" mails to) and `tracks` — one
 entry per song (`title`, `language` (the heading it sits under), `audio`, `duration`, optional `genre`/`bpm`/`key`/`note`, and `status`: `'available'`,
 `'on hold'` or `'cut'`; the last two replace the Request link with their label). A song with `audio: null` shows
-"Audio to follow". The page is `vault.html`, `css/vault.css` and `js/vault.js`.
+"Audio to follow". The page is `demos.html`, `css/demos.css` and `js/demos.js`.
 
-The earlier version — a 3D safe door that opens onto a wall of boxes — is switched off and saved in
-`archive/vault-door/`, with its own README on how to put it back.
+This page used to be called **The Vault**, with a 3D safe door that opened onto a wall of deposit boxes; that
+version is saved in `archive/vault-door/` (README there). It still uses the old names (`vault.html`, `CONFIG.vault`).
 
-### The page pill and the Vault's password
-Every page (Player, Portfolio, The Vault) has the same pill at the top: `Portfolio · Player · The Vault`. The dark
-slider sits under the page you are on; choosing another page glides it across, then the page fades over. It is
-markup in each HTML page (`<nav class="seg" data-seg>`) driven by `js/nav.js`, styled in `css/styles.css`.
+### The page pill
+Every page (Portfolio, Demos) has the same pill at the top: `Portfolio · Demos`. The dark slider sits under the page
+you are on; choosing another page glides it across, then the page fades over. It is markup in each HTML page
+(`<nav class="seg" data-seg>`) driven by `js/nav.js`, styled in `css/styles.css`.
 
-Choosing **The Vault** asks for a password first: a prompt fades up over the page you are on, with Back / Esc / a tap
-beside it to put it away again. A wrong one is a shake and nothing else. Once let in, that browser tab stays in for
-as long as it is open. `vault.html` has the same door on itself, so a direct link to it is no way round the password.
-The password is `gate.passwordHash` in `js/config.js` (a SHA-256 hash, not the password itself — the comment there shows
-how to make a new one). It is a doorman, not a lock: nothing server-side is checking, so it stops a link being
-passed around, not anyone determined. The old front-door password (SEP26 / OKT26) and the publishers' page (HAP)
-are gone; HAP is now the Vault's password.
+**There are no passwords on the site any more** — the front door (SEP26 / OKT26), the publishers' page (HAP) and the
+Demos password are all gone, and every page is open to anyone with the link. The pages say `noindex`, so they are not
+found by search, but they are not protected. If something ever needs protecting, put the site behind your host's own
+password (Netlify and Cloudflare both do this server-side).
 
 ### Portfolio (`index.html`, the landing page)
 Everything we've made, on its own page: the covers stand upright in a row, each turned toward the middle, so
@@ -127,9 +126,14 @@ Don't put `transform-style: preserve-3d` on `.shelf` — that is what would brin
 
 **Filling the row out.** The set runs round again from the start until the row holds
 `CONFIG.portfolio.fill` covers (default 10: 7 tracks → the first 3 appear a second time; it never cuts real
-tracks). The extras are the same releases, so any of them opens that release, and only the first run is exposed to
-screen readers and the keyboard. Set `fill` to the number of tracks to show each exactly once. (There used to be a
-filter by artist at the top; the top of the page is now the page pill.)
+tracks). The extras are the same releases, so any of them plays that release, and only the first run is exposed to
+screen readers and the keyboard. Set `fill` to the number of tracks to show each exactly once.
+
+**Playing pulls a cover out of the stack.** The stack steps back a little and the playing cover slides straight out
+of it, spine first, then turns quickly and smoothly to face you in the middle; the stack stays behind it with a gap
+where the cover was. Playing another track turns the first back and slides it home (the pull-out in reverse) while the next comes out; the cover you click is the one that comes out, even when a release is in the row twice. A click on the empty space above or below the stack puts the cover back in its place, stops the music and takes the bar away; while something is playing the bar never hides on hover. (The
+poses are in `place()` / `setFront()` in `js/portfolio.js`; how far the stack steps back is `BACK`, how far a cover
+slides out is `OUT`.) There used to be a filter by artist at the top; the top of the page is now the page pill.
 
 The player on the front page is for what we *feature*; this page is the whole catalogue. It's
 `CONFIG.portfolio` in `js/config.js` — one line per track: `title`, `artist`, `artwork`, a fallback `color`,

@@ -7,6 +7,7 @@
   'use strict';
 
   const $  = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const html = document.documentElement;
@@ -79,79 +80,129 @@
   const shelf = $('[data-shelf]');
   const pfEl = $('[data-pf]');
   const floor = $('[data-floor]');
-  /* One cover per track, and the set runs round again from the start until
-     the row holds CONFIG.portfolio.fill covers. The extras are the same
-     releases, so a click on any copy opens that release; only the first run
-     (rep 0) is exposed to screen readers and the keyboard. */
-  const TOTAL = Math.max(tracks.length, Math.floor(PF.fill || tracks.length));
+  /* One cover per track, and the set runs round again from the start until the row holds
+     CONFIG.portfolio.fill covers. The extras are the same releases, so a click on any copy plays that release;
+     only the first run is exposed to screen readers and the keyboard. */
+  const T = tracks.length;
+  const N = Math.max(T, Math.floor(PF.fill || T));
   const items = [];
-  for (let i = 0; i < TOTAL; i++) {
-    const t = tracks[i % tracks.length], ti = i % tracks.length, rep = Math.floor(i / tracks.length);
-    const n = i;
+  for (let i = 0; i < N; i++) {
+    const t = tracks[i % T], ti = i % T, rep = Math.floor(i / T);
+    const row = i - (N - 1) / 2;                           // its signed distance from the middle, in covers
+    const side = row < 0 ? 'l' : 'r';                      // left of the middle: hinged on its left edge; right of it: on its right
     const li = document.createElement('li');
-    li.className = 'cd';
+    li.className = `cd cd--${side}`;
     if (rep > 0) li.setAttribute('aria-hidden', 'true');
     li.innerHTML = `
       <div class="cd__btn" role="button" tabindex="${rep ? -1 : 0}" aria-label="Open ${esc(t.title)} by ${esc(t.artist)}">
         <div class="cd__bob">
           <img class="cd__face" src="${esc(t.artwork)}" alt="${rep ? '' : esc(t.title) + ' — artwork'}" decoding="async">
           <div class="cd__shade"></div>
-          <div class="cd__edge"><span class="cd__play" data-play aria-hidden="true"><svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.5 20 12 7 19.5Z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><rect x="5" y="4.5" width="5" height="15" rx="1.2"/><rect x="14" y="4.5" width="5" height="15" rx="1.2"/></svg></span><span class="cd__label"><b>${esc(t.title)}</b><span>${esc(t.artist)}</span></span><span class="cd__info" data-info aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 11v5.2"/><circle class="dot" cx="12" cy="7.9" r=".6"/></svg></span></div>
+          <div class="cd__edge"><span class="cd__label"><b>${esc(t.title)}</b><span>${esc(t.artist)}</span></span></div>
         </div>
       </div>`;
     shelf.appendChild(li);
     /* its half of the ground: a pool of the cover's own colour and its spine's reflection,
        laid out like the cover itself (same place along the row, same turn) */
     const fl = document.createElement('div');
-    fl.className = 'fl';
+    fl.className = `fl cd--${side}`;
     fl.innerHTML = `<div class="fl__glow"></div><div class="fl__edge"></div>`;
     floor.appendChild(fl);
-    /* pos: its place along the row */
-    const it = { li, fl, t, n, ti, rep, pos: n, k: 0, side: 'r', btn: $('.cd__btn', li), face: $('.cd__face', li), tint: tintOf(t, null) };
+    const it = { ym: 0, zm: 0, li, fl, t, n: i, ti, rep, row, pos: i, side, pose: 'slot', btn: $('.cd__btn', li), face: $('.cd__face', li), tint: tintOf(t, null) };
     paintTint(li, it.tint); paintTint(fl, it.tint);
     /* swap the configured colour for the real one as soon as the artwork has loaded */
     const real = () => { it.tint = tintOf(t, it.face); paintTint(li, it.tint); paintTint(fl, it.tint); };
     if (it.face.complete && it.face.naturalWidth) real(); else it.face.addEventListener('load', real, { once: true });
     /* Playing comes first. A click on a cover plays its track (the bar comes up); on the one that is already
-       playing it opens the credits instead. The symbols on the spine are the explicit ways: play / pause at
-       the top, the credits ("i") at the bottom. */
-    it.btn.addEventListener('click', ev => {
-      if (ev.target.closest('[data-info]')) { Focus.open(n); return; }
-      if (ev.target.closest('[data-play]')) { NP.playTrack(it.ti); return; }
-      if (NP.has(it.ti) && !NP.isPlaying(it.ti)) NP.playTrack(it.ti); else Focus.open(n);
+       playing it opens the credits instead. */
+    it.btn.addEventListener('click', () => {
+      if (NP.has(it.ti) && !NP.isPlaying(it.ti)) {
+        pick = it;                                           // the copy that was clicked is the one that opens
+        NP.playTrack(it.ti);
+        if (NP.live() && front !== it) setFront(it);
+      } else Focus.open(it.n);
     });
     it.btn.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); it.btn.click(); } });
     items.push(it);
   }
   if (PF.heading) $('[data-pf-heading]').textContent = PF.heading;
+  pfEl.style.setProperty('--n', N);
+  pfEl.toggleAttribute('data-odd', N % 2 === 1);
 
   /* the two small icons bottom left: shown only when CONFIG has a link for them */
   [['[data-instagram]', CONFIG.instagram && CONFIG.instagram.url], ['[data-spotify-playlist]', CONFIG.spotify && CONFIG.spotify.url]]
     .forEach(([sel, url]) => { const a = $(sel); if (a && url) { a.href = url; a.hidden = false; } });
 
-  /* Lay the covers out along the row, centred: each gets its signed distance
-     from the middle (k), which side of it that puts it on (the left ones face
-     right, the right ones face left), and the row sizes itself from how many
-     there are (--n → --w, --p in css/portfolio.css). */
-  function layout() {
-    const cnt = items.length;
-    pfEl.style.setProperty('--n', Math.max(1, cnt));
-    pfEl.toggleAttribute('data-odd', cnt % 2 === 1);
+  /* a CSS length custom property (--w, --p), in pixels */
+  const probeEl = document.createElement('i');
+  probeEl.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;height:0;';
+  pfEl.appendChild(probeEl);
+  const px = name => { probeEl.style.width = `var(${name})`; return probeEl.getBoundingClientRect().width; };
+  const both = it => [it.li, it.fl];
+
+  /* ---- the cover that is playing is pulled out of the stack ----
+     The stack stays where it is, just stepping back a little, with a gap where the cover was. The cover
+     slides straight out towards you with its spine first (pose 'out'), then turns smoothly and quickly to face
+     you in the middle (pose 'flat'). The one it replaces turns back and slides home into its place. */
+  const BACK = .28;                                        // how far the stack steps back, as a share of a cover's width
+  const OUT = .2;                                          // how far a cover is slid out, spine first
+  const LIFT = .09;                                        // the cover that is out stands this much higher (a share of its width)
+  let front = null;
+  let wakeHover = () => {};                                // set below, where the hover spring lives
+  let pick = null;                                         // the copy of a release that was clicked (a release can be in the row twice)
+  const timers = [];
+  const later = (ms, fn) => { const id = setTimeout(fn, ms); timers.push(id); };
+  function place() {
+    const w = px('--w'), p = px('--p');
     items.forEach(it => {
-      it.k = it.pos - (cnt - 1) / 2;
-      it.side = it.k < 0 ? 'l' : 'r';
-      it.li.classList.toggle('cd--l', it.side === 'l');
-      it.li.classList.toggle('cd--r', it.side === 'r');
-      it.li.classList.toggle('is-rim', cnt >= 3 && (it.pos === 0 || it.pos === cnt - 1));   // the outermost two are softened
-      it.fl.classList.toggle('cd--l', it.side === 'l');
-      it.fl.classList.toggle('cd--r', it.side === 'r');
-      it.fl.classList.toggle('is-rim', it.li.classList.contains('is-rim'));
-      it.fl.style.setProperty('--k', it.k);
-      it.li.style.setProperty('--k', it.k);
-      it.li.style.zIndex = String(20 - Math.round(Math.abs(it.k) * 2));   // nearer the middle is drawn on top
+      let x = it.row * p, rot = 90, z = front ? -w * BACK : 0, zi = 20 - Math.round(Math.abs(it.row) * 2), ly = 0;
+      if (it.pose === 'pull') { z = w * OUT; }                // sliding out: it keeps its place in the paint order, so its neighbours still cover it
+      else if (it.pose === 'out') { z = w * OUT; zi = 40; ly = -w * LIFT; }
+      else if (it.pose === 'flat') { x = it.side === 'l' ? -w / 2 : w / 2; rot = 0; z = w * .05; zi = 40; ly = -w * LIFT; }
+      else if (it.pose === 'turn') { z = w * OUT; zi = 40; ly = -w * LIFT; }   // going back: turns edge-on where it stands, still in front of the stack
+      else if (it.pose === 'return') { zi = 40; }          // …then slides home into its slot, still in front until it has all but arrived
+      for (const el of both(it)) {
+        el.style.setProperty('--x', `${x.toFixed(1)}px`);
+        el.style.setProperty('--rot', `${rot}deg`);
+        el.style.setProperty('--z', `${z.toFixed(1)}px`);
+        el.classList.toggle('is-front', it.pose === 'out' || it.pose === 'flat');
+        el.classList.toggle('is-rim', it.n === 0 || it.n === N - 1);         // the outermost two are softened
+      }
+      it.li.style.zIndex = String(zi);
+      it.li.style.setProperty('--ly', `${ly.toFixed(1)}px`);
+      it.pos = it.n;
     });
   }
-  layout();
+  place();
+  addEventListener('resize', place);
+  /* Putting a cover back is the pull-out played backwards: it turns edge-on where it stands, slides in
+     into its slot, and only when it has all but arrived does it drop back into the stack's paint order
+     (the same threshold as on the way out), so it is never drawn through its neighbours on the way. */
+  function sendHome(it) {
+    clearTimeout(it.homeT); clearTimeout(it.seatT);
+    it.pose = 'turn'; place();
+    it.homeT = setTimeout(() => {
+      it.pose = 'return'; place();
+      it.seatT = setTimeout(() => { it.pose = 'slot'; place(); }, 400);
+    }, 280);
+  }
+  function setFront(f) {
+    timers.splice(0).forEach(clearTimeout);
+    const prev = front;
+    front = f;
+    if (prev && prev !== f) sendHome(prev);
+    if (f) {
+      clearTimeout(f.homeT); clearTimeout(f.seatT);
+      f.pose = 'pull';                                     // spine first, out of the stack — still covered by its neighbours
+      place();
+      later(340, () => { f.pose = 'out'; place(); });      // once it is clear of them it comes in front and rises a little
+      later(560, () => { f.pose = 'flat'; place(); });     // then round to face you, in the middle
+    }
+    items.forEach(it => { if (it !== f && it !== prev && it.pose !== 'turn' && it.pose !== 'return') it.pose = 'slot'; });
+    wakeHover();
+  }
+  /* of a track's copies in the row, the one nearest the middle comes out */
+  const nearest = ti => items.filter(it => it.ti === ti).sort((a, b) => Math.abs(a.row) - Math.abs(b.row))[0];
   /* the first layout places the covers, it doesn't fly them in from where they were created */
   items.forEach(it => { it.li.classList.add('no-tr'); it.fl.classList.add('no-tr'); });
   const settle = () => items.forEach(it => { it.li.classList.remove('no-tr'); it.fl.classList.remove('no-tr'); });
@@ -206,16 +257,27 @@
         const lift = Math.max(0, mags[n]);
         const m = lift.toFixed(4);
         it.li.style.setProperty('--mag', m); it.fl.style.setProperty('--mag', m);
+        /* the cover that is pulled out gives up its hover lift and takes up the little zoom instead — eased,
+           so nothing jumps at the moment it changes over */
+        const pulled = it.pose === 'pull' || it.pose === 'out' || it.pose === 'flat';
+        const k = 1 - Math.exp(-11 * dt);
+        it.ym += ((pulled ? 0 : lift) - it.ym) * k;
+        it.zm += ((pulled ? lift : 0) - it.zm) * k;
+        if (Math.abs(it.ym - (pulled ? 0 : lift)) > .002 || Math.abs(it.zm - (pulled ? lift : 0)) > .002) busy = true;
+        it.li.style.setProperty('--ym', it.ym.toFixed(4)); it.li.style.setProperty('--zm', it.zm.toFixed(4));
       });
 
-      pxv += (tpx - pxv) * (1 - Math.exp(-5 * dt));
-      pyv += (tpy - pyv) * (1 - Math.exp(-5 * dt));
-      if (Math.abs(tpx - pxv) > .002 || Math.abs(tpy - pyv) > .002) busy = true; else { pxv = tpx; pyv = tpy; }
+      /* with a cover pulled out and playing the viewpoint stays still (it would turn the big cover with the pointer) */
+      const gx = front ? 0 : tpx, gy = front ? 0 : tpy;
+      pxv += (gx - pxv) * (1 - Math.exp(-5 * dt));
+      pyv += (gy - pyv) * (1 - Math.exp(-5 * dt));
+      if (Math.abs(gx - pxv) > .002 || Math.abs(gy - pyv) > .002) busy = true; else { pxv = gx; pyv = gy; }
       for (const el of [shelf, floor]) { el.style.setProperty('--px', pxv.toFixed(4)); el.style.setProperty('--py', pyv.toFixed(4)); }
 
       if (busy) requestAnimationFrame(frame); else running = false;
     };
     const wake = () => { if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); } };
+    wakeHover = wake;
 
     /* Any part of a cover — its artwork or its spine — lifts it, and the
        gaps between covers belong to the nearest one, so sliding along the row
@@ -280,7 +342,7 @@
   const NP = (() => {
     const el = $('[data-np]'), audio = $('[data-np-audio]');
     const queue = tracks.map((t, ti) => ({ t, ti })).filter(q => q.t.audio);
-    const idle = { has: () => false, playTrack() {}, isPlaying: () => false, current: () => -1, live: () => false, onOpen: null };
+    const idle = { has: () => false, playTrack() {}, stop() {}, isPlaying: () => false, current: () => -1, live: () => false, onOpen: null };
     if (!el || !audio || !queue.length) { if (el) el.hidden = true; return idle; }
 
     const ui = {
@@ -288,7 +350,7 @@
       play: $('[data-np-play]', el), prev: $('[data-np-prev]', el), next: $('[data-np-next]', el),
       who: $('[data-np-open]', el), scrub: $('[data-np-scrub]', el), fill: $('[data-np-fill]', el),
       mid: $('[data-np-mid]', el), tscrub: $('[data-np-tscrub]', el), tfill: $('[data-np-tfill]', el),
-      elapsed: $('[data-np-elapsed]', el), total: $('[data-np-total]', el)
+      elapsed: $$('[data-np-elapsed]', el), total: $$('[data-np-total]', el)
     };
     let i = 0, loaded = -1, dragging = false;
     const api = { onOpen: null };
@@ -331,7 +393,7 @@
       const pct = d ? Math.min(100, t / d * 100) : 0;
       ui.fill.style.width = ui.tfill.style.width = `${pct}%`;
       ui.scrub.setAttribute('aria-valuenow', Math.round(pct));
-      ui.elapsed.textContent = time(t); ui.total.textContent = time(d);
+      ui.elapsed.forEach(e => { e.textContent = time(t); }); ui.total.forEach(e => { e.textContent = time(d); });
     }
     function show() {
       const { t } = queue[i];
@@ -380,29 +442,6 @@
     const prev = () => { if (loaded === i && audio.currentTime > 3) { audio.currentTime = 0; paint(); } else load(i - 1, !audio.paused); };
     const next = () => load(i + 1, !audio.paused);
 
-    /* The bar steps down out of the way as soon as the mouse is below the covers — anywhere under them, not
-       only under the bar itself — or above them (where the page pill comes down in its place), and comes back
-       up when the mouse is on the covers again. Straight above the
-       bar, on the way down to it, it stays put. */
-    let tucked = false;
-    const sync = () => {
-      el.classList.toggle('is-tucked', tucked);
-    };
-    document.addEventListener('pointermove', ev => {
-      if (ev.pointerType !== 'mouse' || tucked) return;
-      const rows = shelf.getBoundingClientRect();
-      if (ev.clientY < rows.top) { tucked = true; sync(); return; }     // above the covers the page pill comes down, and the bar goes
-      if (ev.clientY < rows.bottom) return;                             // still on the covers' rows
-      /* where the bar rests, not where it happens to be mid-slide */
-      const rest = { l: (innerWidth - el.offsetWidth) / 2, b: innerHeight - (parseFloat(getComputedStyle(el).bottom) || 0) };
-      const overBar = ev.clientX >= rest.l && ev.clientX <= rest.l + el.offsetWidth && ev.clientY <= rest.b;
-      if (!overBar) { tucked = true; sync(); }
-    }, { passive: true });
-    shelf.addEventListener('pointerover', ev => {
-      if (ev.pointerType === 'mouse' && tucked && ev.target.closest && ev.target.closest('.cd')) { tucked = false; sync(); }
-    });
-    document.addEventListener('np:change', sync);
-
     ui.play.addEventListener('click', toggle);
     ui.prev.addEventListener('click', prev);
     ui.next.addEventListener('click', next);
@@ -427,21 +466,35 @@
       const go = () => jump(ratio * len());
       if (isFinite(audio.duration) && audio.duration) go(); else audio.addEventListener('loadedmetadata', go, { once: true });
     };
+    /* every press on the thick timeline gives it, and the times with it, a quick swell and back — just for life */
+    const timeFace = $('.np__time', el);
+    let popping = null;
+    const pop = () => {
+      if (reduced || !timeFace.animate) return;
+      /* a press in the middle of a swell carries on from the size it has reached, so rapid presses stay smooth */
+      const from = parseFloat(getComputedStyle(timeFace).scale) || 1;
+      if (popping) popping.cancel();
+      popping = timeFace.animate([
+        { scale: String(from), easing: 'cubic-bezier(.3, 0, .2, 1)' },
+        { scale: '1.025', offset: .38, easing: 'cubic-bezier(.4, 0, .25, 1)' },
+        { scale: '1' }
+      ], { duration: 520 });
+    };
     [ui.scrub, ui.tscrub].forEach(zone => {
       /* as on the player page: held from the press, and "scrubbing" (the fill follows the finger exactly)
          a beat later, so the first jump still eases */
       let hold = 0;
-      zone.addEventListener('pointerdown', ev => { dragging = true; zone.classList.add('is-held'); hold = setTimeout(() => dragging && zone.classList.add('is-scrubbing'), 90); try { zone.setPointerCapture(ev.pointerId); } catch (_) {} seek(zone, ev); });
+      zone.addEventListener('pointerdown', ev => { if (zone === ui.tscrub) pop(); dragging = true; zone.classList.add('is-held'); hold = setTimeout(() => dragging && zone.classList.add('is-scrubbing'), 90); try { zone.setPointerCapture(ev.pointerId); } catch (_) {} seek(zone, ev); });
       zone.addEventListener('pointermove', ev => { if (dragging && zone.hasPointerCapture(ev.pointerId)) seek(zone, ev); });
       const release = () => { dragging = false; clearTimeout(hold); zone.classList.remove('is-held', 'is-scrubbing'); if (!ui.mid.matches(':hover')) leaveTime(); };
       zone.addEventListener('pointerup', release);
       zone.addEventListener('pointercancel', release);
     });
 
-    /* Half a second on the hairline brings up the times and the thick timeline; leaving the
-       middle sends them away again after a beat — each at the same slow pace (css/portfolio.css). */
+    /* Half a second on the hairline brings up the thick timeline with the times in it, in a quick fade;
+       leaving the middle sends it straight back down, even quicker (css/portfolio.css). */
     let enter = 0, leave = 0;
-    const leaveTime = () => { clearTimeout(leave); leave = setTimeout(() => { if (!dragging) el.classList.remove('is-time'); }, 250); };
+    const leaveTime = () => { clearTimeout(leave); leave = setTimeout(() => { if (!dragging) el.classList.remove('is-time'); }, 40); };
     ui.scrub.addEventListener('pointerenter', ev => {
       if (ev.pointerType !== 'mouse') return;
       clearTimeout(enter); clearTimeout(leave);
@@ -466,6 +519,13 @@
       has: ti => queue.some(q => q.ti === ti),
       current: () => queue[i].ti,
       live: () => el.classList.contains('is-live'),
+      /* stop altogether: back to the start, and the bar goes */
+      stop() {
+        audio.pause();
+        try { audio.currentTime = 0; } catch (_) {}
+        el.classList.remove('is-live', 'is-playing');
+        paint(); changed();
+      },
       isPlaying: ti => !audio.paused && queue[i].ti === ti,
       /* play this track, or pause it if it is the one already playing */
       playTrack(ti) {
@@ -476,28 +536,38 @@
     });
   })();
 
-  /* the covers whose track the bar can play get the play symbol; once something has been played, the one the
-     bar is on keeps its symbol up (pause bars while it plays) */
-  items.forEach(it => it.li.classList.toggle('has-audio', NP.has(it.ti)));
-  const markNow = () => items.forEach(it => {
-    it.li.classList.toggle('is-now', NP.live() && NP.current() === it.ti);   // marked only once something has been played
-    it.li.classList.toggle('is-playing', NP.isPlaying(it.ti));
-  });
-  document.addEventListener('np:change', markNow);
-  markNow();
-
-  /* The page pill at the top goes out of the way as soon as the mouse is on the covers — and comes back down
-     when the mouse goes above them. (Only where there is a mouse to hover with.) */
+  /* The page pill at the top goes out of the way as soon as the mouse is on the covers — and is there again
+     when the mouse is above them or below them. (Only where there is a mouse to hover with.) */
   (function pillAway() {
     const pill = $('[data-seg]');
     if (!pill || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     let lastY = -1, away = false;                    // until the mouse has moved, the pill is there
     const apply = () => {
-      const want = lastY >= shelf.getBoundingClientRect().top;
+      const rows = shelf.getBoundingClientRect();
+      const want = lastY >= rows.top && lastY <= rows.bottom;
       if (want !== away) { away = want; pill.classList.toggle('is-away', away); }
     };
     addEventListener('pointermove', ev => { if (ev.pointerType === 'mouse') { lastY = ev.clientY; apply(); } }, { passive: true });
   })();
+
+  /* Put it back: the cover goes home into the stack, the music stops and the bar goes. A click on the empty
+     space above or below the stack does it. */
+  const putBack = () => { NP.stop(); pick = null; setFront(null); };
+  document.addEventListener('click', ev => {
+    if (!front && !NP.live()) return;
+    if (html.classList.contains('is-focused')) return;
+    if (ev.target.closest('.np, .seg, .socials, a, button, input, [role=slider], .focus')) return;
+    const rows = shelf.getBoundingClientRect();
+    if (ev.clientY < rows.top || ev.clientY > rows.bottom) putBack();
+  });
+
+  /* the track the bar is on comes to the front once something has been played */
+  document.addEventListener('np:change', () => {
+    if (!NP.live()) return;
+    if (pick && pick.ti !== NP.current()) pick = null;       // the bar moved on to another release by itself
+    const want = pick || nearest(NP.current());
+    if (want && want !== front) setFront(want);
+  });
 
   /* ==========================================================
      THE FOCUS VIEW — a cover pulled out of the shelf
@@ -534,7 +604,7 @@
       const f = items[n].face.getBoundingClientRect();
       /* left covers face right, right covers face left: the big card starts
          turned the same way, standing on edge */
-      return { cx: f.left + f.width / 2, cy: f.top + f.height / 2, h: f.height, ry: (items[n].side === 'l' ? 1 : -1) * 80 };
+      return { cx: f.left + f.width / 2, cy: f.top + f.height / 2, h: f.height, ry: items[n] === front && items[n].pose === 'flat' ? 0 : (items[n].side === 'l' ? 1 : -1) * 80 };
     }
     function frames(n) {
       const to = card.getBoundingClientRect();           // untransformed: its place in the layout
@@ -641,9 +711,8 @@
       if (busy || cur === -1) return;
       /* on to the next release; of its copies on show, the one nearest to
          where we are, so closing lands on a slot close by */
-      const uniq = items.filter(x => x.rep === 0);
       const here = items[cur];
-      const nextTi = uniq[(uniq.findIndex(x => x.ti === here.ti) + dir + uniq.length) % uniq.length].ti;
+      const nextTi = mod(here.ti + dir, T);
       const n = items.filter(x => x.ti === nextTi).sort((a, b) => Math.abs(a.pos - here.pos) - Math.abs(b.pos - here.pos))[0].n;
       busy = true;
       items[cur].li.classList.remove('is-out');

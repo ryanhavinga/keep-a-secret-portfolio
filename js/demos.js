@@ -1,13 +1,13 @@
 /* ============================================================
-   KEEP A SECRET — THE VAULT (vault.html)
-   The list · one player shared by every row · the door for a direct link
-   Content lives in js/config.js, under CONFIG.vault.
+   KEEP A SECRET — DEMOS (demos.html)
+   The list · one player shared by every row
+   Content lives in js/config.js, under CONFIG.demos.
    ============================================================ */
 (() => {
   'use strict';
 
   const $ = (sel, root = document) => root.querySelector(sel);
-  const V = CONFIG.vault || {};
+  const V = CONFIG.demos || {};
   const STATUS_LABEL = { 'on hold': 'On hold', 'cut': 'Cut' };   // 'available' (the default) gets the Request link instead
   const esc = s => String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -159,7 +159,7 @@
       const meta = [t.genre, t.bpm && `${t.bpm} BPM`, t.key].filter(Boolean).join(' · ');
       const state = STATUS_LABEL[t.status];                       // on hold / cut: no Request link
       const mail = contact && !state
-        ? `mailto:${contact}?subject=${encodeURIComponent(`The Vault — ${t.title}`)}`
+        ? `mailto:${contact}?subject=${encodeURIComponent(`Demo request: ${t.title}`)}&body=${encodeURIComponent(`Hi,\n\nI'd like to request the demo of "${t.title}".\n\n`)}`
         : null;
       const li = document.createElement('li');
       li.className = 'row';
@@ -187,22 +187,5 @@
     });
   }
 
-  /* ==========================================================
-     THE DOOR — the Vault's password (CONFIG.gate; wired by js/nav.js)
-     Almost everyone has already typed it at the page pill, and walks
-     straight in. This door is for a link that goes directly to this page.
-     ========================================================== */
-  function door() {
-    const el = $('[data-gate]');
-    if (!el) return;
-    if (window.kasVault.unlocked()) return el.remove();
-    const input = window.kasVault.wire(el, () => {
-      el.classList.add('is-open');
-      setTimeout(() => el.remove(), 3600);   // past .gate's own 3.4s fade
-    });
-    input.focus();
-  }
-
   fill();
-  door();
 })();
