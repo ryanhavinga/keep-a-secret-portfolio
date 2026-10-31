@@ -124,16 +124,17 @@ const CONFIG = {
       ],
       'Tim Tiago': [
         { heading: 'Composition & Lyrics', people: [
-          { name: 'Tim Kurris', role: 'Lyricist • Composer' },
-          { name: 'Ryan Havinga', role: 'Lyricist • Composer' },
-          { name: 'Kelvin Pasman', role: 'Lyricist • Composer' }
+          { name: 'Ryan Havinga', role: 'Composer • Lyricist' },
+          { name: 'Kelvin Pasman', role: 'Composer • Lyricist' },
+          { name: 'Tim Kurris', role: 'Composer • Lyricist' }
         ] },
         { heading: 'Production & Engineering', people: [{ name: 'Keep A Secret', role: 'Studio Producer' }] }
       ],
       'Rosalie': [                                   // Incompleet and Liever Kwijt
         { heading: 'Composition & Lyrics', people: [
-          { name: 'Kelvin Pasman, Ryan Havinga, Rosalie Zieleman', role: 'Composer' },
-          { name: 'Rosalie Zieleman', role: 'Lyricist' }
+          { name: 'Ryan Havinga', role: 'Composer • Lyricist' },
+          { name: 'Kelvin Pasman', role: 'Composer • Lyricist' },
+          { name: 'Rosalie Zieleman', role: 'Composer • Lyricist' }
         ] },
         { heading: 'Production & Engineering', people: [{ name: 'Keep A Secret', role: 'Producer' }] }
       ]

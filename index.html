@@ -90,6 +90,23 @@
 .cd.is-entering .cd__shade, .fl.is-entering .fl__glow, .fl.is-entering .fl__edge, .cd.is-entering .cd__face, .cd.is-entering .cd__edge { transition: opacity .28s cubic-bezier(.4, 0, .6, 1) !important; }
 /* fewer separate layers: the artwork, the spine and the reflection of the spine are no longer each kept in a layer of their own (the browser still makes one while one of them fades) */
 .cd__face, .cd__edge, .fl__edge { will-change: auto; }
+.art-info { position: fixed; z-index: 25; left: 0; top: 0; width: 32px; height: 32px; padding: 0;
+  display: grid; place-items: center; cursor: pointer; background: none; border: 0;
+  transition: opacity .3s ease; -webkit-tap-highlight-color: transparent; }
+/* the same icon as the social links bottom left: a white ring with a white i in it, drawn in the same thin line */
+.art-info svg { display: block; width: 19px; height: 19px; fill: none; stroke: #fff; stroke-width: 1.5; stroke-linecap: round;
+  transition: stroke .4s var(--ease); filter: drop-shadow(0 0 4px rgba(0, 0, 0, .55)); }
+.art-info:hover svg { stroke: #8c8c8c; }
+.art-info.is-away, html.is-focused .art-info { opacity: 0; pointer-events: none; }
+.art-info:focus { outline: none; }
+/* while the credits are open the page's own header goes quiet, so it does not show through the dark under the Back button */
+.pf__bar { transition: opacity .3s ease; }
+html.is-focused .pf__bar { opacity: 0; }
+/* the two stacks are a touch darker and less saturated than the middle cover, so the middle one stands out */
+.cd:not(.is-mid) .cd__face { filter: saturate(.86) brightness(.92); }
+.cd:not(.is-mid) .cd__edge { filter: saturate(.86) brightness(calc((1 + var(--mag, 0) * .22) * .92)); }
+.cd.is-rim:not(.is-mid) .cd__face { filter: blur(calc(max(2px, var(--w) * .0055) * (1 - var(--mag, 0)))) saturate(.86) brightness(.92); }
+.cd__face, .cd__edge { transition: filter .4s ease; }
 /* the middle cover's light on the floor, under the player bar (js/center-cd.js); its own pool in the floor is off */
 .fl.is-front .fl__glow { opacity: 0 !important; }
 .mid-light { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0;
@@ -105,7 +122,8 @@
 .np { --vt: .62s; --vc: cubic-bezier(.3, .6, .2, 1); }
 .np__btn--vol { z-index: 2; translate: 0 0; transition: translate var(--vt) var(--vc), transform .3s var(--ease), opacity .3s var(--ease); }
 .np.is-vol .np__btn--vol { translate: calc(var(--vdx, 0px) * -1) 0; }
-.np.is-vol .np__who { opacity: .75; filter: blur(3.5px); pointer-events: none; transition: opacity var(--tm) var(--tm-out), filter var(--tm) var(--tm-out); }
+/* the artwork, title and artist in the bar give way — a bit more blurred and a touch fainter than the stylesheet's .75 / 3.5px — while the times (timeline) or the volume line come up */
+.np.is-time .np__who, .np.is-vol .np__who { opacity: .6; filter: blur(5.5px); pointer-events: none; transition: opacity var(--tm) var(--tm-out), filter var(--tm) var(--tm-out); }
 .np.is-vol .np__scrub { opacity: 0; pointer-events: none; transition: opacity var(--tm) var(--tm-out); }
 .np .np__vol .np__flyout {
   position: absolute; left: auto; bottom: auto; right: 19px; top: 50%;
@@ -169,6 +187,44 @@
     <p>Written &amp; Produced by Keep A Secret</p>
   </footer>
 </main>
+
+<!-- ══════════ THE CREDITS ══════════
+     Opened by a click on the big cover in the middle, or on the small artwork in the player bar (js/center.js, Focus). -->
+<div class="focus" data-focus hidden>
+  <div class="focus__veil" data-veil></div>
+
+  <div class="focus__stage" data-stage>
+    <div class="focus__card" data-card><img data-card-img alt=""></div>
+  </div>
+
+  <section class="focus__info" data-info>
+    <h2 class="focus__title" data-title></h2>
+    <p class="focus__artist" data-artist></p>
+    <p class="focus__line" data-year hidden></p>
+    <p class="focus__note" data-note hidden></p>
+
+    <div class="focus__credits" data-credits hidden></div>
+    <div class="focus__links" data-links></div>
+    <p class="focus__credit" data-credit-line>Written &amp; Produced by Keep A Secret</p>
+  </section>
+
+  <!-- small streaming icons, bottom right: they go to the track's own link when
+       CONFIG.portfolio gives one (spotify / apple), otherwise to a search for it -->
+  <div class="focus__stream">
+    <a class="focus__svc" data-spotify target="_blank" rel="noopener noreferrer" aria-label="Listen on Spotify" title="Spotify">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M5.9 9.1c4.3-1.2 9-.8 12.6 1.4M6.5 12.4c3.6-.9 7.3-.6 10.3 1.2M7.1 15.5c2.9-.7 5.7-.4 8.1.9" fill="none" stroke="#060607" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </a>
+    <a class="focus__svc" data-apple target="_blank" rel="noopener noreferrer" aria-label="Listen on Apple Music" title="Apple Music">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5.5" fill="currentColor"/><path d="M9.1 17.3a2.1 2.1 0 1 1-1.3-1.9V8.4a.9.9 0 0 1 .7-.9l6.6-1.4a.9.9 0 0 1 1.1.9v8.4a2.1 2.1 0 1 1-1.3-1.9V8.6l-5.1 1.1z" fill="#060607"/></svg>
+    </a>
+  </div>
+
+  <button class="focus__close" data-close type="button" aria-label="Back to the shelf">Back</button>
+</div>
+
+<button class="art-info" data-art-info type="button" aria-label="Credits">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v5.4M12 7.6h.01"/></svg>
+</button>
 
 <div class="np" data-np role="region" aria-label="Now playing">
   <div class="np__ctrl">

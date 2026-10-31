@@ -85,7 +85,7 @@
   }
 
   /* ---------- build the row ---------- */
-  const pfEl = $('[data-pf]'), shelf = $('[data-shelf]'), floor = $('[data-floor]'), npEl = $('[data-np]');
+  const pfEl = $('[data-pf]'), shelf = $('[data-shelf]'), floor = $('[data-floor]'), npEl = $('[data-np]'), infoBtn = $('[data-art-info]');
   pfEl.style.setProperty('--n', SLOTS);                    // (an odd count would shift the viewpoint; the middle cover is flat here, so it is not marked data-odd)
   /* Each stack has a perspective of its own (css .stack), so each can follow the pointer without the other one moving: the covers of the left stack
      live in stk.l, those of the right in stk.r, and the middle cover directly in the shelf (at depth 0 no viewpoint can move it). Their reflections the same. */
@@ -138,7 +138,7 @@
     paintTint(li, t); paintTint(fl, t);
     const it = { i, t, li, fl, side: 'l', k: null, mag: 0, vel: 0, ym: 0, lf: 0, zm: 0, tok: 0 };
     it.btn = li.querySelector('.cd__btn');
-    it.btn.addEventListener('click', () => { if (it.k) go(it.k); });
+    it.btn.addEventListener('click', () => { if (it.k) go(it.k); else Focus.open(it.i); });   // a side cover comes to the middle; the one in the middle opens its credits
     it.btn.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); it.btn.click(); } });
     return it;
   });
@@ -193,6 +193,11 @@
     const off = innerHeight * (k === 0 ? MIDLINE : STACKLINE) - (shelf.getBoundingClientRect().top + w / 2) - (k === 0 ? 0 : (BIG - 1) * w * .67);
     it.li.style.setProperty('--ly', `${off.toFixed(1)}px`);    // (the whole height of the middle cover is in this one value, so it travels with the cover's own slide — no separate lift that eases in afterwards)
     it.fl.style.setProperty('--fy', `${off.toFixed(1)}px`);
+    if (k === 0 && infoBtn) {                                // the info button sits in the top right corner of the middle artwork
+      const aw = w * MID;
+      infoBtn.style.left = `${(innerWidth / 2 + aw / 2 - 10 - 32).toFixed(1)}px`;
+      infoBtn.style.top = `${(innerHeight * MIDLINE - aw / 2 + 10).toFixed(1)}px`;
+    }
     if (k === 0 && npEl) {                                   // the player bar stands under the middle cover, as wide as it
       npEl.style.setProperty('--np-top', `${Math.round(innerHeight * MIDLINE + w * MID / 2 + BARGAP)}px`);
       npEl.style.setProperty('--mid-k', MID);
@@ -525,17 +530,19 @@
   /* `target` is the track the row is turning to; the player bar changes to it at once (the row itself follows, one step at a time).
      While the row is still turning (its animations are not finished) nothing can be chosen: clicks, keys, the wheel and the bar's previous / next are ignored. */
   let todo = 0, busy = false, target = cur, locked = false, lockT = 0;
+  let focusOpen = false;                                      // the credits are open: nothing can be switched
   function go(d, force) {
     d = Math.round(d);
-    if (!d || (locked && !force)) return;
+    if (!d || ((locked || focusOpen) && !force)) return;
     locked = true; clearTimeout(lockT);
+    if (infoBtn) infoBtn.classList.add('is-away');            // (it would otherwise stand in the corner of where the cover was)
     todo += d;
     target = (((target + d) % T) + T) % T;
     NP.select(target);                                         // the bar's track, title and artwork change the moment it is clicked
     if (!busy) run();
   }
   function run() {
-    if (!todo) { busy = false; lockT = setTimeout(() => { locked = false; }, 160); return; }   // (the last step is still finishing its slide)
+    if (!todo) { busy = false; lockT = setTimeout(() => { locked = false; if (infoBtn) infoBtn.classList.remove('is-away'); }, 160); return; }   // (the last step is still finishing its slide)
     busy = true;
     const s = Math.sign(todo); todo -= s;
     cur = (cur + s + T) % T;
@@ -543,8 +550,101 @@
     setTimeout(run, STEP);
   }
   npEl.addEventListener('click', ev => {                       // the bar's previous / next are locked too
-    if (locked && ev.target.closest('[data-np-prev], [data-np-next]')) { ev.stopPropagation(); ev.preventDefault(); }
+    if ((locked || focusOpen) && ev.target.closest('[data-np-prev], [data-np-next]')) { ev.stopPropagation(); ev.preventDefault(); }
   }, true);
+  /* ---------- THE CREDITS: opened by a click on the big cover in the middle, or on the small artwork in the player bar. The big cover flies out to the
+     left column (from where it stands in the middle), the title, artist, credits and links come in on the right; Back / Esc / a click on the dark closes it. ---------- */
+  const Focus = (() => {
+    const el = $('[data-focus]');
+    if (!el) return { open() {} };
+    const card = $('[data-card]', el), cardImg = $('[data-card-img]', el);
+    const PFc = CONFIG.portfolio || {};
+    const ui = {
+      info: $('[data-info]', el), credits: $('[data-credits]', el), creditLine: $('[data-credit-line]', el),
+      spotify: $('[data-spotify]', el), apple: $('[data-apple]', el),
+      title: $('[data-title]', el), artist: $('[data-artist]', el),
+      year: $('[data-year]', el), note: $('[data-note]', el), links: $('[data-links]', el)
+    };
+    let cur = -1, anim = null, fadeAnim = null, busy = false, closing = false, outIt = null;
+    const DUR = reduced ? 1 : 640;
+    const EASE_OPEN = 'cubic-bezier(.22, .78, .22, 1)';       // fast out of the middle, settling softly into place
+    const FADE = 150;                                          // ms: the big card fading in over the cover it replaces
+
+    function fillInfo(n) {
+      const t = list[n];
+      ui.title.textContent = t.title;
+      ui.artist.textContent = t.artist;
+      ui.year.textContent = t.year || ''; ui.year.hidden = !t.year;
+      ui.note.textContent = t.note || ''; ui.note.hidden = !t.note;
+      ui.links.innerHTML = (t.links || []).map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a>`).join('');
+      /* credits for every track — its own when CONFIG gives them, otherwise the two we always know */
+      const cr = t.credits || (PFc.creditsByArtist || {})[t.artist] || [
+        { heading: 'Production & Engineering', people: [{ name: (CONFIG.brand && CONFIG.brand.logo) || 'Keep A Secret', role: 'Producer' }] }
+      ];
+      ui.credits.hidden = !cr.length;
+      ui.credits.innerHTML = cr.map(sec => `<h3>${esc(sec.heading)}</h3>` + sec.people.map(p => `<p class="focus__who">${esc(p.name)}<span>${esc(p.role)}</span></p>`).join('')).join('');
+      ui.creditLine.hidden = !!cr.length;
+      ui.info.scrollTop = 0;
+      const find = encodeURIComponent(`${t.title} ${t.artist}`);
+      ui.spotify.href = t.spotify || `https://open.spotify.com/search/${find}`;
+      ui.apple.href = t.apple || `https://music.apple.com/search?term=${find}`;
+      cardImg.src = t.artwork;
+      cardImg.alt = `${t.title} — artwork`;
+      paintTint(el, t);
+    }
+    /* the big card starts where the cover in the middle stands and flies to its place in the left column */
+    function frames(it) {
+      const to = card.getBoundingClientRect();                  // untransformed: its place in the layout
+      const f = it.li.querySelector('.cd__face').getBoundingClientRect();
+      const dx = f.left + f.width / 2 - (to.left + to.width / 2), dy = f.top + f.height / 2 - (to.top + to.height / 2);
+      const s0 = clamp(f.height / to.height, .15, 1);
+      return [{ transform: `translate(${dx}px, ${dy}px) scale(${s0})` }, { transform: 'none' }];
+    }
+    function open(n) {
+      if (busy || cur !== -1 || locked || focusOpen) return;
+      const it = items.find(x => x.k === 0 && x.i === n) || items.find(x => x.k === 0);
+      if (!it) return;
+      busy = true; cur = n; focusOpen = true; outIt = it;
+      fillInfo(n);
+      /* everything is set up while the overlay is still invisible, so the first frame already has the card over the cover it came from */
+      el.style.visibility = 'hidden';
+      el.hidden = false;
+      html.classList.add('is-focused');
+      const f = frames(it);
+      anim = card.animate(f, { duration: DUR, easing: EASE_OPEN, fill: 'both' });
+      const fade = fadeAnim = card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: reduced ? 1 : FADE, easing: 'ease-out', fill: 'both' });
+      it.li.classList.add('is-out');
+      el.style.visibility = '';
+      void el.offsetWidth;                                      // so the veil and the info transition in rather than appearing
+      el.classList.add('is-open');
+      anim.onfinish = () => { anim.cancel(); fade.cancel(); anim = fadeAnim = null; busy = false; };
+    }
+    /* closing is a short, quiet fade over the middle cover, which is already back underneath */
+    function close() {
+      if (cur === -1 || closing) return;
+      closing = true; busy = true;
+      anim?.cancel(); fadeAnim?.cancel(); anim = fadeAnim = null;
+      const dur = reduced ? 1 : 260;
+      el.classList.add('is-closing');
+      el.classList.remove('is-open');
+      if (outIt) outIt.li.classList.remove('is-out');
+      const out = card.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.985)' }], { duration: dur, easing: 'cubic-bezier(.4, 0, .2, 1)', fill: 'both' });
+      setTimeout(() => {
+        out.cancel();
+        el.hidden = true;
+        el.classList.remove('is-closing');
+        html.classList.remove('is-focused');
+        cur = -1; busy = false; closing = false; focusOpen = false; outIt = null;
+      }, dur);
+    }
+    $('[data-close]', el).addEventListener('click', close);
+    $('[data-veil]', el).addEventListener('click', close);
+    document.addEventListener('keydown', ev => { if (cur !== -1 && ev.key === 'Escape') close(); });
+    addEventListener('resize', () => { if (cur !== -1 && !busy) close(); });   // a resize would strand the card against a layout that has changed under it
+    return { open };
+  })();
+  NP.onOpen = ti => Focus.open(ti);
+  if (infoBtn) infoBtn.addEventListener('click', () => Focus.open(cur));                            // the small artwork (and title) in the bar
   /* the bar moved on by itself (previous / next / the track ended): the row turns to that track */
   NP.onTrack = ti => {
     if (ti === target) return;
@@ -622,11 +722,16 @@
     shelf.addEventListener('pointerleave', () => { if (hover !== null || midHover) { hover = null; midHover = false; wake(); } });
     addEventListener('pointermove', ev => {
       if (ev.pointerType === 'touch') return;
-      if (midHover) return;                                    // over the middle cover nothing moves at all: the viewpoint holds still too
-      const mine = ev.clientX < innerWidth / 2 ? 'l' : 'r', other = mine === 'l' ? 'r' : 'l';
-      drift[other].tx = drift[other].ty = 0;                      // the stack on the other side stays still
-      if (ev.clientY > shelf.getBoundingClientRect().bottom) drift[mine].tx = drift[mine].ty = 0;
-      else { drift[mine].tx = clamp(ev.clientX / innerWidth * 2 - 1, -1, 1); drift[mine].ty = clamp(ev.clientY / innerHeight * 2 - 1, -1, 1); }
+      /* The viewpoint only follows the pointer while it is on one of the covers in a stack, and only that stack's. Everywhere else — the page, the
+         middle cover, the bar — both stacks ease back to straight. */
+      const cd = ev.target.closest && ev.target.closest('.cd');
+      const over = cd && items.find(x => x.li === cd);
+      const mine = over && over.k ? (over.k < 0 ? 'l' : 'r') : null;
+      for (const side of ['l', 'r']) {
+        const d = drift[side];
+        if (side === mine) { d.tx = clamp(ev.clientX / innerWidth * 2 - 1, -1, 1); d.ty = clamp(ev.clientY / innerHeight * 2 - 1, -1, 1); }
+        else d.tx = d.ty = 0;
+      }
       wake();
     }, { passive: true });
     document.documentElement.addEventListener('mouseleave', () => { for (const d of Object.values(drift)) d.tx = d.ty = 0; wake(); });
