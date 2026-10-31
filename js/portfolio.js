@@ -412,6 +412,8 @@
     });
     addEventListener('pointermove', ev => {
       if (ev.pointerType === 'touch' || !armed) return;
+      /* below the covers (the floor, the footer) the row stops following the pointer and eases back to square */
+      if (ev.clientY > shelf.getBoundingClientRect().bottom) { tpx = tpy = 0; wake(); return; }
       tpx = clamp(ev.clientX / innerWidth * 2 - 1, -1, 1); tpy = clamp(ev.clientY / innerHeight * 2 - 1, -1, 1); wake();
     }, { passive: true });
     document.documentElement.addEventListener('mouseleave', () => { tpx = tpy = 0; wake(); });
