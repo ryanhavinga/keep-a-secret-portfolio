@@ -8,9 +8,9 @@ index.html          the landing page: the portfolio
 demos.html          the demos (unreleased songs)
 css/styles.css      all styling
 js/config.js        ← everything you normally edit lives here
-js/portfolio.js     the landing page: shelf, now-playing bar
+js/center.js        the landing page: the centre cover, the two stacks, the now-playing bar
 js/nav.js           the Portfolio · Demos pill
-archive/            switched-off things kept for later: the Player page, the 3D-door vault, an older list page
+archive/            switched-off things kept for later: the Player page, the earlier shelf page, the 3D-door vault, an older list page
 img/                artwork
 audio/              your audio files
 fonts/              Monument Extended
@@ -109,31 +109,25 @@ found by search, but they are not protected. If something ever needs protecting,
 password (Netlify and Cloudflare both do this server-side).
 
 ### Portfolio (`index.html`, the landing page)
-Everything we've made, on its own page: the covers stand upright in a row, each turned toward the middle, so
-the ones in the centre are seen almost edge-on (just the spine, with the title running up it) and each one
-further out shows more of its face, all from one perspective. The row sizes itself from
-the window — height sets how big the covers are, width how far apart — so **all of it is in view at once**,
-no scrolling (`--w`, `--p` in `css/portfolio.css`). Hovering a cover's **spine** (the side with the title on it) lifts it clearly, with only a hint of a wave in its
-neighbours; the artwork itself doesn't lift anything, so there is one small, exact place to be for each cover
-(mouse and trackpad only; the height is `--y` in `css/portfolio.css`, the width of the swell is `SPREAD` in
-`js/portfolio.js`). Clicking one pulls it out of the row and turns it to face you,
-large, with its title and artist on the right (and a play button and timeline if it has audio). Back / Esc /
-the arrows step out and along.
+Seven covers in a 3D room: **one always stands flat in the middle**, facing you, with the player bar under it; **three stand
+on each side**, edge-on to the middle and close together, the outermost ones running off the sides of the page, softly blurred.
+Everything is in view at once, no scrolling. The size comes from the window (`--w` in `css/portfolio.css`); the picture itself —
+how big the middle cover is, how close and how far back the stacks stand — is a handful of numbers at the top of `js/center.js`
+(`MID`, `BIG`, `SPACING`, `FACE`, `EDGE`, `BACK`, `MIDLINE`, `STACKLINE`, `GLOW`, `WAVE`, `REACH`).
 
-Covers are deliberately *not* in one shared 3D space: each is drawn on its own, in a set order (nearest the
-middle on top, the hovered one above all), so two covers can never intersect or flicker against each other.
-Don't put `transform-style: preserve-3d` on `.shelf` — that is what would bring the glitching back.
-
-**Filling the row out.** The set runs round again from the start until the row holds
-`CONFIG.portfolio.fill` covers (default 10: 7 tracks → the first 3 appear a second time; it never cuts real
-tracks). The extras are the same releases, so any of them plays that release, and only the first run is exposed to
-screen readers and the keyboard. Set `fill` to the number of tracks to show each exactly once.
-
-**Playing pulls a cover out of the stack.** The stack steps back a little and the playing cover slides straight out
-of it, spine first, then turns quickly and smoothly to face you in the middle; the stack stays behind it with a gap
-where the cover was. Playing another track turns the first back and slides it home (the pull-out in reverse) while the next comes out; the cover you click is the one that comes out, even when a release is in the row twice. A click on the empty space above or below the stack puts the cover back in its place, stops the music and takes the bar away; while something is playing the bar never hides on hover. (The
-poses are in `place()` / `setFront()` in `js/portfolio.js`; how far the stack steps back is `BACK`, how far a cover
-slides out is `OUT`.) There used to be a filter by artist at the top; the top of the page is now the page pill.
+- **Switching.** Click a cover in a stack, press ← / →, scroll, or use the bar's previous / next: that cover comes to the middle.
+  The cover that was in the middle goes back to its side while the new one comes forward — the two move as a pair, with the same
+  time and curve, so they pass each other without touching (`.is-back` / `.is-front` in `index.html`). Nothing can be chosen
+  while the row is still turning. The bar's track, title and artwork change at once.
+- **The player bar** is under the middle cover and plays its track; the speaker slides left across the bar to a volume line.
+- **Hover.** Only the cover under the pointer lifts; the middle cover never moves. Each stack follows the pointer with its own
+  viewpoint, and only while the pointer is on that side.
+- **The light.** The middle cover throws its colour on the floor under the bar; the other covers keep their own pool.
+- **The page pill** at the top is only there while the pointer is above or below the covers.
+- **Layers.** Covers are deliberately *not* in one shared 3D space: each stack is its own perspective box (`.stack`), so two covers can
+  never intersect or flicker against each other. Don't put `transform-style: preserve-3d` on `.shelf`.
+- The covers are `CONFIG.portfolio.tracks`, run round again until there are seven. The earlier shelf page (every cover edge-on,
+  one pulled out to play, with the credits view) is kept in `archive/shelf/`.
 
 The player on the front page is for what we *feature*; this page is the whole catalogue. It's
 `CONFIG.portfolio` in `js/config.js` — one line per track: `title`, `artist`, `artwork`, a fallback `color`,
