@@ -221,7 +221,7 @@ const CONFIG = {
       },
       */
       { title: 'Give Ya What U Like', language: 'Engelstalig', audio: 'audio/demo - Give Ya What U Like.mp3', duration: 180, year: 2021, collections: ['HAP'], status: 'available' },
-      { title: 'Fast Life',           language: 'Engelstalig', audio: 'audio/demo - Fast Life.mp3',           duration: 154, year: 2021, collections: ['HAP'], status: 'available' },
+      { title: 'Fast Life',           language: 'Engelstalig', audio: 'audio/demo - Fast Life.m4a',           duration: 154, year: 2021, collections: ['HAP'], status: 'available' },
       { title: 'No Safe Flights',     language: 'Engelstalig', audio: 'audio/demo - No Safe Flights.m4a',     duration: 43,  year: 2021, collections: ['HAP'], status: 'available' }
     ]
   },
