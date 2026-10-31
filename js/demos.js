@@ -42,14 +42,41 @@
 
     const length = e => (e === current && isFinite(audio.duration) && audio.duration) || e.track.duration || 0;
 
+    /* While a jump is landing (the browser has to fetch from the new place first) the timeline shows where it was sent, not the
+       old position the element may still report for a moment — so the white line never hangs or steps back after a tap. */
+    let landing = null;
+    const here = () => (landing !== null ? landing : audio.currentTime);
+    audio.addEventListener('seeked', () => { landing = null; });
+
     function paint(e) {
       const d = length(e);
-      const t = e === current ? audio.currentTime : 0;
-      const pct = d ? Math.min(100, t / d * 100) : 0;
-      e.fill.style.width = `${pct}%`;
-      e.scrub.setAttribute('aria-valuenow', Math.round(pct));
-      e.timeEl.textContent = e === current && (t > 0 || !audio.paused) ? time(t) : time(d);
+      const t = e === current ? here() : 0;
+      const pct = d ? Math.min(100, Math.max(0, t / d * 100)) : 0;
+      const w = `${pct.toFixed(2)}%`;
+      if (e.w !== w) { e.w = w; e.fill.style.width = w; }
+      const n = String(Math.round(pct));
+      if (e.n !== n) { e.n = n; e.scrub.setAttribute('aria-valuenow', n); }
+      const txt = e === current && (t > 0 || !audio.paused) ? time(t) : time(d);
+      if (e.txt !== txt) { e.txt = txt; e.timeEl.textContent = txt; }
     }
+    /* the line is drawn every frame while a track plays (the browser's own timeupdate only comes a few times a second) */
+    let raf = 0;
+    const tick = () => {
+      raf = 0;
+      if (!current || audio.paused) return;
+      if (!dragging) paint(current);
+      raf = requestAnimationFrame(tick);
+    };
+    const run = () => { if (!raf) raf = requestAnimationFrame(tick); };
+
+    /* The next track is fetched ahead of time (touching a row, and once something plays), so it starts at once instead of after the download. */
+    const warmed = new Set();
+    function warm(t) {
+      if (!t || !t.audio || warmed.has(t.audio)) return;
+      warmed.add(t.audio);
+      fetch(t.audio).then(r => r.arrayBuffer()).catch(() => {});
+    }
+
     function setPlaying(e, on) {
       e.row.classList.toggle('is-playing', on);
       e.btn.setAttribute('aria-label', `${on ? 'Pause' : 'Play'} ${e.track.title}`);
@@ -57,7 +84,8 @@
     function select(e) {
       if (current === e) return;
       if (current) { const prev = current; setPlaying(prev, false); current = null; paint(prev); }
-      current = e;
+      current = e; landing = null;
+      audio.preload = 'auto';
       audio.src = e.track.audio;
     }
     function toggle(e) {
@@ -71,19 +99,26 @@
       const r = e.scrub.getBoundingClientRect();
       const ratio = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
       if (current !== e) { select(e); audio.play().catch(() => setPlaying(e, false)); }
-      const go = () => { audio.currentTime = ratio * (audio.duration || e.track.duration || 0); paint(e); };
+      const go = () => { landing = audio.currentTime = ratio * (audio.duration || e.track.duration || 0); paint(e); };
       if (isFinite(audio.duration) && audio.duration) go();
       else audio.addEventListener('loadedmetadata', go, { once: true });
     }
 
-    audio.addEventListener('play',  () => current && setPlaying(current, true));
-    audio.addEventListener('pause', () => current && setPlaying(current, false));
-    audio.addEventListener('timeupdate', () => current && !dragging && paint(current));
+    audio.addEventListener('play',  () => {
+      if (!current) return;
+      setPlaying(current, true); run();
+      warm(entries.slice(entries.indexOf(current) + 1).find(n => n.track.audio)?.track);   // the next one is on its way before this one ends
+    });
+    audio.addEventListener('pause', () => { if (current) { setPlaying(current, false); paint(current); } });
+    audio.addEventListener('timeupdate', () => {
+      if (landing !== null && !audio.seeking && Math.abs(audio.currentTime - landing) < 1) landing = null;
+      if (current && !dragging) paint(current);
+    });
     audio.addEventListener('loadedmetadata', () => current && paint(current));
     audio.addEventListener('ended', () => {
       if (!current) return;
       const done = current, i = entries.indexOf(done);
-      audio.currentTime = 0;
+      audio.currentTime = 0; landing = null;
       setPlaying(done, false);
       paint(done);
       /* someone working down a list wants the next one, not silence */
@@ -101,19 +136,27 @@
     return {
       /* the list is being rebuilt (another collection): stop what is playing and forget the old rows */
       reset() {
-        current = null; dragging = false; entries.length = 0;
+        current = null; dragging = false; landing = null; entries.length = 0;
         audio.pause();
         audio.removeAttribute('src');
         try { audio.load(); } catch (_) {}
       },
+      /* the first song is fetched ahead, so a first tap on play starts at once */
+      warmFirst() { const f = entries.find(n => n.track.audio); if (f) warm(f.track); },
       add(row, track) {
         const e = {
           row, track,
-          btn: $('.row__play', row), scrub: $('.row__scrub', row),
+          btn: $('.row__play', row), scrub: $('.row__scrub', row), info: $('.row__info', row),
           fill: $('.row__fill', row), timeEl: $('.row__time', row)
         };
         entries.push(e);
         e.btn.addEventListener('click', () => toggle(e));
+        if (track.audio) {
+          /* the song's name plays it too */
+          e.info.classList.add('is-tap');
+          e.info.addEventListener('click', () => toggle(e));
+          row.addEventListener('pointerdown', () => warm(track), { passive: true });
+        }
         e.scrub.addEventListener('pointerdown', ev => {
           if (!track.audio) return;
           dragging = true;
@@ -135,7 +178,7 @@
         e.scrub.addEventListener('keydown', ev => {
           if (current !== e || !['ArrowLeft', 'ArrowRight'].includes(ev.key)) return;
           ev.preventDefault();
-          audio.currentTime = Math.max(0, audio.currentTime + (ev.key === 'ArrowRight' ? 5 : -5));
+          landing = audio.currentTime = Math.max(0, here() + (ev.key === 'ArrowRight' ? 5 : -5));
           paint(e);
         });
       }
@@ -220,6 +263,7 @@
       listFor(t.language || '').appendChild(li);
       Player.add(li, t);
     });
+    Player.warmFirst();
   }
 
   /* ==========================================================

@@ -175,6 +175,7 @@ html.fonts-wait .vlt { visibility: hidden; }
 
 /* the player's title and artist: plain sans, bold over medium */
 .row__info { grid-area: info; min-width: 0; }
+.row__info.is-tap { cursor: pointer; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
 .row__title {
   margin: 0;
   font-family: var(--ui);
@@ -198,7 +199,7 @@ html.fonts-wait .vlt { visibility: hidden; }
   margin: 9px 0 0;
   font-size: 13px;
   letter-spacing: .03em;
-  color: var(--w-48);
+  color: rgba(255, 255, 255, .74);          /* the year: halfway between the white of the title and the grey it was (.48) */
 }
 .row__meta:empty { display: none; }
 .row__note {
@@ -276,9 +277,7 @@ html.fonts-wait .vlt { visibility: hidden; }
   height: 100%; width: 0;
   background: #fff;
   box-shadow: 0 0 10px rgba(255, 255, 255, .6);
-  transition: width .18s linear;
-}
-.row__scrub.is-scrubbing .row__fill { transition: none; }
+}                                           /* (no easing: the line follows the playhead frame by frame, and a tap puts it there at once) */
 
 .row__time {
   flex: 0 0 auto;
