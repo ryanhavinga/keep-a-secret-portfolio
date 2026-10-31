@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" class="pf-html">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keep A Secret — Portfolio (centre-cover prototype)</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- PROTOTYPE — the same 3D shelf as index.html (same stylesheets, same covers), but with one cover always standing flat in the
+     middle and three on each side. Click a side cover, press ← / →, or scroll to bring another one to the middle.
+     Nothing on the live site links here. Open it at /lab/center-cd.html -->
+<link rel="preload" as="font" type="font/otf" href="../fonts/MonumentExtended-Ultrabold.otf" crossorigin>
+<link rel="preload" as="font" type="font/otf" href="../fonts/MonumentExtended-Regular.otf" crossorigin>
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/portfolio.css">
+<script>
+/* keeps the lettering out of sight until Monument Extended is in, instead of flashing it in a fallback face first (as on the live page) */
+(function () {
+  var d = document.documentElement, done = function () { d.classList.remove('fonts-wait'); };
+  d.classList.add('fonts-wait');
+  try { Promise.all([document.fonts.load('800 1em "Monument Extended"'), document.fonts.load('400 1em "Monument Extended"')]).then(done, done); } catch (e) { done(); }
+  setTimeout(done, 1200);
+})();
+</script>
+<style>
+/* the player bar stands under the middle cover (js/center-cd.js sets --np-top and --mid-k) and is as wide as that cover */
+.np { bottom: auto; top: var(--np-top, 70vh);
+  width: min(calc(var(--w) * var(--mid-k, 1)), calc(100vw - 2 * clamp(16px, 4vw, 48px))); }
+.cd { cursor: pointer; }
+/* each side stack is its own perspective box over the shelf's box (js/center-cd.js moves the covers into them), so it follows the pointer by itself */
+.stack { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  perspective: calc(var(--w) * 1.25);
+  perspective-origin: calc(50% + var(--px, 0) * var(--sway, 2.6%)) calc(50% + var(--py, 0) * var(--sway-y, 1.3%)); }
+.stack > .cd { pointer-events: auto; }
+.floor .stack { z-index: 0; }
+/* the middle cover is smaller than the others (--ms, set by center-cd.js): the cover scales about its own middle, its reflection about its hinge */
+.cd__btn { scale: var(--ms, 1); transition: scale .6s cubic-bezier(.2, .75, .2, 1); }
+.cd.no-tr .cd__btn { transition: none; }
+.fl { translate: var(--x) var(--fy, 0px) var(--z, 0px); scale: var(--ms, 1); }
+.cd, .fl { transition: translate .5s cubic-bezier(.3, .6, .2, 1), rotate .38s cubic-bezier(.45, 0, .25, 1), opacity .25s var(--ease), scale .42s ease; }   /* the covers that shift along */
+.fl, .fl.is-front, .fl.is-entering { transition-property: translate, rotate, opacity, scale; }
+.cd.is-mid { cursor: default; }
+/* the cover that is chosen comes forward faster (turning to face you, sliding out and growing); everything else keeps its own speed:
+   the covers that shift along and the one that goes back to its side use the shelf's normal timing, because that one has lost .is-front */
+.cd, .fl { transition-property: translate, rotate, opacity, scale; }
+/* The two covers that change places move as a pair: the one that goes back (.is-back) and the one that comes forward (.is-front) have exactly the same time and curve,
+   starting together, so one is never ahead of the other (no empty middle, no overlap). The covers that shift along keep the shelf's own timing. */
+.cd.is-back, .fl.is-back, .cd.is-front, .fl.is-front { transition: translate .42s cubic-bezier(.45, 0, .25, 1), rotate .42s cubic-bezier(.45, 0, .25, 1), opacity .25s var(--ease), scale .42s cubic-bezier(.45, 0, .25, 1); }
+.cd.is-back .cd__btn, .cd.is-front .cd__btn { transition: scale .42s cubic-bezier(.45, 0, .25, 1); }
+.cd.no-tr .cd__btn { transition: none; }
+/* the cover that goes round the end of the row: out and in a bit faster than on the shelf */
+.cd.is-entering { transition: translate .5s cubic-bezier(.1, .72, .15, 1), rotate .3s; }
+.fl.is-entering { transition: translate .5s cubic-bezier(.1, .72, .15, 1), rotate .3s, opacity .25s var(--ease); }
+.cd.is-fading .cd__face, .cd.is-fading .cd__edge, .cd.is-fading .cd__shade, .fl.is-fading .fl__glow, .fl.is-fading .fl__edge { transition: opacity .28s var(--ease) !important; }
+.cd.is-entering .cd__shade, .fl.is-entering .fl__glow, .fl.is-entering .fl__edge, .cd.is-entering .cd__face, .cd.is-entering .cd__edge { transition: opacity .28s cubic-bezier(.4, 0, .6, 1) !important; }
+/* fewer separate layers: the artwork, the spine and the reflection of the spine are no longer each kept in a layer of their own (the browser still makes one while one of them fades) */
+.cd__face, .cd__edge, .fl__edge { will-change: auto; }
+/* the middle cover's light on the floor, under the player bar (js/center-cd.js); its own pool in the floor is off */
+.fl.is-front .fl__glow { opacity: 0 !important; }
+.mid-light { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0;
+  transform: translateX(var(--gx, 0px)); transition: opacity .5s var(--ease), transform .6s cubic-bezier(.2, .75, .2, 1); }
+.mid-light.is-on { opacity: 1; }
+.mid-glow { position: absolute; left: 50%; top: calc(var(--np-top, 70vh) + 29px + 78px); width: var(--gw, 600px); height: 190px;
+  transform: translate(-50%, -50%); border-radius: 50%;
+  /* a smooth many-stop gradient instead of a blur filter: the same soft look, without the cost of blurring a large area on every change */
+  background: radial-gradient(closest-side, hsl(var(--h) calc(var(--s) * .6%) 60% / 0.54), hsl(var(--h) calc(var(--s) * .6%) 60% / 0.47) 10%, hsl(var(--h) calc(var(--s) * .6%) 60% / 0.34) 24%, hsl(var(--h) calc(var(--s) * .6%) 60% / 0.22) 36%, hsl(var(--h) calc(var(--s) * .6%) 60% / 0.13) 48%, hsl(var(--h) calc(var(--s) * .6%) 60% / 0.07) 60%, hsl(var(--h) calc(var(--s) * .6%) 60% / 0.03) 72%, hsl(var(--h) calc(var(--s) * .6%) 60% / 0.008) 86%, hsl(var(--h) calc(var(--s) * .6%) 60% / 0) 100%); }
+/* The volume. Pressing the speaker slides it, smoothly, left to where the artwork's thumbnail stands (--vdx, set by the script), while the artwork,
+   title and artist blur away exactly as they do when the times come up (.is-time); behind the speaker a volume line is drawn out
+   that it leaves behind: its left end keeps pace with the speaker (same time, same curve), its right end stays where the speaker was. */
+.np { --vt: .62s; --vc: cubic-bezier(.3, .6, .2, 1); }
+.np__btn--vol { z-index: 2; translate: 0 0; transition: translate var(--vt) var(--vc), transform .3s var(--ease), opacity .3s var(--ease); }
+.np.is-vol .np__btn--vol { translate: calc(var(--vdx, 0px) * -1) 0; }
+.np.is-vol .np__who { opacity: .75; filter: blur(3.5px); pointer-events: none; transition: opacity var(--tm) var(--tm-out), filter var(--tm) var(--tm-out); }
+.np.is-vol .np__scrub { opacity: 0; pointer-events: none; transition: opacity var(--tm) var(--tm-out); }
+.np .np__vol .np__flyout {
+  position: absolute; left: auto; bottom: auto; right: 19px; top: 50%;
+  width: calc(var(--vdx, 0px) - 19px); height: 30px; margin-top: -15px;
+  display: block; border-radius: 0; background: none; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  opacity: 1; visibility: visible;
+  transform: scaleX(0); transform-origin: 100% 50%;
+  pointer-events: none;
+  transition: transform var(--vt) var(--vc);
+}
+.np.is-vol .np__vol .np__flyout { transform: scaleX(1); pointer-events: auto; }
+.np .np__vtrack { position: absolute; inset: 0; width: auto; height: auto; display: block; }
+.np .np__vtrack::before { top: 50%; bottom: auto; left: 0; right: 0; width: auto; height: 4px; margin: -2px 0 0; }
+.np .np__vfill { left: 0; bottom: auto; top: 50%; width: 40%; height: 4px; margin: -2px 0 0; }
+@media (prefers-reduced-motion: reduce) { .np { --vt: .01s; } }
+</style>
+</head>
+<body class="page-pf">
+
+<header class="pf__bar">
+  <div class="wordmark">
+    <span class="wordmark__main">Keep A Secret</span>
+    <span class="wordmark__sub">Portfolio</span>
+  </div>
+  <nav class="topbar__links">
+    <a class="tag" href="../contact.html">Contact</a>
+  </nav>
+</header>
+
+<nav class="seg" data-seg aria-label="Pages">
+  <span class="seg__thumb" aria-hidden="true"></span>
+  <a class="seg__btn" href="../index.html" aria-current="page">Portfolio</a>
+  <a class="seg__btn" href="../demos.html">Demos</a>
+</nav>
+
+<main class="pf" data-pf>
+  <h1 class="pf__title">Portfolio</h1>
+  <div class="floor" data-floor aria-hidden="true"></div>
+  <div class="shelf" data-shelf role="list"></div>
+  <!-- bottom left, level with the credit line: Instagram and the Spotify playlist
+       (hrefs set from CONFIG.instagram / CONFIG.spotify by js/portfolio.js) -->
+  <div class="socials">
+    <a data-instagram href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.5" y="3.5" width="17" height="17" rx="5"/>
+        <circle cx="12" cy="12" r="4.2"/>
+        <circle cx="17.1" cy="6.9" r="1"/>
+      </svg>
+    </a>
+    <a data-spotify-playlist href="#" target="_blank" rel="noopener noreferrer" aria-label="Spotify playlist" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9.5"/>
+        <path d="M6.9 9.2c3.6-1 7.6-.7 10.6 1.1M7.4 12.3c3-.8 6.2-.5 8.7 1M7.9 15.2c2.4-.6 4.7-.3 6.7.8"/>
+      </svg>
+    </a>
+  </div>
+
+  <footer class="pf__foot">
+    <p>&copy; Keep A Secret. All Rights Reserved</p>
+    <p>Written &amp; Produced by Keep A Secret</p>
+  </footer>
+</main>
+
+<div class="np" data-np role="region" aria-label="Now playing">
+  <div class="np__ctrl">
+    <button class="np__btn" data-np-prev type="button" aria-label="Previous">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 9.5 12 18 18Z"/><path d="M6 6v12"/></svg>
+    </button>
+    <button class="np__btn np__btn--play" data-np-play type="button" aria-label="Play">
+      <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5 19 12 9 18.5Z"/></svg>
+      <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg>
+    </button>
+    <button class="np__btn" data-np-next type="button" aria-label="Next">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 14.5 12 6 18Z"/><path d="M18 6v12"/></svg>
+    </button>
+  </div>
+  <div class="np__mid" data-np-mid>
+    <button class="np__who" data-np-open type="button" aria-label="Show credits">
+      <img class="np__art" data-np-art alt="">
+      <span class="np__text"><b data-np-title></b><span data-np-artist></span></span>
+    </button>
+    <!-- hover the hairline for half a second and the artwork and title give way to the times
+         (centred on the bar) with a timeline under them; leave and it sinks away again, fast -->
+    <div class="np__time" aria-hidden="true">
+      <span class="np__tl"><span class="np__t" data-np-elapsed>0:00</span><span class="np__t" data-np-total>0:00</span></span>
+      <div class="np__tscrub" data-np-tscrub>
+        <div class="np__ttrack"><div class="np__tfill" data-np-tfill></div></div>
+      </div>
+    </div>
+    <div class="np__scrub" data-np-scrub role="slider" tabindex="0" aria-label="Seek"
+         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="np__track"><div class="np__fill" data-np-fill></div></div>
+    </div>
+  </div>
+  <div class="np__vol">
+    <button class="np__btn np__btn--vol" data-np-vol type="button" aria-label="Volume" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="i-body" d="M4 9.6v4.8h3.6L12.4 18.4V5.6L7.6 9.6Z"/>
+        <path class="i-wave" d="M15.6 9.2a4 4 0 0 1 0 5.6M18.2 6.6a7.6 7.6 0 0 1 0 10.8"/>
+        <path class="i-mute" d="M15.6 9.6l5 4.8M20.6 9.6l-5 4.8"/>
+      </svg>
+    </button>
+    <div class="np__flyout" data-np-flyout>
+      <div class="np__vtrack" data-np-vtrack role="slider" tabindex="0" aria-label="Volume" aria-orientation="horizontal"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="40">
+        <div class="np__vfill" data-np-vfill></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<audio data-np-audio preload="none"></audio>
+
+<script src="../js/config.js"></script>
+<script src="center-cd.js"></script>
+</body>
+</html>
