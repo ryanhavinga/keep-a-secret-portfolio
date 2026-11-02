@@ -102,11 +102,21 @@
 /* while the credits are open the page's own header goes quiet, so it does not show through the dark under the Back button */
 .pf__bar { transition: opacity .3s ease; }
 html.is-focused .pf__bar { opacity: 0; }
-/* the two stacks are a touch darker and less saturated than the middle cover, so the middle one stands out */
-.cd:not(.is-mid) .cd__face { filter: saturate(.86) brightness(.92); }
-.cd:not(.is-mid) .cd__edge { filter: saturate(.86) brightness(calc((1 + var(--mag, 0) * .22) * .92)); }
-.cd.is-rim:not(.is-mid) .cd__face { filter: blur(calc(max(2px, var(--w) * .0055) * (1 - var(--mag, 0)))) saturate(.86) brightness(.92); }
+/* the two stacks are a touch darker than the middle cover, so the middle one stands out (but with their colour, not washed out) */
+.cd:not(.is-mid) .cd__face { filter: saturate(1) brightness(.98); }
+.cd:not(.is-mid) .cd__edge { filter: saturate(1) brightness(calc((1 + var(--mag, 0) * .22) * .98)); }
+.cd.is-rim:not(.is-mid) .cd__face { filter: blur(calc(max(2px, var(--w) * .0055) * (1 - var(--mag, 0)))) saturate(1) brightness(.98); }
 .cd__face, .cd__edge { transition: filter .4s ease; }
+/* the covers in the stacks go darker towards their foot, so they stand on the floor rather than hang in the light (the artwork's own shade, and the spine) */
+.cd--l:not(.is-mid) .cd__shade { background: linear-gradient(to top, rgba(0, 0, 0, .42), rgba(0, 0, 0, 0) 40%), linear-gradient(to right, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .3) 68%, rgba(0, 0, 0, .78) 100%); }
+.cd--r:not(.is-mid) .cd__shade { background: linear-gradient(to top, rgba(0, 0, 0, .42), rgba(0, 0, 0, 0) 40%), linear-gradient(to left, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .3) 68%, rgba(0, 0, 0, .78) 100%); }
+.cd:not(.is-mid) .cd__edge::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to top, rgba(0, 0, 0, .42), rgba(0, 0, 0, 0) 40%); }
+/* The light and the reflection on the floor under a stack cover are only there while it is lifted (--mag, 0 → 1 under the pointer); at rest nothing glows under it.
+   The reflection of the spine also stands in line with the spine itself: it sat about one thickness too far back, which slid it towards the middle of the page. */
+.fl:not(.is-front) .fl__glow { opacity: calc(var(--mag, 0) * .6); }
+.fl:not(.is-front) .fl__edge { opacity: calc(var(--mag, 0) * .85); }
+.fl.cd--l .fl__edge { translate: calc(var(--t) * -1.2) calc(var(--mag, 0) * var(--w) * .1); }
+.fl.cd--r .fl__edge { translate: calc(var(--t) * 1.2) calc(var(--mag, 0) * var(--w) * .1); }
 /* the middle cover's light on the floor, under the player bar (js/center-cd.js); its own pool in the floor is off */
 .fl.is-front .fl__glow { opacity: 0 !important; }
 .mid-light { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0;
