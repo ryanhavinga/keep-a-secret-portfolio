@@ -31,6 +31,7 @@
   const EDGE = .51;                       // where the outermost spine stands: this share of the window's width from the middle (.5 = the very edge)
   const SPACING = .32;                    // the distance from one side cover's spine to the next (a share of a cover's width; the live shelf uses .6)
   const SWAP_AT = 200;                    // ms into a step at which the cover that comes out passes in front of the one that goes back (half of its turn)
+  const ROTATE = 760;                     // ms the whole row needs to turn several places in one motion (the lock lasts this long)
   const STEP = 520;                       // ms between two single steps when the row has to turn further than one
   const WAVE = .6;                        // how high the cover under the pointer lifts, as a share of the live shelf's (1 = as high as there)
   const REACH = [1, 0, 0];                // hover lift by distance along the row: only the cover under the pointer lifts, its neighbours stay put (the live shelf: [1, .36, .1])
@@ -210,7 +211,7 @@
   }
 
   /* One step of the row: everything slides one place, the cover in the middle turns back to its side, the next one comes out and turns to face you. */
-  function layout(first) {
+  function layout(first, rot = 0) {                           // rot: how many places the row has turned (+ = to the left), 0 on the first layout
     let fromX = 0;                                             // where the cover that comes into the middle stands now (relative to the middle of the page)
     const swap = {};                                           // the cover that leaves the middle and the one that comes into it, to change places half-way
     items.forEach(it => {
@@ -223,9 +224,10 @@
       clearTimeout(it.flatT);
       if (first || old === null) { setSide(it, k < 0 ? 'l' : 'r'); home(it, k); put(it, k); if (!shown(k)) { it.li.classList.add('is-hide'); it.fl.classList.add('is-hide'); } if (k === 0) it.li.classList.add('is-flat'); return; }   // (the middle cover stands at its height from the first frame)
       if (k === old) return;
-      if (k === 0 && Math.abs(old) === 1) swap.inn = { box: stk[old < 0 ? 'l' : 'r'] };
+      if (k === 0 && old !== 0 && shown(old)) swap.inn = { box: stk[old < 0 ? 'l' : 'r'] };
       const tok = ++it.tok;
-      const jump = Math.abs(k - old) > 1;                    // it goes round the end of the row, from one side to the other: unseen, behind the others
+      for (const el of both(it)) el.style.opacity = '';          // (a turn that was cut short while the cover was fading must not leave it invisible)
+      const jump = Math.abs(old - rot) > SIDE;               // it goes round the end of the row, from one side to the other: unseen, behind the others
       it.li.classList.remove('is-flat');
       if (jump || !shown(k) || !shown(old)) {
         /* The cover that goes round the end of the row leaves out of the side of the page (never fading in place over its neighbours, which made them look see-
@@ -251,6 +253,35 @@
             setTimeout(() => { for (const el of both(it)) el.classList.remove('is-entering'); }, 600);
           }, 70);
         }, 180);
+        return;
+      }
+      /* A cover that has to get from one stack to the other (when the row turns more than one place) does not run through the middle: it goes back, behind
+         the artwork in the middle, to the centre line, changes sides there where nothing shows of it, and comes out again on the other side. */
+      if (old !== 0 && k !== 0 && Math.sign(old) !== Math.sign(k)) {
+        const w = px('--w');
+        it.li.style.zIndex = '1';                              // (behind every other cover of its stack)
+        /* it also goes up to the height of the middle cover, which stands higher than the stacks: at the stack's own height its foot and its top would show
+           below and above the artwork it hides behind (the cover itself stays solid — fading it made it look see-through against its neighbours) */
+        const midY = innerHeight * MIDLINE - (shelf.getBoundingClientRect().top + w / 2);
+        for (const el of both(it)) {
+          el.style.transition = 'translate .23s cubic-bezier(.5, 0, .8, .45)';
+          el.style.setProperty('--x', '0px');
+          el.style.setProperty(el === it.fl ? '--fy' : '--ly', `${midY.toFixed(1)}px`);
+          el.style.setProperty('--z', `${(-w * .8).toFixed(1)}px`);
+        }
+        it.fl.style.transition = 'translate .23s cubic-bezier(.5, 0, .8, .45), opacity .2s ease-in';
+        it.fl.style.opacity = '0';                             // (its reflection on the floor just fades)
+        setTimeout(() => {
+          if (it.tok !== tok) return;
+          for (const el of both(it)) el.classList.add('no-tr');
+          setSide(it, k < 0 ? 'l' : 'r'); home(it, k);
+          void it.li.offsetWidth;
+          for (const el of both(it)) { el.classList.remove('no-tr'); el.style.transition = 'translate .27s cubic-bezier(.2, .75, .3, 1)'; }
+          it.fl.style.transition = 'translate .27s cubic-bezier(.2, .75, .3, 1), opacity .22s ease-out .05s';
+          put(it, k);
+          it.fl.style.opacity = '';                                 // … and its reflection comes back once it is out beside the artwork
+          setTimeout(() => { for (const el of both(it)) el.style.transition = ''; }, 340);
+        }, 230);
         return;
       }
       /* the one leaving the middle: its hinge changes to the side it is heading for, while it still stands flat (which looks the same either way) */
@@ -536,9 +567,15 @@
     if (!d || ((locked || focusOpen) && !force)) return;
     locked = true; clearTimeout(lockT);
     if (infoBtn) infoBtn.classList.add('is-away');            // (it would otherwise stand in the corner of where the cover was)
-    todo += d;
     target = (((target + d) % T) + T) % T;
     NP.select(target);                                         // the bar's track, title and artwork change the moment it is clicked
+    if (Math.abs(d) > 1 && !busy) {                            // further than one place: the whole row turns in ONE motion (not one place after the other)
+      cur = (((cur + d) % T) + T) % T;
+      layout(false, d);
+      lockT = setTimeout(() => { locked = false; if (infoBtn) infoBtn.classList.remove('is-away'); }, ROTATE);
+      return;
+    }
+    todo += d;
     if (!busy) run();
   }
   function run() {
@@ -546,7 +583,7 @@
     busy = true;
     const s = Math.sign(todo); todo -= s;
     cur = (cur + s + T) % T;
-    layout(false);
+    layout(false, s);
     setTimeout(run, STEP);
   }
   npEl.addEventListener('click', ev => {                       // the bar's previous / next are locked too
