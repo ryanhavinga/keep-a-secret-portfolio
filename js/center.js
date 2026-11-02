@@ -377,8 +377,8 @@
     volBtn.addEventListener('click', () => { if (!el.classList.contains('is-vol')) setOpen(true); else setMuted(!muted); });
     document.addEventListener('pointerdown', ev => { if (!ev.target.closest('.np__vol')) setOpen(false); });
     const fromX = ev => { const r = vtrack.getBoundingClientRect(); setVol((ev.clientX - r.left) / r.width, true); };
-    let vdrag = false;
-    vtrack.addEventListener('pointerdown', ev => { vdrag = true; try { vtrack.setPointerCapture(ev.pointerId); } catch (_) {} fromX(ev); });
+    let vdrag = false, popVol = () => {};
+    vtrack.addEventListener('pointerdown', ev => { popVol(); vdrag = true; try { vtrack.setPointerCapture(ev.pointerId); } catch (_) {} fromX(ev); });
     vtrack.addEventListener('pointermove', ev => { if (vdrag) fromX(ev); });
     vtrack.addEventListener('pointerup', () => { vdrag = false; });
     vtrack.addEventListener('pointercancel', () => { vdrag = false; });
@@ -462,32 +462,38 @@
     }
 
     /* the timeline — the hairline, and the thick one that replaces it while hovered: tap or drag along either */
-    const seek = (zone, ev) => {
+    const seek = (zone, ev, press) => {
       const r = zone.getBoundingClientRect();
       const ratio = clamp((ev.clientX - r.left) / r.width, 0, 1);
       if (loaded !== i) load(i, true);
+      /* a press while the track is not playing starts it at that point, and from there it runs on until it is stopped (playing is what makes the
+         browser load a track that has not been touched yet — before that it has no length to jump in — so it starts at once and jumps as soon as it can) */
+      if (press && audio.paused) audio.play().catch(() => {});
       const go = () => jump(ratio * len());
       if (isFinite(audio.duration) && audio.duration) go(); else audio.addEventListener('loadedmetadata', go, { once: true });
     };
-    /* every press on the thick timeline gives it, and the times with it, a quick swell and back — just for life */
-    const timeFace = $('.np__time', el);
-    let popping = null;
-    const pop = () => {
-      if (reduced || !timeFace.animate) return;
-      /* a press in the middle of a swell carries on from the size it has reached, so rapid presses stay smooth */
-      const from = parseFloat(getComputedStyle(timeFace).scale) || 1;
-      if (popping) popping.cancel();
-      popping = timeFace.animate([
-        { scale: String(from), easing: 'cubic-bezier(.3, 0, .2, 1)' },
-        { scale: '1.025', offset: .38, easing: 'cubic-bezier(.4, 0, .25, 1)' },
-        { scale: '1' }
-      ], { duration: 520 });
+    /* every press on the thick timeline gives it, and the times with it, a quick swell and back — just for life; the volume line does the same */
+    const popper = node => {
+      let popping = null;
+      return () => {
+        if (reduced || !node.animate) return;
+        /* a press in the middle of a swell carries on from the size it has reached, so rapid presses stay smooth */
+        const from = parseFloat(getComputedStyle(node).scale) || 1;
+        if (popping) popping.cancel();
+        popping = node.animate([
+          { scale: String(from), easing: 'cubic-bezier(.3, 0, .2, 1)' },
+          { scale: '1.025', offset: .38, easing: 'cubic-bezier(.4, 0, .25, 1)' },
+          { scale: '1' }
+        ], { duration: 520 });
+      };
     };
+    const pop = popper($('.np__time', el));
+    popVol = popper(vtrack);
     [ui.scrub, ui.tscrub].forEach(zone => {
       /* as on the player page: held from the press, and "scrubbing" (the fill follows the finger exactly)
          a beat later, so the first jump still eases */
       let hold = 0;
-      zone.addEventListener('pointerdown', ev => { if (zone === ui.tscrub) pop(); dragging = true; zone.classList.add('is-held'); hold = setTimeout(() => dragging && zone.classList.add('is-scrubbing'), 90); try { zone.setPointerCapture(ev.pointerId); } catch (_) {} seek(zone, ev); });
+      zone.addEventListener('pointerdown', ev => { if (zone === ui.tscrub) pop(); dragging = true; zone.classList.add('is-held'); hold = setTimeout(() => dragging && zone.classList.add('is-scrubbing'), 90); try { zone.setPointerCapture(ev.pointerId); } catch (_) {} seek(zone, ev, true); });
       zone.addEventListener('pointermove', ev => { if (dragging && zone.hasPointerCapture(ev.pointerId)) seek(zone, ev); });
       const release = () => { dragging = false; clearTimeout(hold); zone.classList.remove('is-held', 'is-scrubbing'); if (!ui.mid.matches(':hover')) leaveTime(); };
       zone.addEventListener('pointerup', release);
