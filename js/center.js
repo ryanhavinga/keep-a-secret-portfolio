@@ -705,10 +705,10 @@
     if (Math.abs(wheelAcc) > 60 && !busy) { go(Math.sign(wheelAcc)); wheelAcc = 0; }
   }, { passive: true });
 
-  /* ---------- hovering: the cover under the pointer lifts (the middle one only zooms a touch), the pair beside it rises less,
-     and the viewpoint drifts with the pointer — none of it below the row ---------- */
+  /* ---------- hovering: only the cover under the pointer lifts (the middle one does not move), and the viewpoint of that stack
+     drifts with the pointer — none of it below the row ---------- */
   let hover = null, midHover = false, running = false, last = 0, drift = { l: { tx: 0, ty: 0, x: 0, y: 0 }, r: { tx: 0, ty: 0, x: 0, y: 0 } };
-  const UP = 20, DOWN = 14.5, ZETA = .8;
+  const UP = 20, DOWN = 19, ZETA = .8;                         // (DOWN: how briskly a cover settles back when the pointer leaves it)
   const frame = now => {
     const dt = Math.min(.05, (now - last) / 1000 || .016); last = now;
     const steps = Math.max(1, Math.ceil(dt / .004)), h = dt / steps, kk = 1 - Math.exp(-9 * dt);
@@ -724,7 +724,7 @@
       if (Math.abs(x - target) > .001 || Math.abs(v) > .01) busyF = true; else { it.mag = target; it.vel = 0; }
       const lift = Math.max(0, it.mag), mid = it.k === 0;
       const up = mid ? 0 : lift * WAVE;                       // how high the wave actually lifts a cover
-      it.ym += (up - it.ym) * kk;
+      it.ym += (up - it.ym) * (up < it.ym ? 1 - Math.exp(-12 * dt) : kk);   // (it comes down faster than it goes up)
       if (Math.abs(it.ym - up) > .002) busyF = true;
       for (const el of both(it)) el.style.setProperty('--mag', lift.toFixed(4));
       it.li.style.setProperty('--ym', it.ym.toFixed(4));
