@@ -117,13 +117,11 @@
     audio.addEventListener('loadedmetadata', () => current && paint(current));
     audio.addEventListener('ended', () => {
       if (!current) return;
-      const done = current, i = entries.indexOf(done);
+      const done = current;
       audio.currentTime = 0; landing = null;
       setPlaying(done, false);
       paint(done);
-      /* someone working down a list wants the next one, not silence */
-      const next = entries.slice(i + 1).find(n => n.track.audio);
-      if (next) toggle(next);
+      /* the song ends and stops: nothing starts by itself, the listener picks the next one */
     });
 
     /* space plays/pauses whatever is loaded, like the portfolio's player */
