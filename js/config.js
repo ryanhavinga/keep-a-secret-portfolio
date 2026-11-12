@@ -213,7 +213,7 @@ const CONFIG = {
       { title: 'No Safe Flights',     language: 'English', audio: 'audio/demo - No Safe Flights.m4a',     duration: 43,  year: 2021, collections: ['HAP'], status: 'available' },
       { title: 'Banga',               language: 'Dutch', audio: 'audio/demo - Banga.m4a',           duration: 226, collections: ['HAP'], status: 'available' },
       { title: 'Miracle',             language: 'Dutch', audio: 'audio/demo - Miracle.m4a',         duration: 114, collections: ['HAP'], status: 'available' },
-      { title: 'Alles Waar Je Spijt Van Hebt', language: 'Dutch', audio: 'audio/demo - Alles Waar Je Spijt Van Hebt.m4a', duration: 137, collections: ['HAP'], status: 'available' },
+      { title: 'Alles Waar Je Spijt Van Hebt', language: 'Dutch', audio: 'audio/demo - Alles Waar Je Spijt Van Hebt (v2).m4a', duration: 137, collections: ['HAP'], status: 'available' },
       { title: 'Spend Op Jou',        language: 'Dutch', audio: 'audio/demo - Spend Op Jou.m4a',    duration: 217, collections: ['HAP'], status: 'available' },
       { title: 'Vallen',              language: 'Dutch', audio: 'audio/demo - Vallen.m4a',          duration: 37,  collections: ['HAP'], status: 'available' }
     ]
