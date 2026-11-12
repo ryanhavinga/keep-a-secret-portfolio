@@ -55,6 +55,8 @@
   <!-- no visible title — the pill already says where you are; the page keeps one for screen readers -->
   <h1 class="vlt__title">Demos</h1>
 
+  <div class="vlt__in">
+
   <!-- the code bar: nothing is listed until a code (e.g. HAP) is given; then only that collection. Not a lock — see CONFIG.demos.collections -->
   <form class="code" data-code-form autocomplete="off" novalidate>
     <label class="code__label" for="code">Collection code</label>
@@ -72,12 +74,14 @@
 
   <!-- one heading and one list per language, one row per song, built from CONFIG.demos.tracks -->
   <div data-groups></div>
-
-  <footer class="vlt__foot">
-    <p>&copy; Keep A Secret. All Rights Reserved</p>
-    <p>Written &amp; Produced by Keep A Secret</p>
-  </footer>
+  </div>
 </main>
+
+<!-- outside <main> on purpose: <main> scrolls and fades at its edges, the credit line stays put under it -->
+<footer class="vlt__foot">
+  <p>&copy; Keep A Secret. All Rights Reserved</p>
+  <p>Written &amp; Produced by Keep A Secret</p>
+</footer>
 
 <audio data-audio preload="none"></audio>
 

@@ -5,15 +5,8 @@
    on the portfolio — laid out as a plain list, one song under the next.
    ============================================================ */
 
-/* styles.css locks <html>/<body> to the viewport for the portfolio's one
-   fixed room; this is a page that scrolls */
-html.demos-html,
-html.demos-html body {
-  height: auto;
-  min-height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
+/* styles.css locks <html>/<body> to the viewport, and that stays: the page itself doesn't scroll any more —
+   the list does, inside .vlt, which stops a little above the credit line (see "the page" below) */
 
 /* the lettering stays out of sight while Monument Extended arrives
    (script in demos.html's head) rather than flashing in a fallback */
@@ -45,12 +38,35 @@ html.fonts-wait .vlt { visibility: hidden; }
 .vlt__bar .wordmark { display: block; }
 
 /* ---------- the page ------------------------------------------ */
+/* .vlt is the scroller: from just under the bar to a little above the credit line, the full width of the window,
+   so its scrollbar sits at the window's right edge. The list breaks off (a soft fade) above the credits and the
+   rest is reached by scrolling. .vlt__in keeps the column at 1040px in the middle. */
 .vlt {
   --gutter: clamp(20px, 5vw, 48px);
-  width: min(1040px, 100% - 2 * var(--gutter));
-  margin: 0 auto;
-  padding: clamp(120px, 19vh, 190px) 0 clamp(96px, 14vh, 130px);      /* room for the credit line fixed under it */
+  --head: clamp(84px, 11vh, 120px);                                 /* the bar (wordmark, page pill) above it */
+  --foot: calc(clamp(18px, 3vh, 36px) + 23px + 24px);                /* the credit line: its distance from the foot, its height, and air */
+  position: fixed; z-index: 1;
+  left: 0; right: 0; top: var(--head); bottom: var(--foot);
+  overflow-x: hidden; overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: clamp(32px, 8vh, 80px) var(--gutter) 28px;
   font-family: var(--ui);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 34px), transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 34px), transparent 100%);
+}
+.vlt__in { width: min(1040px, 100%); margin: 0 auto; }
+
+/* a scrollbar that is always there, on the right: a slim light thumb (macOS would otherwise hide it until you scroll) */
+.vlt::-webkit-scrollbar { width: 14px; }
+.vlt::-webkit-scrollbar-track { background: transparent; }
+.vlt::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, .3);
+  border: 4px solid transparent; background-clip: padding-box;       /* 6px of thumb in a 14px lane */
+  border-radius: 999px;
+}
+.vlt::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .5); background-clip: padding-box; }
+@supports not selector(::-webkit-scrollbar) {
+  .vlt { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .35) transparent; }
 }
 
 .vlt__title {
@@ -356,7 +372,7 @@ html.fonts-wait .vlt { visibility: hidden; }
     row-gap: 10px;
   }
   /* the page pill drops below the wordmark here (see .seg in styles.css) */
-  .vlt { padding-top: 172px; }
+  .vlt { --head: 156px; padding-top: 22px; }
   .row__no { display: none; }
   .row__ask, .row__pending { justify-self: start; margin-top: 2px; }
   .row__play { margin-left: -10px; }
