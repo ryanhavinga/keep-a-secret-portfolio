@@ -208,19 +208,11 @@ const CONFIG = {
       HAP: { name: 'Holland America Publishing', request: false }     // request: false — no Request link on its rows
     },
     tracks: [
-      /* Nederlandstalig is switched off for now — take the comment marks away to bring it back (the heading comes with it):
-      {
-        title: 'Alles Waar Je Spijt Van Hebt',
-        language: 'Nederlandstalig',
-        audio: 'audio/track 4 - Alles Waar Je Spijt Van Hebt.m4a',
-        duration: 133,
-        genre: null,
-        bpm: null,
-        key: null,
-        status: 'available',
-        note: null
-      },
-      */
+      { title: 'Banga',               language: 'Nederlandstalig', audio: 'audio/demo - Banga.m4a',           duration: 226, collections: ['HAP'], status: 'available' },
+      { title: 'Alles Waar Je Spijt Van Hebt', language: 'Nederlandstalig', audio: 'audio/demo - Alles Waar Je Spijt Van Hebt.m4a', duration: 137, collections: ['HAP'], status: 'available' },
+      { title: 'Spend Op Jou',       language: 'Nederlandstalig', audio: 'audio/demo - Spend Op Jou.m4a',    duration: 217, collections: ['HAP'], status: 'available' },
+      { title: 'Vallen',              language: 'Nederlandstalig', audio: 'audio/demo - Vallen.m4a',          duration: 37,  collections: ['HAP'], status: 'available' },
+      { title: 'Miracle',             language: 'Engelstalig', audio: 'audio/demo - Miracle.m4a',             duration: 114, collections: ['HAP'], status: 'available' },
       { title: 'Give Ya What U Like', language: 'Engelstalig', audio: 'audio/demo - Give Ya What U Like.mp3', duration: 180, year: 2021, collections: ['HAP'], status: 'available' },
       { title: 'Fast Life',           language: 'Engelstalig', audio: 'audio/demo - Fast Life.m4a',           duration: 154, year: 2021, collections: ['HAP'], status: 'available' },
       { title: 'No Safe Flights',     language: 'Engelstalig', audio: 'audio/demo - No Safe Flights.m4a',     duration: 43,  year: 2021, collections: ['HAP'], status: 'available' }
