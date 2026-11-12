@@ -185,8 +185,8 @@ const CONFIG = {
 
      Each entry in `tracks` is one row:
        title    : song title
-       language : the heading it is listed under, e.g. 'Nederlandstalig' or
-                  'Engelstalig'. The groups come in the order they first
+       language : the heading it is listed under, e.g. 'Dutch' or
+                  'English'. The groups come in the order they first
                   appear here; a song with no language sits above them all.
        audio    : path to the .m4a (same rules as the tracks above —
                   under 25MB, see CLAUDE.md for the afconvert line).
@@ -208,14 +208,14 @@ const CONFIG = {
       HAP: { name: 'Holland America Publishing', request: false }     // request: false — no Request link on its rows
     },
     tracks: [
-      { title: 'Give Ya What U Like', language: 'Engelstalig', audio: 'audio/demo - Give Ya What U Like.mp3', duration: 180, year: 2021, collections: ['HAP'], status: 'available' },
-      { title: 'Fast Life',           language: 'Engelstalig', audio: 'audio/demo - Fast Life.m4a',           duration: 154, year: 2021, collections: ['HAP'], status: 'available' },
-      { title: 'No Safe Flights',     language: 'Engelstalig', audio: 'audio/demo - No Safe Flights.m4a',     duration: 43,  year: 2021, collections: ['HAP'], status: 'available' },
-      { title: 'Banga',               language: 'Nederlandstalig', audio: 'audio/demo - Banga.m4a',           duration: 226, collections: ['HAP'], status: 'available' },
-      { title: 'Miracle',             language: 'Nederlandstalig', audio: 'audio/demo - Miracle.m4a',         duration: 114, collections: ['HAP'], status: 'available' },
-      { title: 'Alles Waar Je Spijt Van Hebt', language: 'Nederlandstalig', audio: 'audio/demo - Alles Waar Je Spijt Van Hebt.m4a', duration: 137, collections: ['HAP'], status: 'available' },
-      { title: 'Spend Op Jou',        language: 'Nederlandstalig', audio: 'audio/demo - Spend Op Jou.m4a',    duration: 217, collections: ['HAP'], status: 'available' },
-      { title: 'Vallen',              language: 'Nederlandstalig', audio: 'audio/demo - Vallen.m4a',          duration: 37,  collections: ['HAP'], status: 'available' }
+      { title: 'Give Ya What U Like', language: 'English', audio: 'audio/demo - Give Ya What U Like.mp3', duration: 180, year: 2021, collections: ['HAP'], status: 'available' },
+      { title: 'Fast Life',           language: 'English', audio: 'audio/demo - Fast Life.m4a',           duration: 154, year: 2021, collections: ['HAP'], status: 'available' },
+      { title: 'No Safe Flights',     language: 'English', audio: 'audio/demo - No Safe Flights.m4a',     duration: 43,  year: 2021, collections: ['HAP'], status: 'available' },
+      { title: 'Banga',               language: 'Dutch', audio: 'audio/demo - Banga.m4a',           duration: 226, collections: ['HAP'], status: 'available' },
+      { title: 'Miracle',             language: 'Dutch', audio: 'audio/demo - Miracle.m4a',         duration: 114, collections: ['HAP'], status: 'available' },
+      { title: 'Alles Waar Je Spijt Van Hebt', language: 'Dutch', audio: 'audio/demo - Alles Waar Je Spijt Van Hebt.m4a', duration: 137, collections: ['HAP'], status: 'available' },
+      { title: 'Spend Op Jou',        language: 'Dutch', audio: 'audio/demo - Spend Op Jou.m4a',    duration: 217, collections: ['HAP'], status: 'available' },
+      { title: 'Vallen',              language: 'Dutch', audio: 'audio/demo - Vallen.m4a',          duration: 37,  collections: ['HAP'], status: 'available' }
     ]
   },
 

@@ -300,6 +300,19 @@
   input.addEventListener('input', () => { note.textContent = ''; });
   $('[data-code-clear]').addEventListener('click', () => { show(null); input.value = ''; });
 
+  /* ==========================================================
+     "SCROLL FOR MORE" — a pill over the fade at the foot of the list for as long as there is more below it
+     ========================================================== */
+  const scroller = $('.vlt'), more = $('[data-more]');
+  const updateMore = () => {
+    const left = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop;
+    more.classList.toggle('is-on', left > 24);
+  };
+  scroller.addEventListener('scroll', updateMore, { passive: true });
+  addEventListener('resize', updateMore);
+  if (window.ResizeObserver) new ResizeObserver(updateMore).observe($('.vlt__in'));
+  more.addEventListener('click', () => scroller.scrollBy({ top: scroller.clientHeight * 0.7, behavior: 'smooth' }));
+
   const top = $('[data-contact-link]');
   if (contact) top.href = `mailto:${contact}`; else top.hidden = true;
   /* A collection opens only from a link that carries its code (?code=HAP) or from typing the code — nothing is remembered,

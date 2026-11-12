@@ -14,6 +14,7 @@ html.fonts-wait .vlt__bar,
 html.fonts-wait .vlt { visibility: hidden; }
 
 .page-demos {
+  --foot: calc(clamp(18px, 3vh, 36px) + 23px + 24px);       /* the credit line: its distance from the foot, its height, and air (the list and the hint stop above it) */
   --inset: 22px;                                          /* where all the text starts, the same as the text in the code bar */
   --ui: Helvetica, 'Helvetica Neue', Arial, sans-serif;     /* the credit line's lettering — used for everything on the page below the bar */
   background:
@@ -44,7 +45,6 @@ html.fonts-wait .vlt { visibility: hidden; }
 .vlt {
   --gutter: clamp(20px, 5vw, 48px);
   --head: clamp(84px, 11vh, 120px);                                 /* the bar (wordmark, page pill) above it */
-  --foot: calc(clamp(18px, 3vh, 36px) + 23px + 24px);                /* the credit line: its distance from the foot, its height, and air */
   position: fixed; z-index: 1;
   left: 0; right: 0; top: var(--head); bottom: var(--foot);
   overflow-x: hidden; overflow-y: auto;
@@ -77,7 +77,7 @@ html.fonts-wait .vlt { visibility: hidden; }
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
-.group + .group { margin-top: clamp(40px, 7vh, 72px); }
+.group + .group { margin-top: clamp(28px, 4.5vh, 44px); }
 .group__title {                       /* a quiet label over each list, not a heading to read first */
   margin: 0 0 0 var(--inset);
   font-family: var(--ui);
@@ -146,10 +146,10 @@ html.fonts-wait .vlt { visibility: hidden; }
 }
 
 .row {
-  --pad: clamp(16px, 2.2vh, 22px);
+  --pad: clamp(9px, 1.25vh, 13px);
   position: relative;
   display: grid;
-  grid-template-columns: 40px 54px minmax(0, 1fr) minmax(0, 1.5fr) 104px;
+  grid-template-columns: 32px 42px minmax(0, 1fr) minmax(0, 1.5fr) 104px;
   grid-template-areas: 'no icon info player ask';
   align-items: center;
   column-gap: clamp(14px, 2vw, 26px);
@@ -171,18 +171,18 @@ html.fonts-wait .vlt { visibility: hidden; }
 
 .row__icon {                               /* the little tile with a music note, left, level with the middle of the row */
   grid-area: icon;
-  width: 54px; height: 54px;
+  width: 42px; height: 42px;
   display: grid; place-items: center;
-  border-radius: 13px;
+  border-radius: 10px;
   background: #1f1d29;
   color: #b9a7e8;
 }
-.row__icon svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.row__icon svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .row__icon svg circle { fill: currentColor; stroke: none; }
 .row.is-playing .row__icon { background: #2a2639; color: #d6c8ff; }
 .row__no {
   grid-area: no;
-  font-size: clamp(16px, 1.55vw, 20px);        /* as big as the song's name, and white like it */
+  font-size: clamp(14px, 1.25vw, 17px);        /* as big as the song's name, and white like it */
   line-height: 1.15;
   letter-spacing: .02em;
   font-variant-numeric: tabular-nums;
@@ -196,7 +196,7 @@ html.fonts-wait .vlt { visibility: hidden; }
   margin: 0;
   font-family: var(--ui);
   font-weight: 700;
-  font-size: clamp(16px, 1.55vw, 20px);
+  font-size: clamp(14px, 1.25vw, 17px);
   letter-spacing: .01em;
   line-height: 1.15;
   color: rgba(255, 255, 255, .92);
@@ -212,8 +212,8 @@ html.fonts-wait .vlt { visibility: hidden; }
   color: rgba(255, 255, 255, .82);
 }
 .row__meta {
-  margin: 9px 0 0;
-  font-size: 13px;
+  margin: 5px 0 0;
+  font-size: 12px;
   letter-spacing: .03em;
   color: rgba(255, 255, 255, .74);          /* the year: halfway between the white of the title and the grey it was (.48) */
 }
@@ -236,7 +236,7 @@ html.fonts-wait .vlt { visibility: hidden; }
 .row__play {
   flex: 0 0 auto;
   position: relative;
-  width: 52px; height: 52px;
+  width: 42px; height: 42px;
   display: grid; place-items: center;
   border-radius: 50%;
   /* a bit grey at rest, full white on hover or while playing — exactly
@@ -271,7 +271,7 @@ html.fonts-wait .vlt { visibility: hidden; }
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
-  padding: 12px 0;
+  padding: 10px 0;
   cursor: pointer;
   touch-action: none;
 }
@@ -334,13 +334,37 @@ html.fonts-wait .vlt { visibility: hidden; }
 }
 .sel__title { margin: 0; font: 700 clamp(18px, 1.7vw, 22px)/1.15 var(--ui); letter-spacing: .01em; color: #fff; }
 .sel__count { font: 500 13px/1.2 var(--ui); letter-spacing: .03em; color: var(--w-48); white-space: nowrap; }
-.sel + .group .rows { margin-top: clamp(14px, 2vh, 20px); }
+.sel + .group { margin-top: clamp(26px, 4.2vh, 42px); }      /* air between "Your selection" and the first language */
+.sel + .group .rows { margin-top: clamp(10px, 1.5vh, 16px); }
 
 /* a collection with no Request links: the column on the right goes, the time ends the row */
-.no-ask .row { grid-template-columns: 40px 54px minmax(0, 1fr) minmax(0, 1.5fr); grid-template-areas: 'no icon info player'; }
+.no-ask .row { grid-template-columns: 32px 42px minmax(0, 1fr) minmax(0, 1.5fr); grid-template-areas: 'no icon info player'; }
 @media (max-width: 860px) {
-  .no-ask .row { grid-template-columns: 54px minmax(0, 1fr); grid-template-areas: 'icon info' 'player player'; }
+  .no-ask .row { grid-template-columns: 42px minmax(0, 1fr); grid-template-areas: 'icon info' 'player player'; }
 }
+
+/* ---------- the hint that there is more below ------------------ */
+/* a small pill with a bouncing arrow, sitting on the fade above the credit line while the list goes on below
+   (js/demos.js shows and hides it); a tap scrolls down */
+.more {
+  position: fixed; z-index: 6;
+  left: 50%; bottom: var(--foot, 80px);
+  transform: translate(-50%, 6px);
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px 8px 16px;
+  border-radius: 999px;
+  font: 600 11px/1 var(--ui, Helvetica, Arial, sans-serif); letter-spacing: .1em;
+  color: #fff; cursor: pointer;
+  background: rgba(40, 40, 46, .88);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22), 0 8px 24px -8px rgba(0, 0, 0, .9);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .4s var(--ease), transform .4s var(--ease), visibility 0s .4s;
+}
+.more.is-on { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 0); transition-delay: 0s; }
+.more svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; animation: more-bob 1.6s ease-in-out infinite; }
+@keyframes more-bob { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(2px); } }
+@media (prefers-reduced-motion: reduce) { .more svg { animation: none; } }
 
 /* ---------- foot ---------------------------------------------- */
 /* exactly where it is on the portfolio: fixed to the foot of the window, in the middle (see .pf__foot in portfolio.css) */
@@ -364,7 +388,7 @@ html.fonts-wait .vlt { visibility: hidden; }
 /* ---------- narrower screens: the row folds into two lines ----- */
 @media (max-width: 860px) {
   .row {
-    grid-template-columns: 54px minmax(0, 1fr);
+    grid-template-columns: 42px minmax(0, 1fr);
     grid-template-areas:
       'icon info'
       'player player'
@@ -375,7 +399,7 @@ html.fonts-wait .vlt { visibility: hidden; }
   .vlt { --head: 156px; padding-top: 22px; }
   .row__no { display: none; }
   .row__ask, .row__pending { justify-self: start; margin-top: 2px; }
-  .row__play { margin-left: -10px; }
+  .row__play { margin-left: -8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
