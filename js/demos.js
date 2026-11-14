@@ -62,7 +62,7 @@
     } catch (_) {}
     audio.volume = vol;
 
-    let swapTimer = 0;
+    let swapTimer = 0, npHold = false;          // npHold: while the bar fades from one song to the next, its time and timeline wait
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     /* the now-playing bar (demos.html): the song that is loaded, previous / play / next, a timeline, the volume */
     const np = {
@@ -134,7 +134,7 @@
       if (e.n !== n) { e.n = n; e.scrub.setAttribute('aria-valuenow', n); }
       const txt = e === current && (t > 0 || !audio.paused) ? time(t) : total(d);
       if (e.txt !== txt) { e.txt = txt; e.timeEl.textContent = txt; }
-      if (e === current) {                                          // the bar follows the same song
+      if (e === current && !npHold) {                               // the bar follows the same song (not while it is fading to it)
         np.fill.style.width = w;
         np.bar.setAttribute('aria-valuenow', n);
         np.cur.textContent = time(t); np.dur.textContent = total(d);
@@ -171,10 +171,14 @@
       audio.src = e.track.audio;
       /* the bar slides up (once) and shows this song — when it was already showing another, the old one fades away and the new one fades in */
       const wasOn = np.el.classList.contains('is-on');
-      const showSong = () => { np.title.textContent = e.track.title; np.art.innerHTML = e.art; np.who.classList.remove('is-swap'); np.seek.classList.remove('is-swap'); };
+      const showSong = () => {
+        np.title.textContent = e.track.title; np.art.innerHTML = e.art;
+        npHold = false; if (current) paint(current);               // the new time and timeline go in while everything is faded out…
+        np.who.classList.remove('is-swap'); np.seek.classList.remove('is-swap');   // …and all of it fades back in together
+      };
       clearTimeout(swapTimer);
       if (!wasOn || reducedMotion || !np.title.textContent) showSong();
-      else { np.who.classList.add('is-swap'); np.seek.classList.add('is-swap'); swapTimer = setTimeout(showSong, 240); }
+      else { npHold = true; np.who.classList.add('is-swap'); np.seek.classList.add('is-swap'); swapTimer = setTimeout(showSong, 240); }
       np.el.classList.add('is-on'); document.body.classList.add('has-np');
       np.next.disabled = !entries.slice(entries.indexOf(e) + 1).some(n => n.track.audio);
       paint(e);

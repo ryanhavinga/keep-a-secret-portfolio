@@ -434,7 +434,7 @@ html.fonts-wait .vlt { visibility: hidden; }
 .np__who { display: flex; align-items: center; gap: 14px; min-width: 0; transition: opacity .3s var(--ease), filter .3s var(--ease), transform .3s var(--ease); }
 /* switching song: the old one fades (and blurs) away, then the new one fades back in, the same way */
 .np__who.is-swap { opacity: 0; filter: blur(4px); transform: translateY(3px); }
-.np__seek.is-swap { opacity: .35; }
+.np__seek.is-swap { opacity: 0; filter: blur(4px); transform: translateY(3px); }      /* the same fade as the title and cover tile, so they leave and come back together */
 .np__art { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 10px; background: #2a2639; color: #d6c8ff; }
 .np__text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .np__text b, .np__text span {
@@ -511,7 +511,7 @@ html.fonts-wait .vlt { visibility: hidden; }
 .np.is-muted .np__btn--vol .i-mute { opacity: 1; }
 .np.is-vol .np__btn--vol { translate: calc(var(--vdx, 0px) * -1) 0; }
 /* the time and the timeline give way — blurred and a touch fainter — while the volume line is up */
-.np__seek { transition: opacity var(--tm) var(--tm-in), filter var(--tm) var(--tm-in); }          /* coming back: it sharpens again exactly as it blurred */
+.np__seek { transition: opacity .3s var(--ease), filter .3s var(--ease), transform .3s var(--ease); }          /* coming back: it sharpens again exactly as it blurred */
 .np.is-vol .np__seek { opacity: .6; filter: blur(5.5px); pointer-events: none; transition: opacity var(--tm) var(--tm-out), filter var(--tm) var(--tm-out); }
 .np__flyout {
   position: absolute; right: 21px; top: 50%;
