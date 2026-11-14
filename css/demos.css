@@ -91,15 +91,14 @@ html.fonts-wait .vlt { visibility: hidden; }
   letter-spacing: .01em;
   color: rgba(255, 255, 255, .92);
 }
-/* ---------- the open collection: a glass bar under the header ----- */
-/* While a collection is open, a bar runs the full width of the window directly under the header (the wordmark, the page pill and
-   Contact stay above it). It is a little darker at the top and lightens toward its lower edge, so the header is set apart from the list. "Showing your selection", the name and "Clear" are on it, in line with the list's left edge. */
+/* ---------- the open collection, under the header ----------------- */
+/* While a collection is open, "Showing your selection", the name and "Clear" stay at the top, under the wordmark and the page pill, in
+   line with the left edge of the list. A thin line under them (as wide as the lines between the songs) sets them apart from the list,
+   which scrolls underneath. No background. */
 .band {
   position: fixed; z-index: 2; left: 0; right: 0;
   top: calc(var(--head) + clamp(28px, 5.6vh, 56px));
-  padding: clamp(16px, 2.8vh, 26px) 0;
-  /* a gentle gradient: a little darker at the top, a little lighter at the lower edge — no border */
-  background: linear-gradient(to bottom, rgba(0, 0, 0, .16) 0%, rgba(255, 255, 255, .03) 50%, rgba(255, 255, 255, .075) 100%);
+  padding: clamp(16px, 2.8vh, 26px) 0 0;
   color: #fff;
 }
 .band[hidden] { display: none; }
@@ -107,8 +106,11 @@ html.fonts-wait .vlt { visibility: hidden; }
 .band__in {
   --gut: clamp(20px, 5vw, 48px);
   --lw: min(1040px, calc(var(--vw, 100vw) - 2 * var(--gut)));
-  width: var(--lw);
-  margin-left: calc((var(--vw, 100vw) - var(--lw)) / 2);
+  box-sizing: border-box;
+  width: calc(var(--lw) + 28px);                                   /* the line reaches 14px past the text, like the lines between the songs */
+  margin-left: calc((var(--vw, 100vw) - var(--lw)) / 2 - 14px);
+  padding: 0 14px clamp(16px, 2.4vh, 24px);
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
 }
 /* with a collection open, the list starts under the bar */
 .page-demos.has-band .vlt { top: var(--band-h, 180px); padding-top: clamp(22px, 4.4vh, 38px); }
@@ -191,7 +193,7 @@ html.fonts-wait .vlt { visibility: hidden; }
   --pad: clamp(8px, 1.2vh, 11px);
   position: relative;
   display: grid;
-  grid-template-columns: 28px 44px minmax(0, 1fr) minmax(0, 1.5fr) 104px;
+  grid-template-columns: 28px 44px minmax(0, 1fr) minmax(0, 1.5fr) 100px;
   grid-template-areas: 'no icon info player ask';
   align-items: center;
   column-gap: clamp(14px, 2vw, 26px);
@@ -199,8 +201,25 @@ html.fonts-wait .vlt { visibility: hidden; }
   border-top: 1px solid rgba(255, 255, 255, .1);
   transition: background-color .5s var(--ease);
 }
+/* hovering a song that is not the loaded one: a soft glow of light across the row, fading in from the left. Only light — nothing moves or grows. */
+.row { isolation: isolate; }
+.row::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .085), rgba(255, 255, 255, .03) 60%, rgba(255, 255, 255, .012));
+  opacity: 0;
+  transition: opacity .4s var(--ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .row:not(.is-current):hover::after { opacity: 1; }
+}
+
 /* the song that is loaded (playing or paused): a subtle lighter background */
 .row.is-current { background: rgba(255, 255, 255, .075); }
+/* and a white vertical stripe at its left edge, the height of the row */
+.row.is-current::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; border-radius: 2px; background: #fff;
+}
 
 /* the tile in front of every song: a small music note on a dark purple tile, as on the site as it was (js/demos.js);
    a track with an `artwork` in config.js shows its picture instead */
@@ -346,18 +365,26 @@ html.fonts-wait .vlt { visibility: hidden; }
   color: rgba(255, 255, 255, .78);
 }
 
+/* the Request button: only on the song that is loaded (selected) — also while it is paused, so it stays there for someone who stops to think —
+   and nowhere when no song has been picked. It follows the selection from row to row. A warm grey pill (#a2a1a0) with near-black text;
+   on hover it turns dark grey with white text. */
 .row__ask {
   grid-area: ask;
   justify-self: end;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .1em;
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 32px; padding: 0 16px;
+  border-radius: 999px;
+  font: 600 13px/1 var(--ui); letter-spacing: .02em;
   white-space: nowrap;
-  color: var(--w-72);
-  transition: color .5s var(--ease);
+  color: #0a0a0a;
+  background: #a2a1a0;
+  box-shadow: none;
+  /* not on this song: gone (the space stays, so nothing in the row shifts); not clickable and not reachable with Tab either */
+  opacity: 0; visibility: hidden;
+  transition: opacity .3s var(--ease), visibility 0s .3s, background-color .3s var(--ease), box-shadow .3s var(--ease);
 }
-.row__ask::after { content: ' \2192'; letter-spacing: 0; }
-.row__ask:hover { color: #fff; }
+.row.is-current .row__ask { opacity: 1; visibility: visible; transition-delay: 0s; }
+.row.is-current .row__ask:hover { background: #333335; box-shadow: none; color: #fff; }
 
 .row__pending {
   grid-area: ask; justify-self: end;
@@ -520,11 +547,10 @@ html.fonts-wait .vlt { visibility: hidden; }
 /* ---------- narrower screens: the row folds into two lines ----- */
 @media (max-width: 860px) {
   .row {
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 44px minmax(0, 1fr) auto;
     grid-template-areas:
-      'icon info'
-      'player player'
-      'ask ask';
+      'icon info ask'
+      'player player player';
     row-gap: 10px;
   }
   /* the page pill drops below the wordmark here (see .seg in styles.css) */
@@ -533,7 +559,9 @@ html.fonts-wait .vlt { visibility: hidden; }
   .page-demos.has-band .vlt { padding-top: 16px; }
   .code__name { font-size: clamp(16px, 4.8vw, 24px); }               /* the name and "Clear" share a line on a phone */
   .row__no { display: none; }
-  .row__ask, .row__pending { justify-self: start; margin-top: 2px; }
+  .row__ask, .row__pending { justify-self: end; align-self: center; }
+  .row__ask { height: 30px; padding: 0 14px; font-size: 12.5px; }
+  .row:not(.is-current) .row__ask { display: none; }                  /* on a phone the others give their room to the title */
   .row__play { margin-left: -8px; }
   /* the bar keeps its shape; the time and the volume step aside (a phone has its own buttons) and the timeline becomes a thin
      line along the top edge, with room to be hit */

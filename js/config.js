@@ -206,7 +206,7 @@ const CONFIG = {
        collection is not shown anywhere. It is not a password: a link ending in ?code=HAP opens a collection straight
        away, and the files themselves are still on the server for anyone who goes looking. */
     collections: {
-      HAP: { name: 'Holland America Publishing', request: false }     // request: false — no Request link on its rows
+      HAP: { name: 'Holland America Publishing' }     // add request: false to take the Request button off its rows
     },
     tracks: [
       { title: 'Miracle',             language: 'English', audio: 'audio/demo - Miracle (v3).m4a',  duration: 121, year: 2026, collections: ['HAP'], status: 'available' },

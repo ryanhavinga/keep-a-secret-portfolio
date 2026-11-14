@@ -377,9 +377,9 @@
     tracks.forEach((t, i) => {
       const meta = [t.year, t.genre, t.bpm && `${t.bpm} BPM`, t.key].filter(Boolean).join(' · ');
       const state = STATUS_LABEL[t.status];                       // on hold / cut: no Request link
-      const forWho = active ? `Collection: ${collections[active].name || active}\n` : '';
+      const forWho = active ? ` (selection: ${collections[active].name || active})` : '';
       const mail = contact && canAsk && !state
-        ? `mailto:${contact}?subject=${encodeURIComponent(`Demo request: ${t.title}`)}&body=${encodeURIComponent(`Hi,\n\nI'd like to request the demo of "${t.title}".\n${forWho}\n`)}`
+        ? `mailto:${contact}?subject=${encodeURIComponent(`Demo request: ${t.title}`)}&body=${encodeURIComponent(`Hi Keep A Secret,\n\nI'd like to request the demo of "${t.title}"${forWho}.\n\nKind regards,\n`)}`
         : null;
       const bars = wave(t.title);
       const li = document.createElement('li');
