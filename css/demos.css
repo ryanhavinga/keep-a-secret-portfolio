@@ -91,12 +91,16 @@ html.fonts-wait .vlt { visibility: hidden; }
   letter-spacing: .01em;
   color: rgba(255, 255, 255, .92);
 }
-/* ---------- the open collection, kept at the top ---------------- */
-/* While a collection is open, "Showing …" stays at the top, under the wordmark and the page pill, in line with the left edge of the
-   list's cards, and the list scrolls underneath it. No background of its own. */
+/* ---------- the open collection: a glass bar under the header ----- */
+/* While a collection is open, a bar runs the full width of the window directly under the header (the wordmark, the page pill and
+   Contact stay above it). It is a little darker at the top and lightens toward its lower edge, so the header is set apart from the list. "Showing your selection", the name and "Clear" are on it, in line with the list's left edge. */
 .band {
-  position: fixed; z-index: 2; left: 0; right: 0; top: 0;
-  padding: calc(var(--head) + clamp(38px, 7.5vh, 72px)) 0 clamp(16px, 2.4vh, 24px);
+  position: fixed; z-index: 2; left: 0; right: 0;
+  top: calc(var(--head) + clamp(28px, 5.6vh, 56px));
+  padding: clamp(16px, 2.8vh, 26px) 0;
+  /* a gentle gradient: a little darker at the top, a little lighter at the lower edge — no border */
+  background: linear-gradient(to bottom, rgba(0, 0, 0, .16) 0%, rgba(255, 255, 255, .03) 50%, rgba(255, 255, 255, .075) 100%);
+  color: #fff;
 }
 .band[hidden] { display: none; }
 /* the same column as the list: 1040px (or the window less its gutters), centred on the area the list scrolls in (--vw, js/demos.js) */
@@ -106,7 +110,7 @@ html.fonts-wait .vlt { visibility: hidden; }
   width: var(--lw);
   margin-left: calc((var(--vw, 100vw) - var(--lw)) / 2);
 }
-/* with a collection open, the list starts under it */
+/* with a collection open, the list starts under the bar */
 .page-demos.has-band .vlt { top: var(--band-h, 180px); padding-top: clamp(22px, 4.4vh, 38px); }
 .page-demos.has-band [data-groups] { margin-top: 0; }
 
@@ -158,9 +162,9 @@ html.fonts-wait .vlt { visibility: hidden; }
 }
 .code__active[hidden] { display: none; }
 .code__who { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.code__showing { font: 500 14px/1.2 var(--ui); letter-spacing: .015em; color: rgba(255, 255, 255, .7); }
+.code__showing { font: 500 14px/1.2 var(--ui); letter-spacing: .015em; color: rgba(255, 255, 255, .72); }
 .code__name { font: 700 clamp(22px, 2.4vw, 28px)/1.15 var(--ui); letter-spacing: .01em; color: #fff; }
-.code__clear { flex: 0 0 auto; font: 500 15px/1.4 var(--ui); color: rgba(255, 255, 255, .55); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; transition: color .3s var(--ease); }
+.code__clear { flex: 0 0 auto; font: 500 15px/1.4 var(--ui); color: rgba(255, 255, 255, .62); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; transition: color .3s var(--ease); }
 .code__clear:hover { color: #fff; }
 [data-groups] { margin-top: clamp(28px, 5.4vh, 46px); }
 [data-groups].is-bare { margin-top: 0; }
