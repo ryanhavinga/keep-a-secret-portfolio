@@ -334,6 +334,42 @@
   })();
 
   const contact = V.contact || CONFIG.bio?.contact;
+
+  /* ==========================================================
+     THE REQUEST BUTTON is a mailto: link — it opens the visitor's own mail app, with the subject and a greeting filled in.
+     Not everyone has one set up (a lot of people read their mail in the browser), and then the click would seem to do nothing.
+     So: if the page keeps the focus for a moment after the click (a mail app that opens takes it), a small note says where to
+     write instead and offers to copy the address.
+     ========================================================== */
+  let askNote = null, askTimer = 0, askHide = 0, askBlurred = false;
+  addEventListener('blur', () => { askBlurred = true; });
+  const showAskNote = (title, subject) => {
+    if (!askNote) {
+      askNote = document.createElement('div');
+      askNote.className = 'ask-note';
+      askNote.setAttribute('role', 'status');
+      askNote.innerHTML = '<span class="ask-note__text"></span><button class="ask-note__copy" type="button">Copy address</button>';
+      document.body.appendChild(askNote);
+      askNote.querySelector('.ask-note__copy').addEventListener('click', async ev => {
+        const btn = ev.currentTarget;
+        try { await navigator.clipboard.writeText(contact); btn.textContent = 'Copied'; }
+        catch (_) { try { prompt('Copy the address:', contact); } catch (__) {} }
+        clearTimeout(askHide); askHide = setTimeout(() => askNote.classList.remove('is-on'), 2600);
+      });
+    }
+    askNote.querySelector('.ask-note__text').textContent = `No mail app? Write to ${contact}, subject “${subject}”.`;
+    askNote.querySelector('.ask-note__copy').textContent = 'Copy address';
+    askNote.classList.add('is-on');
+    clearTimeout(askHide); askHide = setTimeout(() => askNote.classList.remove('is-on'), 9000);
+  };
+  document.addEventListener('click', ev => {
+    const a = ev.target.closest && ev.target.closest('.row__ask');
+    if (!a || !contact) return;
+    const subject = new URL(a.href).searchParams.get('subject') || 'Demo request';
+    askBlurred = false;
+    clearTimeout(askTimer);
+    askTimer = setTimeout(() => { if (!askBlurred && !document.hidden) showAskNote(a.closest('.row')?.querySelector('.row__title')?.textContent || '', subject); }, 1100);
+  });
   const collections = V.collections || {};
   const groups = $('[data-groups]');
   let active = null;                                          // the collection being shown (a key of CONFIG.demos.collections), or null for everything
