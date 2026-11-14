@@ -46,10 +46,23 @@
 <header class="vlt__bar">
   <a class="wordmark" href="index.html">
     <span class="wordmark__main">Keep A Secret</span>
-    <span class="wordmark__sub">Demos</span>
   </a>
   <a class="tag" data-contact-link href="mailto:contact@keepasecret.nl">Contact</a>
 </header>
+
+<!-- the open collection: stays at the top, under the wordmark and the page pill, with the
+     collection that is open ("Showing …"). The list scrolls underneath it. Shown (js/demos.js) only while a collection is open. -->
+<div class="band" data-band hidden>
+  <div class="band__in">
+    <div class="code__active" data-code-active hidden>
+      <div class="code__who">
+        <span class="code__showing">Showing your selection</span>
+        <b class="code__name" data-code-name></b>
+      </div>
+      <button class="code__clear" type="button" data-code-clear>Clear</button>
+    </div>
+  </div>
+</div>
 
 <main class="vlt">
   <!-- no visible title — the pill already says where you are; the page keeps one for screen readers -->
@@ -67,20 +80,56 @@
     </button>
   </form>
   <p class="code__note" id="code-note" data-code-note role="status" aria-live="polite"></p>
-  <div class="code__active" data-code-active hidden>
-    <span>Showing <b data-code-name></b></span>
-    <button class="code__clear" type="button" data-code-clear>Clear</button>
-  </div>
 
   <!-- one heading and one list per language, one row per song, built from CONFIG.demos.tracks -->
   <div data-groups></div>
   </div>
 </main>
 
-<!-- shown (js/demos.js) while the list goes on below the edge of the page -->
-<button class="more" type="button" data-more aria-label="Scroll down for more demos">Scroll for more
-  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-</button>
+<!-- the now-playing bar: slides up as soon as a song has been started (js/demos.js).
+     The song on the left, previous / play / next exactly in the middle, on the right the time and the timeline, with the speaker at the far end: press it and it slides left over the timeline, drawing
+     a volume line out behind it (as on the portfolio). -->
+<section class="np" data-np aria-label="Now playing">
+  <div class="np__who">
+    <span class="np__art" data-np-art aria-hidden="true"></span>
+    <span class="np__text"><b data-np-title></b><span>Keep A Secret</span></span>
+  </div>
+  <div class="np__ctrl">
+    <button class="np__btn" type="button" data-np-prev aria-label="Previous song">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 9.5 12 18 18Z"/><path d="M6 6v12"/></svg>
+    </button>
+    <button class="np__btn np__btn--play" type="button" data-np-play aria-label="Play">
+      <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5 19 12 9 18.5Z"/></svg>
+      <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="5" width="5" height="14" rx="1.5"/><rect x="13.5" y="5" width="5" height="14" rx="1.5"/></svg>
+    </button>
+    <button class="np__btn" type="button" data-np-next aria-label="Next song">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 14.5 12 6 18Z"/><path d="M18 6v12"/></svg>
+    </button>
+  </div>
+  <div class="np__right">
+    <div class="np__seek" data-np-seek>
+      <span class="np__t"><span data-np-cur>0:00</span> / <span data-np-dur>0:00</span></span>
+      <div class="np__bar" data-np-bar role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="np__rail"><div class="np__fill" data-np-fill></div></div>
+      </div>
+    </div>
+    <div class="np__vol">
+      <button class="np__btn np__btn--vol" data-np-vol type="button" aria-label="Volume" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path class="i-body" d="M4 9.6v4.8h3.6L12.4 18.4V5.6L7.6 9.6Z"/>
+          <path class="i-wave" d="M15.6 9.2a4 4 0 0 1 0 5.6M18.2 6.6a7.6 7.6 0 0 1 0 10.8"/>
+          <path class="i-mute" d="M15.6 9.6l5 4.8M20.6 9.6l-5 4.8"/>
+        </svg>
+      </button>
+      <div class="np__flyout" data-np-flyout>
+        <div class="np__vtrack" data-np-vtrack role="slider" tabindex="0" aria-label="Volume" aria-orientation="horizontal"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="40">
+          <div class="np__vfill" data-np-vfill></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- outside <main> on purpose: <main> scrolls and fades at its edges, the credit line stays put under it -->
 <footer class="vlt__foot">

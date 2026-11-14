@@ -197,7 +197,8 @@ const CONFIG = {
        status   : 'available' (default) | 'on hold' | 'cut'
                   the last two swap the Request link for their label —
                   'cut' is a song that's been placed.
-       note     : optional one-liner, e.g. 'Female vocal' */
+       note     : optional one-liner, e.g. 'Female vocal'
+       artwork  : optional path to a picture for the song's tile; without one the tile shows a music note */
   demos: {
     contact: 'contact@keepasecret.nl',
     /* Collections: the Demos page lists nothing until a code is typed into the bar at the top; then it shows only the

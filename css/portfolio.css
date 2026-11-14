@@ -155,7 +155,6 @@ html.fonts-wait .seg { visibility: hidden; }
   outline: none;
   -webkit-tap-highlight-color: transparent;
 }
-.cd__btn:focus-visible .cd__edge { outline: 2px solid #fff; outline-offset: 2px; }
 /* the one that's been pulled out leaves its slot empty, like a shelf — a
    beat after the big cover has begun to fade in over it, so the swap has no seam */
 .cd.is-out .cd__btn { visibility: hidden; transition: visibility 0s linear .14s; }
@@ -365,7 +364,7 @@ html.np-live .pf__foot { filter: blur(5px); opacity: .6; }
   left: clamp(20px, 3.4vw, 48px);
   bottom: clamp(18px, 3vh, 36px);                  /* …and the same as the credit line and the player bar */
   height: calc(2 * 9.5px * 1.16 + 1px);
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: center; gap: 18px;
 }
 /* out of the way while a track is selected, back when it is put back */
 .socials { transition: opacity .5s var(--ease); }
@@ -374,8 +373,8 @@ html.np-live .socials { opacity: 0; pointer-events: none; }
 .socials a[hidden] { display: none; }
 .socials svg {
   display: block;
-  width: 17px; height: 17px;
-  fill: none; stroke: #fff; stroke-width: 1.5; stroke-linecap: round;
+  width: 22px; height: 22px;
+  fill: none; stroke: #fff; stroke-width: 1.35; stroke-linecap: round;
   transition: stroke .4s var(--ease);
 }
 .socials a:hover svg { stroke: #8c8c8c; }
@@ -518,7 +517,6 @@ html.np-live .socials { opacity: 0; pointer-events: none; }
   position: absolute; left: 50%; bottom: 0; width: 5px; margin-left: -2.5px; height: 40%;
   border-radius: 999px; background: #fff;
 }
-.np__vtrack:focus-visible { outline: 2px solid #fff; outline-offset: 4px; border-radius: 6px; }
 
 /* the hairline along the bottom of the middle — from the artwork's left edge to just before
    the speaker — thicker when held */
@@ -570,7 +568,6 @@ html.np-live .socials { opacity: 0; pointer-events: none; }
   overflow: hidden;                  /* it stays this thin: it doesn't swell on the way — the thick timeline replaces it after a longer hover */
 }
 .np__fill { height: 100%; width: 0; background: #fff; transition: width .18s linear; }
-.np__scrub:focus-visible { outline-offset: 2px; }
 
 /* ============================================================
    THE FOCUS VIEW
