@@ -525,36 +525,76 @@ html.fonts-wait .vlt { visibility: hidden; }
 .np__vtrack::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 9px; margin-top: -4.5px; border-radius: 999px; background: rgba(255, 255, 255, .28); }
 .np__vfill { position: absolute; left: 0; top: 50%; width: 40%; height: 9px; margin-top: -4.5px; border-radius: 999px; background: #fff; }
 
-/* ---------- the chooser for the Request button --------------------- */
-/* a small pill above the player bar: Mail app / Gmail / Outlook / Copy address; it fades in and out */
-.ask-note {
-  position: fixed; z-index: 9; left: 50%;
-  bottom: calc(var(--gap) + 23px + var(--gap) + 66px + 12px);
-  width: max-content; max-width: calc(100% - 2 * clamp(20px, 5vw, 48px));
-  display: flex; align-items: center; gap: 14px;
-  padding: 10px 10px 10px 18px;
-  border-radius: 999px;
-  font: 500 13px/1.35 var(--ui); color: #fff;
-  background: rgba(40, 40, 42, .92);
-  -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), 0 18px 40px -16px rgba(0, 0, 0, .85);
-  transform: translate(-50%, 8px);
-  opacity: 0; visibility: hidden; pointer-events: none;
-  transition: opacity .35s var(--ease), transform .35s var(--ease), visibility 0s .35s;
+/* ---------- the Request window ------------------------------------- */
+/* Rises from the bottom while everything behind it goes (almost) black. A list, one under the other, of the ways to send the request. */
+.ask-modal {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center;          /* in the middle of the screen */
+  padding: 12px;
+  visibility: hidden; pointer-events: none;
+  transition: visibility 0s .45s;
 }
-.ask-note.is-on { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 0); transition-delay: 0s; }
-.ask-note__text { min-width: 0; }
-.ask-note__actions { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
-.ask-note__btn {
-  display: inline-flex; align-items: center; height: 30px; padding: 0 14px; border-radius: 999px;
-  font: 600 12.5px/1 var(--ui); color: #fff; background: #333335; cursor: pointer; white-space: nowrap;
+.ask-modal.is-on { visibility: visible; pointer-events: auto; transition-delay: 0s; }
+.ask-modal__veil {
+  position: absolute; inset: 0;
+  background: rgba(0, 0, 0, .9);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  opacity: 0; transition: opacity .4s var(--ease);
+}
+.ask-modal.is-on .ask-modal__veil { opacity: 1; }
+.ask-modal__sheet {
+  position: relative;
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 24px); overflow-y: auto;
+  padding: 22px 20px 20px;
+  border-radius: 26px;
+  font-family: var(--ui); color: #fff;
+  background: #151516;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), 0 30px 80px -20px rgba(0, 0, 0, .9);
+  transform: translateY(70px); opacity: 0;                                /* it rises into place from a little below */
+  transition: transform .5s cubic-bezier(.2, .8, .2, 1), opacity .35s var(--ease);
+}
+.ask-modal.is-on .ask-modal__sheet { transform: none; opacity: 1; }
+.ask-modal__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.ask-modal__who { min-width: 0; }
+.ask-modal__kicker { margin: 0; font: 500 13px/1.2 var(--ui); letter-spacing: .02em; color: rgba(255, 255, 255, .6); }
+.ask-modal__title { margin: 6px 0 0; font: 700 clamp(24px, 3.2vw, 30px)/1.12 var(--ui); letter-spacing: .005em; color: #fff; overflow-wrap: anywhere; }
+.ask-modal__x {
+  flex: 0 0 auto; width: 38px; height: 38px; display: grid; place-items: center;
+  border-radius: 50%; color: #fff; background: #2a2a2c; cursor: pointer;
   transition: background-color .3s var(--ease), color .3s var(--ease);
 }
-.ask-note__btn:hover { background: #ececec; color: #000; }
-@media (max-width: 560px) {
-  .ask-note { border-radius: 22px; align-items: flex-start; flex-direction: column; gap: 10px; padding: 12px 14px; width: calc(100% - 2 * 20px); }
-  .ask-note__actions { flex-wrap: wrap; }
+.ask-modal__x svg { width: 20px; height: 20px; }
+.ask-modal__x:hover { background: #ececec; color: #000; }
+.ask-modal__lead { margin: 22px 0 10px; font: 500 14px/1.2 var(--ui); color: rgba(255, 255, 255, .6); }
+.ask-modal__list { display: grid; gap: 10px; }
+.ask-opt {
+  display: flex; align-items: center; gap: 16px;
+  width: 100%; min-height: 72px; padding: 12px 16px 12px 14px;
+  border-radius: 18px; text-align: left; cursor: pointer;
+  color: #fff; background: #212123;
+  transition: background-color .3s var(--ease);
 }
+.ask-opt:hover { background: #2e2e31; }
+.ask-opt__icon { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; }
+.ask-opt__icon svg { width: 46px; height: 46px; display: block; }
+.ask-opt__icon--plain { border-radius: 12px; background: #333335; }
+.ask-opt__icon--plain svg { width: 26px; height: 26px; }
+.ask-opt__text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ask-opt__text b { font: 700 19px/1.15 var(--ui); letter-spacing: .005em; color: #fff; }
+.ask-opt__text small { font: 500 13.5px/1.25 var(--ui); color: rgba(255, 255, 255, .6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ask-opt__go { flex: 0 0 auto; width: 22px; height: 22px; color: rgba(255, 255, 255, .45); transition: color .3s var(--ease), transform .3s var(--ease); }
+.ask-opt__go svg { width: 22px; height: 22px; display: block; }
+.ask-opt:hover .ask-opt__go { color: #fff; }
+.ask-opt--copy .ask-opt__text { align-items: flex-start; }
+/* while the window is up, nothing behind it moves or answers */
+body.ask-open .vlt, body.ask-open .np { pointer-events: none; }
+/* on a phone it is a sheet from the bottom edge */
+@media (max-width: 560px) {
+  .ask-modal { align-items: flex-end; padding: 0; }
+  .ask-modal__sheet { width: 100%; border-radius: 26px 26px 0 0; padding-bottom: max(20px, env(safe-area-inset-bottom)); transform: translateY(calc(100% + 60px)); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .ask-modal__sheet, .ask-modal__veil { transition: none; } }
 
 /* ---------- foot ---------------------------------------------- */
 /* exactly where it is on the portfolio: fixed to the foot of the window, in the middle (see .pf__foot in portfolio.css) */

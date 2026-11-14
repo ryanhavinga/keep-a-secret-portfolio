@@ -271,7 +271,7 @@
 
     /* Space always plays / pauses the song that is loaded, whatever has the focus (the waveform, a button, the volume …) — and never
        scrolls the page. Only a text field keeps its own spaces. */
-    const spaceIsMine = ev => ev.code === 'Space' && current && !ev.target.closest('input, textarea, select, [contenteditable]');
+    const spaceIsMine = ev => ev.code === 'Space' && current && !document.body.classList.contains('ask-open') && !ev.target.closest('input, textarea, select, [contenteditable]');
     document.addEventListener('keydown', ev => {
       if (!spaceIsMine(ev)) return;
       ev.preventDefault();                                    // no scroll, and no click on a focused button
@@ -336,12 +336,20 @@
   const contact = V.contact || CONFIG.bio?.contact;
 
   /* ==========================================================
-     THE REQUEST BUTTON opens a small chooser, right at the click — the way "open with…" does on a Mac: the mail app (a mailto: link,
-     subject and greeting filled in), Gmail or Outlook in the browser (the same message, ready to send), or just copy the address.
-     A website cannot raise the system's own "open with Mail?" window, and where no mail app is set up a bare mailto: does nothing —
-     this way the visitor always has a way to send it.
+     THE REQUEST BUTTON opens a window that rises from the bottom, with everything behind it going black: a list, one under the other,
+     of the ways to send the request — the mail app (a mailto: link), Gmail or Outlook in the browser, or copy the address. Each has the
+     subject and the greeting filled in. A website cannot raise the system's own "open with…" window, and where no mail app is set up a
+     bare mailto: does nothing — this way the visitor always has a way to send it.
      ========================================================== */
-  let askNote = null, askHide = 0;
+  /* the icons: Apple Mail's blue envelope, Gmail's M, Outlook's O on its envelope, and a plain "copy" */
+  const ICON = {
+    mail: '<svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="ico-mail" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5BC8FB"/><stop offset="1" stop-color="#1B7CF2"/></linearGradient></defs><rect width="48" height="48" rx="11" fill="url(#ico-mail)"/><rect x="8.5" y="13" width="31" height="22" rx="3.2" fill="#fff"/><path d="M9.5 15.5 24 27.5l14.5-12" fill="none" stroke="#3A8DF0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    gmail: '<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#4caf50" d="M45 16.2l-5 2.75-5 4.75L35 40h7c1.657 0 3-1.343 3-3V16.2z"/><path fill="#1e88e5" d="M3 16.2l3.614 1.71L13 23.7V40H6c-1.657 0-3-1.343-3-3V16.2z"/><polygon fill="#e53935" points="35,11.2 24,19.45 13,11.2 12,17 13,23.7 24,31.95 35,23.7 36,17"/><path fill="#c62828" d="M3 12.298V16.2l10 7.5V11.2L9.876 8.859C9.132 8.301 8.228 8 7.298 8 4.924 8 3 9.924 3 12.298z"/><path fill="#fbc02d" d="M45 12.298V16.2l-10 7.5V11.2l3.124-2.341C38.868 8.301 39.772 8 40.702 8 43.076 8 45 9.924 45 12.298z"/></svg>',
+    outlook: '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="15" y="8" width="30" height="32" rx="3.4" fill="#1976d2"/><path d="M15 14.2 30 25.6 45 14.2V12a3.4 3.4 0 0 0-3.4-3.4H18.4A3.4 3.4 0 0 0 15 12z" fill="#42a5f5"/><rect x="3" y="13" width="26" height="22" rx="3.4" fill="#0d47a1"/><ellipse cx="16" cy="24" rx="6" ry="6.8" fill="none" stroke="#fff" stroke-width="3.3"/></svg>',
+    copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.5 8.5V6.9a2.4 2.4 0 0 0-2.4-2.4H6.9a2.4 2.4 0 0 0-2.4 2.4v6.2a2.4 2.4 0 0 0 2.4 2.4h1.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    next: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>'
+  };
   const webmail = (to, subject, body) => {
     const q = (k, v) => `${k}=${encodeURIComponent(v)}`;
     return {
@@ -349,50 +357,64 @@
       outlook: `https://outlook.office.com/mail/deeplink/compose?${q('to', to)}&${q('subject', subject)}&${q('body', body)}`
     };
   };
-  const hideAskNote = (after = 0) => { clearTimeout(askHide); askHide = setTimeout(() => askNote && askNote.classList.remove('is-on'), after); };
-  const showAskNote = (mailto, subject, body) => {
-    if (!askNote) {
-      askNote = document.createElement('div');
-      askNote.className = 'ask-note';
-      askNote.setAttribute('role', 'dialog');
-      askNote.setAttribute('aria-label', 'Send your request');
-      askNote.innerHTML =
-        '<span class="ask-note__text"></span>' +
-        '<span class="ask-note__actions">' +
-          '<a class="ask-note__btn" data-ask-mail>Mail app</a>' +
-          '<a class="ask-note__btn" data-ask-gmail target="_blank" rel="noopener noreferrer">Gmail</a>' +
-          '<a class="ask-note__btn" data-ask-outlook target="_blank" rel="noopener noreferrer">Outlook</a>' +
-          '<button class="ask-note__btn ask-note__copy" type="button">Copy address</button>' +
-        '</span>';
-      document.body.appendChild(askNote);
-      askNote.querySelector('.ask-note__copy').addEventListener('click', async ev => {
-        const btn = ev.currentTarget;
-        try { await navigator.clipboard.writeText(contact); btn.textContent = 'Copied'; }
+  let askBox = null, askFrom = null, askCloseTimer = 0;
+  const closeAsk = () => {
+    if (!askBox || !askBox.classList.contains('is-on')) return;
+    askBox.classList.remove('is-on');
+    document.body.classList.remove('ask-open');
+    if (askFrom && askFrom.isConnected) { try { askFrom.focus({ preventScroll: true }); } catch (_) {} }
+  };
+  const openAsk = (opener, mailto, subject, body) => {
+    if (!askBox) {
+      askBox = document.createElement('div');
+      askBox.className = 'ask-modal';
+      askBox.setAttribute('role', 'dialog'); askBox.setAttribute('aria-modal', 'true'); askBox.setAttribute('aria-label', 'Send your request');
+      const opt = (attrs, icon, name, hint) => `${attrs}<span class="ask-opt__icon">${icon}</span><span class="ask-opt__text"><b>${name}</b><small>${hint}</small></span><span class="ask-opt__go">${ICON.next}</span>`;
+      askBox.innerHTML =
+        '<div class="ask-modal__veil" data-ask-close></div>' +
+        '<div class="ask-modal__sheet">' +
+          '<div class="ask-modal__head">' +
+            '<div class="ask-modal__who"><p class="ask-modal__kicker">Request a demo</p><h2 class="ask-modal__title"></h2></div>' +
+            `<button class="ask-modal__x" type="button" data-ask-close aria-label="Close">${ICON.close}</button>` +
+          '</div>' +
+          '<p class="ask-modal__lead">Send it with</p>' +
+          '<div class="ask-modal__list">' +
+            `<a class="ask-opt" data-ask-mail>${opt('', ICON.mail, 'Mail', 'Opens your mail app')}</a>` +
+            `<a class="ask-opt" data-ask-gmail target="_blank" rel="noopener noreferrer">${opt('', ICON.gmail, 'Gmail', 'Opens in a new tab')}</a>` +
+            `<a class="ask-opt" data-ask-outlook target="_blank" rel="noopener noreferrer">${opt('', ICON.outlook, 'Outlook', 'Opens in a new tab')}</a>` +
+            `<button class="ask-opt ask-opt--copy" type="button" data-ask-copy><span class="ask-opt__icon ask-opt__icon--plain">${ICON.copy}</span><span class="ask-opt__text"><b>Copy address</b><small class="ask-opt__addr"></small></span></button>` +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(askBox);
+      askBox.querySelectorAll('[data-ask-close]').forEach(el => el.addEventListener('click', closeAsk));
+      askBox.querySelectorAll('a.ask-opt').forEach(l => l.addEventListener('click', () => { clearTimeout(askCloseTimer); askCloseTimer = setTimeout(closeAsk, 450); }));
+      askBox.querySelector('[data-ask-copy]').addEventListener('click', async ev => {
+        const hint = ev.currentTarget.querySelector('.ask-opt__addr');
+        try { await navigator.clipboard.writeText(contact); hint.textContent = 'Copied'; }
         catch (_) { try { prompt('Copy the address:', contact); } catch (__) {} }
-        hideAskNote(1800);
+        clearTimeout(askCloseTimer); askCloseTimer = setTimeout(closeAsk, 1100);
       });
-      askNote.querySelectorAll('a').forEach(l => l.addEventListener('click', () => hideAskNote(500)));    // once it is on its way, the chooser goes
     }
+    askFrom = opener;
     const links = webmail(contact, subject, body);
-    askNote.querySelector('[data-ask-mail]').href = mailto;
-    askNote.querySelector('[data-ask-gmail]').href = links.gmail;
-    askNote.querySelector('[data-ask-outlook]').href = links.outlook;
-    askNote.querySelector('.ask-note__text').textContent = `Send your request for “${subject.replace(/^Demo request: /, '')}” with`;
-    askNote.querySelector('.ask-note__copy').textContent = 'Copy address';
-    askNote.classList.add('is-on');
-    hideAskNote(20000);
+    askBox.querySelector('[data-ask-mail]').href = mailto;
+    askBox.querySelector('[data-ask-gmail]').href = links.gmail;
+    askBox.querySelector('[data-ask-outlook]').href = links.outlook;
+    askBox.querySelector('.ask-modal__title').textContent = `“${subject.replace(/^Demo request: /, '')}”`;
+    askBox.querySelector('.ask-opt__addr').textContent = contact;
+    clearTimeout(askCloseTimer);
+    askBox.classList.add('is-on');
+    document.body.classList.add('ask-open');
+    try { askBox.querySelector('[data-ask-mail]').focus({ preventScroll: true }); } catch (_) {}
   };
   document.addEventListener('click', ev => {
     const a = ev.target.closest && ev.target.closest('.row__ask');
-    if (a && contact) {
-      ev.preventDefault();                                     // the chooser first; the mail app is one of its buttons
-      const u = new URL(a.href);
-      showAskNote(a.href, u.searchParams.get('subject') || 'Demo request', u.searchParams.get('body') || '');
-      return;
-    }
-    if (askNote && !ev.target.closest('.ask-note')) hideAskNote();         // a click anywhere else puts it away
+    if (!a || !contact) return;
+    ev.preventDefault();                                       // the window first; the mail app is one of its options
+    const u = new URL(a.href);
+    openAsk(a, a.href, u.searchParams.get('subject') || 'Demo request', u.searchParams.get('body') || '');
   });
-  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && askNote) hideAskNote(); });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeAsk(); });
   const collections = V.collections || {};
   const groups = $('[data-groups]');
   let active = null;                                          // the collection being shown (a key of CONFIG.demos.collections), or null for everything
