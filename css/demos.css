@@ -525,8 +525,8 @@ html.fonts-wait .vlt { visibility: hidden; }
 .np__vtrack::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 9px; margin-top: -4.5px; border-radius: 999px; background: rgba(255, 255, 255, .28); }
 .np__vfill { position: absolute; left: 0; top: 50%; width: 40%; height: 9px; margin-top: -4.5px; border-radius: 999px; background: #fff; }
 
-/* ---------- the note when no mail app opens ---------------------- */
-/* a small glass pill above the player bar, in the same glass; it fades in and out */
+/* ---------- the chooser for the Request button --------------------- */
+/* a small pill above the player bar: Mail app / Gmail / Outlook / Copy address; it fades in and out */
 .ask-note {
   position: fixed; z-index: 9; left: 50%;
   bottom: calc(var(--gap) + 23px + var(--gap) + 66px + 12px);
@@ -544,14 +544,16 @@ html.fonts-wait .vlt { visibility: hidden; }
 }
 .ask-note.is-on { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 0); transition-delay: 0s; }
 .ask-note__text { min-width: 0; }
-.ask-note__copy {
-  flex: 0 0 auto; height: 30px; padding: 0 14px; border-radius: 999px;
+.ask-note__actions { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+.ask-note__btn {
+  display: inline-flex; align-items: center; height: 30px; padding: 0 14px; border-radius: 999px;
   font: 600 12.5px/1 var(--ui); color: #fff; background: #333335; cursor: pointer; white-space: nowrap;
   transition: background-color .3s var(--ease), color .3s var(--ease);
 }
-.ask-note__copy:hover { background: #ececec; color: #000; }
+.ask-note__btn:hover { background: #ececec; color: #000; }
 @media (max-width: 560px) {
-  .ask-note { border-radius: 22px; align-items: flex-start; flex-direction: column; gap: 8px; padding: 12px 14px; width: calc(100% - 2 * 20px); }
+  .ask-note { border-radius: 22px; align-items: flex-start; flex-direction: column; gap: 10px; padding: 12px 14px; width: calc(100% - 2 * 20px); }
+  .ask-note__actions { flex-wrap: wrap; }
 }
 
 /* ---------- foot ---------------------------------------------- */

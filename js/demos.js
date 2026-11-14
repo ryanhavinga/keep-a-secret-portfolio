@@ -336,40 +336,63 @@
   const contact = V.contact || CONFIG.bio?.contact;
 
   /* ==========================================================
-     THE REQUEST BUTTON is a mailto: link — it opens the visitor's own mail app, with the subject and a greeting filled in.
-     Not everyone has one set up (a lot of people read their mail in the browser), and then the click would seem to do nothing.
-     So: if the page keeps the focus for a moment after the click (a mail app that opens takes it), a small note says where to
-     write instead and offers to copy the address.
+     THE REQUEST BUTTON opens a small chooser, right at the click — the way "open with…" does on a Mac: the mail app (a mailto: link,
+     subject and greeting filled in), Gmail or Outlook in the browser (the same message, ready to send), or just copy the address.
+     A website cannot raise the system's own "open with Mail?" window, and where no mail app is set up a bare mailto: does nothing —
+     this way the visitor always has a way to send it.
      ========================================================== */
-  let askNote = null, askTimer = 0, askHide = 0, askBlurred = false;
-  addEventListener('blur', () => { askBlurred = true; });
-  const showAskNote = (title, subject) => {
+  let askNote = null, askHide = 0;
+  const webmail = (to, subject, body) => {
+    const q = (k, v) => `${k}=${encodeURIComponent(v)}`;
+    return {
+      gmail: `https://mail.google.com/mail/?view=cm&fs=1&${q('to', to)}&${q('su', subject)}&${q('body', body)}`,
+      outlook: `https://outlook.office.com/mail/deeplink/compose?${q('to', to)}&${q('subject', subject)}&${q('body', body)}`
+    };
+  };
+  const hideAskNote = (after = 0) => { clearTimeout(askHide); askHide = setTimeout(() => askNote && askNote.classList.remove('is-on'), after); };
+  const showAskNote = (mailto, subject, body) => {
     if (!askNote) {
       askNote = document.createElement('div');
       askNote.className = 'ask-note';
-      askNote.setAttribute('role', 'status');
-      askNote.innerHTML = '<span class="ask-note__text"></span><button class="ask-note__copy" type="button">Copy address</button>';
+      askNote.setAttribute('role', 'dialog');
+      askNote.setAttribute('aria-label', 'Send your request');
+      askNote.innerHTML =
+        '<span class="ask-note__text"></span>' +
+        '<span class="ask-note__actions">' +
+          '<a class="ask-note__btn" data-ask-mail>Mail app</a>' +
+          '<a class="ask-note__btn" data-ask-gmail target="_blank" rel="noopener noreferrer">Gmail</a>' +
+          '<a class="ask-note__btn" data-ask-outlook target="_blank" rel="noopener noreferrer">Outlook</a>' +
+          '<button class="ask-note__btn ask-note__copy" type="button">Copy address</button>' +
+        '</span>';
       document.body.appendChild(askNote);
       askNote.querySelector('.ask-note__copy').addEventListener('click', async ev => {
         const btn = ev.currentTarget;
         try { await navigator.clipboard.writeText(contact); btn.textContent = 'Copied'; }
         catch (_) { try { prompt('Copy the address:', contact); } catch (__) {} }
-        clearTimeout(askHide); askHide = setTimeout(() => askNote.classList.remove('is-on'), 2600);
+        hideAskNote(1800);
       });
+      askNote.querySelectorAll('a').forEach(l => l.addEventListener('click', () => hideAskNote(500)));    // once it is on its way, the chooser goes
     }
-    askNote.querySelector('.ask-note__text').textContent = `No mail app? Write to ${contact}, subject “${subject}”.`;
+    const links = webmail(contact, subject, body);
+    askNote.querySelector('[data-ask-mail]').href = mailto;
+    askNote.querySelector('[data-ask-gmail]').href = links.gmail;
+    askNote.querySelector('[data-ask-outlook]').href = links.outlook;
+    askNote.querySelector('.ask-note__text').textContent = `Send your request for “${subject.replace(/^Demo request: /, '')}” with`;
     askNote.querySelector('.ask-note__copy').textContent = 'Copy address';
     askNote.classList.add('is-on');
-    clearTimeout(askHide); askHide = setTimeout(() => askNote.classList.remove('is-on'), 9000);
+    hideAskNote(20000);
   };
   document.addEventListener('click', ev => {
     const a = ev.target.closest && ev.target.closest('.row__ask');
-    if (!a || !contact) return;
-    const subject = new URL(a.href).searchParams.get('subject') || 'Demo request';
-    askBlurred = false;
-    clearTimeout(askTimer);
-    askTimer = setTimeout(() => { if (!askBlurred && !document.hidden) showAskNote(a.closest('.row')?.querySelector('.row__title')?.textContent || '', subject); }, 1100);
+    if (a && contact) {
+      ev.preventDefault();                                     // the chooser first; the mail app is one of its buttons
+      const u = new URL(a.href);
+      showAskNote(a.href, u.searchParams.get('subject') || 'Demo request', u.searchParams.get('body') || '');
+      return;
+    }
+    if (askNote && !ev.target.closest('.ask-note')) hideAskNote();         // a click anywhere else puts it away
   });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && askNote) hideAskNote(); });
   const collections = V.collections || {};
   const groups = $('[data-groups]');
   let active = null;                                          // the collection being shown (a key of CONFIG.demos.collections), or null for everything
