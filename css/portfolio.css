@@ -483,9 +483,7 @@ html.np-live .socials { opacity: 0; pointer-events: none; }
 .np__btn--play .i-play  { transform: translateX(-8.33%); }
 .np.is-playing .np__btn--play .i-play  { opacity: 0; transform: translateX(-8.33%) scale(0); }
 .np:not(.is-playing) .np__btn--play .i-pause { opacity: 0; transform: scale(0); }
-@media (hover: hover) and (pointer: fine) {
-  .np__btn:hover { transform: scale(1.1); }
-}
+/* (no hover effect on purpose: nothing in the bar grows, shifts or changes size when the pointer passes over it) */
 /* no focus ring anywhere in the bar, however a button was reached (a click, space, the keyboard) */
 .np :focus, .np :focus-visible { outline: none !important; }
 
@@ -691,7 +689,7 @@ html.np-live .socials { opacity: 0; pointer-events: none; }
 .focus.is-playing .focus__play .i-play { opacity: 0; transform: translateX(6%) scale(0); }
 .focus:not(.is-playing) .focus__play .i-pause { opacity: 0; transform: translateX(6%) scale(0); }
 @media (hover: hover) and (pointer: fine) {
-  .focus__play:hover { color: #fff; transform: scale(1.08); }
+  .focus__play:hover { color: #fff; }      /* brightens only: it does not grow */
 }
 .focus__play:active { color: #fff; transform: scale(1.08); }
 
@@ -758,7 +756,7 @@ html.np-live .socials { opacity: 0; pointer-events: none; }
   transition: color .3s var(--ease), transform .3s var(--ease);
 }
 .focus__svc svg { display: block; width: 100%; height: 100%; }
-.focus__svc:hover { color: #fff; transform: scale(1.1); }
+.focus__svc:hover { color: #fff; }      /* brightens only: it does not grow */
 
 .focus__credit {
   margin: clamp(30px, 5vh, 52px) 0 0;

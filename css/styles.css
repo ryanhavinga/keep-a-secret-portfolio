@@ -1319,7 +1319,7 @@ body.is-unlocked .leds {
    landed on, which would otherwise leave a button looking permanently
    brightened/grown after every press */
 @media (hover: hover) and (pointer: fine) {
-  .ctrl:hover { color: #fff; transform: scale(1.08); }
+  .ctrl:hover { color: #fff; }      /* brightens only: it does not grow (the :active press below still does) */
 }
 /* touch's own equivalent, since it has no real hover to fall back on —
    without this a button here just sits at its resting grey forever,
