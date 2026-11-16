@@ -209,7 +209,7 @@ const CONFIG = {
       HAP: { name: 'Holland America Publishing' }     // add request: false to take the Request button off its rows
     },
     tracks: [
-      { title: 'Miracle',             language: 'English', audio: 'audio/demo - Miracle (v3).m4a',  duration: 121, year: 2026, collections: ['HAP'], status: 'available' },
+      { title: 'Miracle',             language: 'English', audio: 'audio/demo - Miracle (NOV16).m4a',  duration: 116, year: 2026, collections: ['HAP'], status: 'available' },
       { title: 'B.A.N.G.E.R',         language: 'English', audio: 'audio/demo - Banga.m4a',           duration: 226, year: 2026, collections: ['HAP'], status: 'available' },
       { title: 'Give Ya What U Like', language: 'English', audio: 'audio/demo - Give Ya What U Like.mp3', duration: 180, year: 2021, collections: ['HAP'], status: 'available' },
       { title: 'Fast Life',           language: 'English', audio: 'audio/demo - Fast Life.m4a',           duration: 154, year: 2021, collections: ['HAP'], status: 'available' },

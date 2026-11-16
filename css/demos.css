@@ -464,7 +464,7 @@ html.fonts-wait .vlt { visibility: hidden; }
 }
 .np__btn:disabled { opacity: .35; cursor: default; }
 .np__btn:focus, .np__btn:focus-visible, .np__bar:focus, .np__bar:focus-visible { outline: none; }
-@media (hover: hover) and (pointer: fine) { .np__btn:not(:disabled):hover { transform: scale(1.1); } }
+/* (no hover effect on purpose: nothing in the bar grows, shifts or changes size when the pointer passes over it) */
 /* play and pause: white symbols, large in a dark grey circle */
 .np__btn--play { width: 44px; height: 44px; margin: 0 6px; color: #fff; background: #161616; }
 .np__btn--play svg { width: 34px; }
@@ -485,7 +485,7 @@ html.fonts-wait .vlt { visibility: hidden; }
   color: rgba(255, 255, 255, .78);                  /* the same as the artist's name */
 }
 /* the timeline is the portfolio's bar: rounded, a pale white track and the progress in solid white — no knob. It swells
-   when it is hovered or held. */
+   when it is held. */
 .np__bar { position: relative; flex: 1 1 auto; min-width: 0; padding: 14px 0; cursor: pointer; touch-action: none; }
 .np__rail {
   position: absolute; top: 50%; left: 0; right: 0;
@@ -495,7 +495,6 @@ html.fonts-wait .vlt { visibility: hidden; }
   transition: height .32s var(--ease);
 }
 .np__bar.is-held .np__rail { height: 11px; }
-@media (hover: hover) and (pointer: fine) { .np__bar:hover .np__rail { height: 11px; } }
 .np__fill { height: 100%; width: 0; background: #fff; }      /* (no easing: it follows the playhead frame by frame, and a tap puts it there at once) */
 
 /* The volume, as on the portfolio. At rest only the speaker shows, at the far right. Pressing it slides it, smoothly, left to the start of
