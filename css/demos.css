@@ -327,7 +327,9 @@ html.fonts-wait .vlt { visibility: hidden; }
   min-width: 0;
   padding: 9px 0;
   cursor: pointer;
-  touch-action: none;
+  /* a finger that starts on a waveform can still scroll the list up and down (touch-action: none here used to swallow it);
+     sideways drags and taps are the waveform's own (js/demos.js) */
+  touch-action: pan-y;
 }
 .row__scrub[aria-disabled='true'] { cursor: default; opacity: .5; }
 /* the timeline is a waveform: grey bars, and the same bars in white on top, cut off at the playhead.
@@ -650,6 +652,13 @@ body.ask-open .vlt, body.ask-open .np { pointer-events: none; }
 }
 @media (max-width: 560px) {
   .np__art { display: none; }
+}
+/* On a phone there is no now-playing bar: the waveform in each row is the player (its own play button, the time and the seeking),
+   so the list gets the room the bar took, and the open collection and the list sit a little higher under the page pill */
+@media (max-width: 860px) and (pointer: coarse) {
+  .np { display: none; }
+  .page-demos.has-np { --np: 0px; }
+  .band { top: calc(var(--head) + clamp(10px, 2.6vh, 24px)); }
 }
 
 @media (prefers-reduced-motion: reduce) {

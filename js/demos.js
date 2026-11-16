@@ -309,23 +309,43 @@
           e.info.addEventListener('click', () => toggle(e));
           row.addEventListener('pointerdown', () => warm(track), { passive: true });
         }
-        e.scrub.addEventListener('pointerdown', ev => {
-          if (!track.audio) return;
+        const grab = ev => {
           dragging = true;
           e.scrub.classList.add('is-held');
-          e.scrub.setPointerCapture(ev.pointerId);
+          try { e.scrub.setPointerCapture(ev.pointerId); } catch (_) {}
           seek(e, ev);
           /* the first jump eases in; the dragging after it follows the finger */
           setTimeout(() => dragging && e.scrub.classList.add('is-scrubbing'), 90);
+        };
+        /* A finger on the waveform is first just a finger on the list: nothing is touched until it is clearly a sideways drag (then it
+           seeks) or a tap (then it seeks on lift). A vertical move belongs to the list's scrolling — the browser takes it over and
+           cancels the pointer, so the song is not started or jumped by a scroll that happened to begin on a waveform. */
+        let touch = null;                                         // { id, x, y } while a finger is down and undecided
+        e.scrub.addEventListener('pointerdown', ev => {
+          if (!track.audio) return;
+          if (ev.pointerType === 'touch') { touch = { id: ev.pointerId, x: ev.clientX, y: ev.clientY }; return; }
+          grab(ev);
         });
         e.scrub.addEventListener('pointermove', ev => {
+          if (touch && touch.id === ev.pointerId) {
+            const dx = ev.clientX - touch.x, dy = ev.clientY - touch.y;
+            if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;     // still undecided
+            const sideways = Math.abs(dx) > Math.abs(dy);
+            touch = null;
+            if (sideways) grab(ev);
+            return;
+          }
           if (dragging && e.scrub.hasPointerCapture(ev.pointerId)) seek(e, ev);
         });
         const release = () => {
+          touch = null;
           dragging = false;
           e.scrub.classList.remove('is-held', 'is-scrubbing');
         };
-        e.scrub.addEventListener('pointerup', release);
+        e.scrub.addEventListener('pointerup', ev => {
+          if (touch && touch.id === ev.pointerId) { const t = touch; touch = null; if (Math.abs(ev.clientX - t.x) < 8 && Math.abs(ev.clientY - t.y) < 8) seek(e, ev); }
+          release();
+        });
         e.scrub.addEventListener('pointercancel', release);
         e.scrub.addEventListener('keydown', ev => {
           if (current !== e || !['ArrowLeft', 'ArrowRight'].includes(ev.key)) return;
